@@ -2326,6 +2326,22 @@ export default function AdminPanel() {
     }
   }
 
+  async function assignStudent(user: AdminUser) {
+    const months = prompt('Duration in months? (default 12)', '12')
+    if (!months) return
+    if (!(await confirmAsync(`Assign student verification for ${user.firstName} ${user.lastName}? (${months} months)`))) return
+    try {
+      await apiFetch(API_ENDPOINTS.adminUserAssignStudent.replace(':id', String(user.id)), {
+        method: 'POST',
+        body: JSON.stringify({ durationMonths: parseInt(months) || 12 }),
+      })
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, studentVerified: true, portalType: 'educational' } : u))
+      alert('Student assigned')
+    } catch (e: any) {
+      alert('Failed: ' + (e.message || 'error'))
+    }
+  }
+
   async function requireStudentReverify(user: AdminUser) {
     if (!(await confirmAsync(`Require ${user.firstName} ${user.lastName} to re-verify student status?`))) return
     try {
@@ -4417,6 +4433,7 @@ remote: ${panelUrl}`
                     userExportJobId,
                     exportJobs,
                     deassignStudent,
+                    assignStudent,
                     requireStudentReverify,
                     deleteUser,
                     usersPage,

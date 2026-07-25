@@ -3131,6 +3131,62 @@ export async function adminRoutes(app: any, prefix = '') {
   );
 
   app.post(
+    prefix + '/admin/users/:id/assign-student',
+    async ctx => {
+      const adminErr = requireAdminPermission(ctx, 'admin:student:assign');
+      if (adminErr !== true) return adminErr;
+      const userRepo = AppDataSource.getRepository(User);
+      const logRepo = AppDataSource.getRepository(UserLog);
+      const target = await userRepo.findOneBy({ id: Number(ctx.params.id) });
+      if (!target) {
+        ctx.set.status = 404;
+        return { error: ctx.t('user.notFound') };
+      }
+      const body = (ctx.body || {}) as any;
+      const durationMonths = body.durationMonths || 12;
+
+      target.studentVerified = true;
+      target.studentVerifiedAt = new Date();
+      target.studentVerifiedUntil = new Date(Date.now() + durationMonths * 30 * 86400000);
+      target.portalType = body.portalType || 'educational';
+      if (!target.educationLimits) target.educationLimits = {};
+      target.educationLimits = { ...target.educationLimits, assignedBy: ctx.user?.id, assignedAt: new Date().toISOString() };
+
+      await userRepo.save(target);
+      await logRepo.save(
+        logRepo.create({
+          userId: ctx.user?.id,
+          action: 'admin-assign-student',
+          targetId: String(target.id),
+          targetType: 'user',
+          timestamp: new Date(),
+          metadata: { durationMonths, portalType: body.portalType },
+        } as any)
+      );
+
+      return { success: true, user: target };
+    },
+    {
+      beforeHandle: [authenticate, authorize('admin:access')],
+      schema: {
+        params: t.Object({ id: t.String() }),
+        body: t.Object({ durationMonths: t.Optional(t.Number()), portalType: t.Optional(t.String()) }),
+        response: {
+          200: t.Object({ success: t.Boolean(), user: t.Any() }),
+          400: t.Object({ error: t.String() }),
+          401: t.Object({ error: t.String() }),
+          403: t.Object({ error: t.String() }),
+          404: t.Object({ error: t.String() }),
+        },
+      },
+      detail: {
+        summary: 'Assign a user as a student for a set duration (admin only)',
+        tags: ['Admin'],
+      },
+    },
+  );
+
+  app.post(
     prefix + '/admin/users/:id/require-student-reverify',
     async ctx => {
       const adminErr = requireAdminPermission(ctx, 'users:write');

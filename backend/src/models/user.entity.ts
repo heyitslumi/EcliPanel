@@ -286,6 +286,9 @@ export class User {
   @Column({ nullable: true })
   studentVerifiedAt?: Date;
 
+  @Column({ nullable: true })
+  studentVerifiedUntil?: Date;
+
   @Column('json', { nullable: true })
   educationLimits?: Record<string, any>;
 

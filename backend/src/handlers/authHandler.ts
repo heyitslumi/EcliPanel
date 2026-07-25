@@ -1964,6 +1964,11 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ id: userId });
       if (user) {
+        if (user.studentVerified && user.studentVerifiedUntil && new Date(user.studentVerifiedUntil) > new Date()) {
+          ctx.log.info({ userId, until: user.studentVerifiedUntil?.toISOString() }, 'Student already verified, skipping renewal');
+          const panelUrl = getPanelUrl(ctx);
+          return ctx.redirect(`${panelUrl}/dashboard/identity?studentVerified=1&alreadyVerified=1`);
+        }
         user.portalType = 'educational';
         user.educationLimits = eduPlan ? {
           memory: eduPlan.memory,
@@ -1985,6 +1990,7 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
         );
         user.studentVerified = true;
         user.studentVerifiedAt = new Date();
+        user.studentVerifiedUntil = new Date(Date.now() + 365 * 86400000); // 1 year
         await userRepo.save(user);
       }
       await redisDel(`github-student-state:${state}`);
@@ -2139,10 +2145,18 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ id: userId });
       if (user) {
+        // Prevent renewal if already student-verified and not expired
+        if (user.studentVerified && user.studentVerifiedUntil && new Date(user.studentVerifiedUntil) > new Date()) {
+          ctx.log.info({ userId, until: user.studentVerifiedUntil?.toISOString() }, 'Student already verified, skipping renewal (non-SSO)');
+          ctx.set.status = 302;
+          ctx.set.headers['Location'] = `${getPanelUrl(ctx)}/dashboard/identity?studentVerified=1&alreadyVerified=1`;
+          return;
+        }
         const keepExistingPaidTier = ['paid', 'enterprise'].includes(user.portalType);
 
         user.studentVerified = true;
         user.studentVerifiedAt = new Date();
+        user.studentVerifiedUntil = new Date(Date.now() + 365 * 86400000); // 1 year
 
         const existingLimits = (user.educationLimits || {}) as NumericLimits;
         const currentBaseLimits = (user.limits || {}) as NumericLimits;

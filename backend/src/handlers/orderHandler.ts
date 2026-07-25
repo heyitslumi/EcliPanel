@@ -513,6 +513,10 @@ export async function orderRoutes(app: any, prefix = '') {
                   ctx.set.status = 403;
                   return { error: 'Student verification required for educational plan. Please verify your student status first.' };
                 }
+                if (plan.type === 'educational' && userEntity.studentVerified && (userEntity as any).studentVerifiedUntil && new Date((userEntity as any).studentVerifiedUntil) > new Date()) {
+                  ctx.set.status = 403;
+                  return { error: 'You already have an active student verification. No need to renew.' };
+                }
                 const limits: Record<string, number> = {};
                 if (plan.memory != null) limits.memory = plan.memory;
                 if (plan.disk != null) limits.disk = plan.disk;

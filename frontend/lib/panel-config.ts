@@ -339,6 +339,7 @@ export const API_ENDPOINTS = {
   adminUserCurrentPlan: "/api/admin/users/:id/current-plan",
   adminUserCancelPlan: "/api/admin/users/:id/cancel-plan",
   adminUserDeassignStudent: "/api/admin/users/:id/deassign-student",
+  adminUserAssignStudent: "/api/admin/users/:id/assign-student",
   adminUserRequireStudentReverify: "/api/admin/users/:id/require-student-reverify",
   adminUserExportJob: "/api/admin/users/:id/export-job",
   adminUserContributorProfile: "/api/admin/users/:id/contributor-profile",

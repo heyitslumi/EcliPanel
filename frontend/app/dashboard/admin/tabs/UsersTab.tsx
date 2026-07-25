@@ -23,6 +23,7 @@ import {
   UserCog,
   UserMinus,
   Users,
+  GraduationCap,
   X,
 } from "lucide-react"
 
@@ -49,6 +50,7 @@ export default function UsersTab({ ctx }: { ctx: any }) {
     userExportJobId,
     exportJobs,
     deassignStudent,
+    assignStudent,
     requireStudentReverify,
     deleteUser,
     usersPage,
@@ -60,6 +62,7 @@ export default function UsersTab({ ctx }: { ctx: any }) {
   const canDeleteUser = !!user && hasPermission(user, 'users:delete')
   const canRequireStudentReverify = !!user && hasPermission(user, 'users:write')
   const canDeassignStudent = !!user && hasPermission(user, 'admin:student:deassign')
+  const canAssignStudent = !!user && hasPermission(user, 'admin:student:assign')
   const canRequestKyc = !!user && hasPermission(user, 'admin:kyc:manage')
   const [moreOpenId, setMoreOpenId] = useState<number | null>(null)
 
@@ -281,6 +284,11 @@ export default function UsersTab({ ctx }: { ctx: any }) {
                             )}
                           </>
                         )}
+                        {canAssignStudent && !user.studentVerified && (
+                          <button onClick={() => assignStudent(user)} title={t("actions.assignStudent")} className="p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                            <GraduationCap className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         {(user.studentVerified || user.portalType === "educational") && canDeassignStudent && (
                           <button onClick={() => deassignStudent(user)} title={t("actions.deassignStudent")} className="p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
                             <UserMinus className="h-3.5 w-3.5" />
@@ -419,6 +427,12 @@ export default function UsersTab({ ctx }: { ctx: any }) {
                         <button onClick={() => { deassignStudent(user); setMoreOpenId(null) }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                           <UserMinus className="h-3.5 w-3.5" />
                           {t("actions.deassignStudent")}
+                        </button>
+                      )}
+                      {canAssignStudent && !user.studentVerified && (
+                        <button onClick={() => { assignStudent(user); setMoreOpenId(null) }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+                          <GraduationCap className="h-3.5 w-3.5" />
+                          {t("actions.assignStudent")}
                         </button>
                       )}
                       {(user.studentVerified || user.portalType === "educational") && canRequireStudentReverify && (
