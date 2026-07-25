@@ -543,12 +543,14 @@ fn tcp_fastopen(s: &Socket) -> std::io::Result<()> {
 fn pin_to_core(core: usize) {
     use libc::{cpu_set_t, CPU_SET, CPU_ZERO, sched_setaffinity};
     use std::mem::{size_of, zeroed};
-    
+
     unsafe {
         let mut set: cpu_set_t = zeroed();
         CPU_ZERO(&mut set);
         CPU_SET(core, &mut set);
-        sched_setaffinity(0, size_of::<cpu_set_t>(), &set);
+        if sched_setaffinity(0, size_of::<cpu_set_t>(), &set) != 0 {
+            tracing::warn!("pin_to_core({core}) failed, running without CPU affinity");
+        }
     }
 }
 
@@ -748,7 +750,7 @@ async fn run_reload() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn print_systemd_unit() { //Scawwy
+fn print_systemd_unit() {
     let exe = std::env::current_exe()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "/usr/local/bin/eclihalo".into());
@@ -763,17 +765,23 @@ ExecStart={exe} start --config /etc/eclihalo/config.yml
 ExecReload={exe} reload
 Restart=on-failure
 RestartSec=5s
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_NICE
 LimitNOFILE=1048576
 LimitNPROC=65536
-CPUSchedulingPolicy=fifo
-CPUSchedulingPriority=50
-IOSchedulingClass=realtime
-IOSchedulingPriority=0
 
 [Install]
 WantedBy=multi-user.target
 "#
+    );
+    eprintln!(
+        "\n# Install instructions < 3\n\
+         # sudo cp {exe} /usr/local/bin/eclihalo\n\
+         # sudo mkdir -p /etc/eclihalo\n\
+         # sudo {exe} systemd > /etc/systemd/system/eclihalo.service\n\
+         # sudo systemctl daemon-reload\n\
+         # sudo systemctl enable eclihalo.service\n\
+         # sudo systemctl start eclihalo.service\n\
+         # sudo systemctl status eclihalo.service\n"
     );
 }
 
