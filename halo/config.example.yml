@@ -1,0 +1,207 @@
+http:
+  port: 80
+
+https:
+  port: 443
+
+tls:
+  mode: provided # provided self_signed lets_encrypt
+  cert_path: /etc/ssl/certs/example.pem
+  key_path: /etc/ssl/private/example.key
+
+  # mode: lets_encrypt
+  # acme_email: admin@example.com
+  # acme_domains:
+  #   - panel.example.com
+  #   - api.example.com
+  #   - cdn.example.com
+  # acme_cache_dir: /var/lib/eclihalo/acme
+  # acme_staging: false
+
+  # mode: self_signed
+  # hostname: node1.internal
+
+rate_limit:
+  enabled: false
+  # requests_per_sec: 500
+  # burst: 1000
+  # whitelist:
+  #   - 10.0.0.
+  #   - 192.168.
+
+auto_update:
+  enabled: false
+  # check_interval_hours: 24
+  # download_url: https://ecli.app/api/halo/download
+
+routes:
+  - domain: api.ecli.app
+    strategy: round_robin # round_robin least_connections ip_hash random
+    upstream_timeout_secs: 30
+    max_body_bytes: 10485760
+    upstreams:
+      - 127.0.0.1:3000
+      - 127.0.0.1:3001
+      - 127.0.0.1:3002
+    header_rules:
+      set_request:
+        x-api-version: "v2"
+        user-agent: "EcliHalo/1.0"
+      remove_request:
+        - cookie
+        - referer
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        strict-transport-security: "max-age=31536000; includeSubDomains; preload"
+        x-content-type-options: "nosniff"
+        x-frame-options: "DENY"
+        x-xss-protection: "0"
+        cache-control: "no-store"
+      remove_response:
+        - server
+        - x-powered-by
+
+  - domain: grpc.ecli.app
+    grpc: true
+    strategy: least_connections
+    upstream_timeout_secs: 120
+    upstreams:
+      - 127.0.0.1:50051
+      - 127.0.0.1:50052
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        strict-transport-security: "max-age=31536000; includeSubDomains; preload"
+
+  - domain: ws.ecli.app
+    websocket: true
+    strategy: ip_hash
+    upstream_timeout_secs: 300
+    upstreams:
+      - 127.0.0.1:8080
+      - 127.0.0.1:8081
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+
+  - domain: panel.ecli.app
+    strategy: least_connections
+    websocket: true
+    upstream_timeout_secs: 60
+    max_body_bytes: 10485760
+    upstreams:
+      - 127.0.0.1:4000
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        strict-transport-security: "max-age=31536000; includeSubDomains; preload"
+        x-content-type-options: "nosniff"
+        x-frame-options: "SAMEORIGIN"
+        referrer-policy: "strict-origin-when-cross-origin"
+
+  - domain: cdn.ecli.app
+    strategy: round_robin
+    static_files:
+      root: /var/www/cdn
+      index: index.html
+      max_age: 31536000
+      cache_enabled: true
+      cache_strategy: smart  # smart ttl mtime none
+      precompressed: true    # .gz ^ .br 
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        cache-control: "public, max-age=31536000, immutable"
+        strict-transport-security: "max-age=31536000; includeSubDomains; preload"
+        content-security-policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        permissions-policy: "geolocation=(), microphone=(), camera=()"
+        cross-origin-resource-policy: "cross-origin"
+        timing-allow-origin: "*"
+      remove_response:
+        - server
+    upstreams:
+      - 127.0.0.1:9000
+
+  - domain: uploads.ecli.app
+    strategy: round_robin
+    static_files:
+      root: /var/www/uploads
+      cache_strategy: ttl
+      cache_enabled: true
+      max_age: 3600
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        cache-control: "public, max-age=3600"
+        strict-transport-security: "max-age=31536000; includeSubDomains; preload"
+    upstreams:
+      - 127.0.0.1:9001
+
+  - domain: config.ecli.app
+    strategy: round_robin
+    static_files:
+      root: /var/www/config
+      cache_strategy: mtime
+      cache_enabled: true
+      max_age: 300
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        cache-control: "public, max-age=300, must-revalidate"
+    upstreams:
+      - 127.0.0.1:9002
+
+  - domain: live.ecli.app
+    strategy: least_connections
+    static_files:
+      root: /var/www/live
+      cache_strategy: none
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        cache-control: "no-store, no-cache, must-revalidate"
+    upstreams:
+      - 127.0.0.1:9003
+
+  - domain: rtc.ecli.app
+    strategy: round_robin
+    webrtc:
+      cors: true
+      signalling_paths:
+        - /offer
+        - /answer
+        - /ice
+    upstreams:
+      - 127.0.0.1:9090
+    header_rules:
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        access-control-allow-origin: "*"
+        access-control-allow-methods: "GET, POST, OPTIONS"
+
+  - domain: rest.ecli.app
+    strategy: round_robin
+    upstreams:
+      - 127.0.0.1:8080
+      - 127.0.0.1:8081
+    header_rules:
+      set_request:
+        x-api-version: "v2"
+        user-agent: "EcliHalo/1.0"
+      remove_request:
+        - referer
+      set_response:
+        alt-svc: 'h3=":443"; ma=86400'
+        access-control-allow-origin: "*"
+        access-control-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        access-control-allow-headers: "Authorization, Content-Type, X-Requested-With"
+        access-control-max-age: "86400"
+        x-ratelimit-limit: "1000"
+      remove_response:
+        - server
+        - x-powered-by
+        - x-backend-version
+    # Legacy see Memo 14
+    # use header_rules for full control
+    add_headers:
+      x-powered-by: "EcliHalo"

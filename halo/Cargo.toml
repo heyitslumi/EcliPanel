@@ -1,0 +1,50 @@
+[package]
+name = "eclihalo"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.40", features = ["full"] }
+tokio-rustls = "0.26"
+rustls = { version = "0.23", features = ["ring"] }
+rustls-pemfile = "2"
+quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls"] }
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+mimalloc = { version = "0.1", default-features = false }
+h2 = "0.4"
+http = "1.1"
+httparse = "1.9"
+bytes = "1.7"
+memchr = "2.7"
+arc-swap = "1.7"
+crossbeam = "0.8"
+dashmap = "6.1"
+moka = { version = "0.12", features = ["future"] }
+socket2 = { version = "0.5", features = ["all"] }
+libc = "0.2"
+num_cpus = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+clap = { version = "4", features = ["derive"] }
+mime_guess = "2.0"
+percent-encoding = "2"
+rcgen = "0.13"
+acme-lib = "0.9"
+x509-parser = "0.16"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+quinn-proto = "0.11"
+openssl = { version = "0.10", features = ["v111"] }
+openssl-sys = "0.9"
+tokio-openssl = "0.6"
+
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+strip = true

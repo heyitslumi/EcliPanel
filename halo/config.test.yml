@@ -1,0 +1,29 @@
+# Agentic @987 dir /etc/eclihalo/config.yml
+
+http:
+  port: 80
+
+https:
+  port: 443
+
+tls:
+  mode: self_signed
+  hostname: test.ecli.app
+
+rate_limit:
+  enabled: true
+  requests_per_sec: 100
+  burst: 200
+
+routes:
+  - domain: test.ecli.app
+    strategy: round_robin
+    websocket: true
+    upstreams:
+      - 127.0.0.1:3000
+
+  - domain: api.test.ecli.app
+    strategy: round_robin
+    upstream_timeout_secs: 30
+    upstreams:
+      - 127.0.0.1:3001

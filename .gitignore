@@ -78,8 +78,11 @@ tunnel/client/target/*
 
 # UI Agents skills
 .agents/*
+AGENTS.md
 
 # Age Verification Model
 /backend/model
 
-AGENTS.md
+# EcliHalo stuff
+/halo/target/
+/halo/bench-results/
