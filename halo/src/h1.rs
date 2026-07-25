@@ -577,6 +577,10 @@ async fn handle_connect<S>(
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
+    if target.bytes().any(|b| b == b'\r' || b == b'\n') {
+        stream.write_all(b"HTTP/1.1 400 Bad Request\r\ncontent-length: 0\r\n\r\n").await?;
+        return Ok(());
+    }
     let target = if target.contains(':') {
         target.to_owned()
     } else {
@@ -661,8 +665,12 @@ pub fn rewrite_request(
         let method = rl.split(|&b| b == b' ').next().unwrap_or(b"GET");
         out.extend_from_slice(method);
         out.put_u8(b' ');
-        out.extend_from_slice(path.as_bytes());
-        out.extend_from_slice(b" HTTP/1.1\r\n");
+        if path.bytes().any(|b| b == b'\r' || b == b'\n') {
+            out.extend_from_slice(b"/ HTTP/1.1\r\n");
+        } else {
+            out.extend_from_slice(path.as_bytes());
+            out.extend_from_slice(b" HTTP/1.1\r\n");
+        }
     }
 
     out.extend_from_slice(b"host: ");

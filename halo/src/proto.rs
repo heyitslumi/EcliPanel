@@ -303,6 +303,10 @@ pub fn parse_chunk_size(buf: &[u8]) -> Result<(usize, usize), ParseError> {
         16,
     )
     .map_err(|_| ParseError::Invalid)?;
+    const MAX_CHUNK: usize = 128 * 1024 * 1024;
+    if size > MAX_CHUNK {
+        return Err(ParseError::Invalid);
+    }
     Ok((size, lf + 1))
 }
 
