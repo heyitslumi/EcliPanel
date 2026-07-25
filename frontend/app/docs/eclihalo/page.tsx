@@ -12,6 +12,14 @@ all with hot-reload via SIGHUP.
 
 It is designed for high performance and low latency, with a focus on simplicity and ease of use.
 
+## Benchmark
+This benchmark compares EcliHalo to Nginx.
+You can view how benchmark works here: https://github.com/thenoname-gurl/EcliPanel/blob/main/halo/bench.sh)
+Anyways here is results, we can see up to 106% improvement in some fields comparing to nginx, higher rps = better.
+
+![Benchmark Results](https://github.com/thenoname-gurl/EcliPanel/blob/main/halo/chart.png?raw=true)
+
+
 ## Quick Start
 
 \`\`\`bash
