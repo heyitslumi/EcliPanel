@@ -12,12 +12,13 @@ import {
   MenuIcon,
   XIcon,
   Trophy,
+  Zap,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import meta from "../meta.json";
 
-const icons = { BookOpen, Sparkles, Server, Cpu, Rocket, Clock, LifeBuoy, Trophy };
+const icons = { BookOpen, Sparkles, Server, Cpu, Rocket, Clock, LifeBuoy, Trophy, Zap };
 
 export function Sidebar() {
   const router = useRouter();

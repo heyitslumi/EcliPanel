@@ -33,13 +33,21 @@ use config::{EcliHaloConfig, TlsMode};
 use conn::ConnHandler;
 use health::build_registry;
 use letsencrypt::ChallengeTokens;
-use proxy::{SharedRegistry, SharedState};
+use proxy::{build_proxy_cache, SharedRegistry, SharedState};
 use ratelimit::RateLimiter;
 use static_files::{build_resp_cache, spawn_prewarm};
 use upstream::UpstreamPool;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const SOCKET_BACKLOG: i32 = 65_536;
+const START_TIME: std::sync::LazyLock<std::time::Instant> =
+    std::sync::LazyLock::new(std::time::Instant::now);
+
+pub mod metrics {
+    use std::sync::atomic::AtomicU64;
+    pub static REQUESTS: AtomicU64 = AtomicU64::new(0);
+    pub static FAILURES: AtomicU64 = AtomicU64::new(0);
+    pub static BYTES_SENT: AtomicU64 = AtomicU64::new(0);
+}
 
 #[derive(Parser)]
 #[command(name = "eclihalo", version = VERSION)]
@@ -73,7 +81,7 @@ fn main() -> anyhow::Result<()> {
         .worker_threads(cpus)
         .max_blocking_threads(cpus * 4)
         .thread_stack_size(2 * 1024 * 1024)
-        .event_interval(31)
+        .event_interval(10)
         .global_queue_interval(61)
         .enable_all()
         .build()?
@@ -105,6 +113,7 @@ async fn async_main() -> anyhow::Result<()> {
 async fn run_start(config_path: PathBuf) -> anyhow::Result<()> {
     let cfg = EcliHaloConfig::load(&config_path)?;
     let cpus = num_cpus::get();
+    let perf = &cfg.performance;
     info!(
         routes = cfg.routes.len(),
         cpus,
@@ -114,7 +123,7 @@ async fn run_start(config_path: PathBuf) -> anyhow::Result<()> {
 
     let shared: SharedState = Arc::new(ArcSwap::from_pointee(cfg.clone()));
     let registry: SharedRegistry = Arc::new(ArcSwap::from_pointee(build_registry(&cfg.routes)));
-    let tls_cfg = build_tls_config(&cfg.tls)?;
+    let tls_cfg = build_tls_config(&cfg.tls, &cfg.routes)?;
     let ossl_acceptor = build_openssl_acceptor(&cfg.tls).ok();
     let resp_cache = build_resp_cache();
 
@@ -159,13 +168,15 @@ async fn run_start(config_path: PathBuf) -> anyhow::Result<()> {
         registry.clone(),
         limiter.clone(),
         resp_cache.clone(),
+        perf.accept_backlog,
+        perf.accept_batch,
     );
 
     let https_addr: SocketAddr = ([0, 0, 0, 0], cfg.https.port).into();
     
     let ossl = ossl_acceptor.map(Arc::new);
     for core_id in 0..cpus {
-        let listener = build_socket(https_addr)
+        let listener = build_socket(https_addr, perf.accept_backlog)
             .with_context(|| format!("bind {https_addr} core {core_id}"))?;
 
         #[cfg(target_os = "linux")]
@@ -177,6 +188,7 @@ async fn run_start(config_path: PathBuf) -> anyhow::Result<()> {
         let registry = registry.clone();
         let limiter = limiter.clone();
         let pool = Arc::new(UpstreamPool::new());
+        let p_cache = build_proxy_cache(104857600, 60);
         let resp = resp_cache.clone();
 
         tokio::spawn(async move {
@@ -188,6 +200,7 @@ async fn run_start(config_path: PathBuf) -> anyhow::Result<()> {
                 limiter,
                 pool,
                 resp,
+                proxy_cache: p_cache,
                 peer: "0.0.0.0:0".parse().unwrap(),
             };
 
@@ -358,13 +371,15 @@ fn spawn_http_handler(
     registry: SharedRegistry,
     limiter: Arc<RateLimiter>,
     resp: static_files::RespCache,
+    backlog: i32,
+    _batch: usize,
 ) {
     let addr: SocketAddr = ([0, 0, 0, 0], http_port).into();
     let cpus = num_cpus::get();
     info!("HTTP → {addr} (h1 plain) x{cpus} cores");
 
     for core_id in 0..cpus {
-        let listener = match build_socket(addr) {
+        let listener = match build_socket(addr, backlog) {
             Ok(l) => l,
             Err(e) => {
                 error!("HTTP bind core {core_id}: {e}");
@@ -379,6 +394,7 @@ fn spawn_http_handler(
         let registry = registry.clone();
         let limiter = limiter.clone();
         let pool = Arc::new(UpstreamPool::new());
+        let p_cache = build_proxy_cache(104857600, 60);
         let resp = resp.clone();
         let _challenges = challenges.clone();
 
@@ -391,6 +407,7 @@ fn spawn_http_handler(
                 limiter: limiter.clone(),
                 pool: pool.clone(),
                 resp: resp.clone(),
+                proxy_cache: p_cache,
                 peer: "0.0.0.0:0".parse().unwrap(),
             };
 
@@ -468,7 +485,7 @@ fn spawn_http_handler(
 }
 
 
-fn build_socket(addr: SocketAddr) -> anyhow::Result<TcpListener> {
+fn build_socket(addr: SocketAddr, backlog: i32) -> anyhow::Result<TcpListener> {
     let s = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))?;
     
     s.set_reuse_address(true)?;
@@ -498,7 +515,7 @@ fn build_socket(addr: SocketAddr) -> anyhow::Result<TcpListener> {
     let _ = s.set_send_buffer_size(2 * 1024 * 1024);
     
     s.bind(&addr.into())?;
-    s.listen(SOCKET_BACKLOG)?;
+    s.listen(backlog)?;
     
     Ok(TcpListener::from_std(s.into())?)
 }
@@ -535,7 +552,7 @@ fn pin_to_core(core: usize) {
     }
 }
 
-fn build_tls_config(tls: &config::TlsConfig) -> anyhow::Result<Arc<rustls::ServerConfig>> {
+fn build_tls_config(tls: &config::TlsConfig, routes: &[config::Route]) -> anyhow::Result<Arc<rustls::ServerConfig>> {
     use rustls::pki_types::CertificateDer;
 
     let (certs, key) = match tls.mode {
@@ -558,17 +575,51 @@ fn build_tls_config(tls: &config::TlsConfig) -> anyhow::Result<Arc<rustls::Serve
         TlsMode::LetsEncrypt => load_le(tls)?,
     };
 
+    let sni_certs: Vec<(String, Arc<rustls::sign::CertifiedKey>)> = routes
+        .iter()
+        .filter_map(|r| {
+            let pt = r.tls.as_ref()?;
+            let cp = std::fs::read(&pt.cert_path).ok()?;
+            let kp = std::fs::read(&pt.key_path).ok()?;
+            let certs: Vec<CertificateDer<'static>> =
+                rustls_pemfile::certs(&mut &cp[..]).collect::<Result<_, _>>().ok()?;
+            let key = rustls_pemfile::private_key(&mut &kp[..]).ok()??;
+            let sk = rustls::crypto::ring::sign::any_supported_type(&key).ok()?;
+            Some((r.domain.clone(), Arc::new(rustls::sign::CertifiedKey::new(certs, sk))))
+        })
+        .collect();
+    let signing_key = rustls::crypto::ring::sign::any_supported_type(&key)?;
+    let default_ck = Arc::new(rustls::sign::CertifiedKey::new(certs, signing_key));
+
     let mut cfg = rustls::ServerConfig::builder()
         .with_no_client_auth()
-        .with_single_cert(certs, key)
-        .context("TLS config")?;
+        .with_cert_resolver(Arc::new(SniResolver { default: default_ck, sni: sni_certs }));
 
     cfg.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     cfg.send_tls13_tickets = 0;
     cfg.session_storage = rustls::server::ServerSessionMemoryCache::new(4096);
     cfg.max_fragment_size = Some(16384);
-    
+
     Ok(Arc::new(cfg))
+}
+
+#[derive(Debug)]
+struct SniResolver {
+    default: Arc<rustls::sign::CertifiedKey>,
+    sni: Vec<(String, Arc<rustls::sign::CertifiedKey>)>,
+}
+
+impl rustls::server::ResolvesServerCert for SniResolver {
+    fn resolve(&self, client_hello: rustls::server::ClientHello<'_>) -> Option<Arc<rustls::sign::CertifiedKey>> {
+        if let Some(name) = client_hello.server_name() {
+            for (domain, ck) in &self.sni {
+                if domain == name {
+                    return Some(ck.clone());
+                }
+            }
+        }
+        Some(self.default.clone())
+    }
 }
 
 fn build_openssl_acceptor(tls: &config::TlsConfig) -> anyhow::Result<openssl::ssl::SslAcceptor> {

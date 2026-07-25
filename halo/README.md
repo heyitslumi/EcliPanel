@@ -11,6 +11,8 @@ It features SIGHUP reload, load balancing, health checks, websocket webrtc and g
 
 It is supposed to be better than NGINX for EcliPanel work and handles up to 106% more RPS than NGINX.
 
+Documentation can be found at: https://ecli.app/docs/eclihalo
+
 
 ## Load balancing 
 <Dev @Memo 23> 

@@ -69,6 +69,7 @@ pub struct HeaderRules {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Route {
     pub domain: String,
+    #[serde(default)]
     pub upstreams: Vec<String>,
     #[serde(default)]
     pub websocket: bool,
@@ -88,14 +89,52 @@ pub struct Route {
     pub header_rules: HeaderRules,
     #[serde(default = "default_true")]
     pub grpc: bool,
+    #[serde(default)]
+    pub error_pages: HashMap<u16, String>,
+    #[serde(default)]
+    pub rewrites: HashMap<String, String>,
+    #[serde(default)]
+    pub tls: Option<PerRouteTls>,
+    #[serde(default)]
+    pub proxy_cache: Option<ProxyCacheConfig>,
+    #[serde(default)]
+    pub auth_request: Option<AuthRequestConfig>,
+    #[serde(default)]
+    pub retry: Option<RetryConfig>,
+    #[serde(default)]
+    pub access_log: Option<String>,
+    #[serde(default)]
+    pub upstream_connect_timeout: Option<u64>,
+    #[serde(default)]
+    pub upstream_read_timeout: Option<u64>,
+    #[serde(default)]
+    pub proxy_redirect: HashMap<String, String>,
+    #[serde(default)]
+    pub sub_filter: HashMap<String, String>,
 }
 
-fn default_max_body() -> u64 {
-    10 * 1024 * 1024
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct PerRouteTls { pub cert_path: String, pub key_path: String, }
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct ProxyCacheConfig {
+    #[serde(default = "default_true")] pub enabled: bool,
+    #[serde(default = "default_cache_ttl")] pub ttl_secs: u64,
+    #[serde(default = "default_cache_size")] pub max_size_bytes: u64,
 }
-fn default_timeout() -> u64 {
-    30
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct AuthRequestConfig { pub url: String, #[serde(default)] pub timeout_secs: u64, }
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct RetryConfig {
+    #[serde(default = "default_retries")] pub tries: u32,
+    #[serde(default = "default_retry_timeout")] pub timeout_secs: u64,
 }
+
+fn default_max_body() -> u64 { 10 * 1024 * 1024 }
+fn default_timeout() -> u64 { 30 }
+fn default_cache_ttl() -> u64 { 60 }
+fn default_cache_size() -> u64 { 104857600 }
+fn default_retries() -> u32 { 2 }
+fn default_retry_timeout() -> u64 { 5 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -195,11 +234,44 @@ pub struct HttpsConfig {
     pub port: u16,
 }
 
-fn default_http_port() -> u16 {
-    80
+fn default_http_port() -> u16 { 80 }
+fn default_https_port() -> u16 { 443 }
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct PerformanceConfig {
+    #[serde(default = "num_cpus::get")]
+    pub worker_threads: usize,
+    #[serde(default = "default_backlog")]
+    pub accept_backlog: i32,
+    #[serde(default = "default_batch")]
+    pub accept_batch: usize,
+    #[serde(default = "default_true")]
+    pub cpu_affinity: bool,
+    #[serde(default = "default_event_interval")]
+    pub event_interval: u32,
+    #[serde(default = "default_queue_interval")]
+    pub global_queue_interval: u32,
+    #[serde(default = "default_stack_size")]
+    pub thread_stack_size: usize,
 }
-fn default_https_port() -> u16 {
-    443
+fn default_backlog() -> i32 { 65536 }
+fn default_batch() -> usize { 128 }
+fn default_event_interval() -> u32 { 31 }
+fn default_queue_interval() -> u32 { 61 }
+fn default_stack_size() -> usize { 2 * 1024 * 1024 }
+
+impl Default for PerformanceConfig {
+    fn default() -> Self {
+        Self {
+            worker_threads: num_cpus::get(),
+            accept_backlog: 65536,
+            accept_batch: 128,
+            cpu_affinity: true,
+            event_interval: 31,
+            global_queue_interval: 61,
+            thread_stack_size: 2 * 1024 * 1024,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -207,11 +279,15 @@ pub struct EcliHaloConfig {
     pub http: HttpConfig,
     pub https: HttpsConfig,
     pub tls: TlsConfig,
+    #[serde(default)]
+    pub performance: PerformanceConfig,
     pub routes: Vec<Route>,
     #[serde(default)]
     pub rate_limit: RateLimitConfig,
     #[serde(default)]
     pub auto_update: AutoUpdateConfig,
+    #[serde(default)]
+    pub metrics: bool,
     #[serde(skip)]
     pub route_map: HashMap<String, Arc<Route>>,
 }

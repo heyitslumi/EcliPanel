@@ -1,4 +1,4 @@
-use crate::proxy::{SharedRegistry, SharedState};
+use crate::proxy::{ProxyCache, SharedRegistry, SharedState};
 use crate::ratelimit::RateLimiter;
 use crate::static_files::RespCache;
 use crate::upstream::UpstreamPool;
@@ -15,6 +15,7 @@ pub struct ConnHandler {
     pub limiter:  Arc<RateLimiter>,
     pub pool:     Arc<UpstreamPool>,
     pub resp:     RespCache,
+    pub proxy_cache: ProxyCache,
     pub peer:     SocketAddr,
 }
 
@@ -27,30 +28,12 @@ impl ConnHandler {
             limiter:  self.limiter.clone(),
             pool:     self.pool.clone(),
             resp:     self.resp.clone(),
+            proxy_cache: self.proxy_cache.clone(),
             peer:     self.peer,
         }
     }
 
     pub async fn run_plain(self, mut stream: TcpStream) -> std::io::Result<()> {
-        if !self.limiter.check(self.peer.ip()) {
-            let body = crate::error_page::error_page(429);
-            let _ = stream
-                .write_all(
-                    format!(
-                        "HTTP/1.1 429 Too Many Requests\r\n\
-                         content-type: text/html\r\n\
-                         content-length: {}\r\n\
-                         connection: close\r\n\r\n",
-                        body.len()
-                    )
-                    .as_bytes(),
-                )
-                .await;
-            let _ = stream.write_all(&body).await;
-            let _ = stream.shutdown().await;
-            return Ok(());
-        }
-
         let mut sniff = [0u8; 24];
         let n = match stream.read(&mut sniff).await {
             Ok(n) => n,

@@ -48,6 +48,7 @@ pub async fn listen(
         let limiter  = limiter.clone();
         let pool     = pool.clone();
         let resp     = resp.clone();
+        let p_cache  = crate::proxy::build_proxy_cache(104857600, 60);
 
         tokio::spawn(async move {
             let conn = match incoming.await {
@@ -75,6 +76,7 @@ pub async fn listen(
                 limiter,
                 pool,
                 resp,
+                proxy_cache: p_cache,
                 peer,
             };
 
@@ -136,10 +138,6 @@ impl ConnHandler {
             .unwrap_or("")
             .to_lowercase();
 
-        if !self.limiter.check(self.peer.ip()) {
-            return send_h3_error(&mut stream, 429).await;
-        }
-
         let cfg = self.config.load();
         let route = match cfg.route_for(&host) {
             Some(r) => r,
@@ -153,7 +151,7 @@ impl ConnHandler {
         };
 
         if is_grpc {
-            return send_h3_error(&mut stream, 501).await;
+            return send_h3_error(&mut stream, 501, Some(route.as_ref())).await;
         }
 
         self.proxy_h3(request, stream, route).await
@@ -166,7 +164,10 @@ impl ConnHandler {
         route: Arc<crate::config::Route>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let method = request.method().to_string();
-        let path   = request.uri().path().to_string();
+        let path = crate::h1::apply_rewrites(
+            request.uri().path(),
+            &route.rewrites,
+        );
 
         if let Some(ref sf) = route.static_files {
             let me = crate::proto::Method::from_bytes(method.as_bytes());
@@ -187,6 +188,22 @@ impl ConnHandler {
             }
         }
 
+        let cache_key = if let Some(ref pc) = route.proxy_cache {
+            if pc.enabled && method == "GET" {
+                Some(format!("GET:{path}"))
+            } else { None }
+        } else { None };
+        if let Some(ref key) = cache_key {
+            if let Some(entry) = self.proxy_cache.get(key).await {
+                let resp = Response::builder().status(200).body(()).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                stream.send_response(resp).await?;
+                stream.send_data(entry.headers.clone()).await?;
+                stream.finish().await?;
+                return Ok(());
+            }
+        }
+
+        crate::metrics::REQUESTS.fetch_add(1, Ordering::Relaxed);
         let reg = self.registry.load();
         let ip  = self.peer.ip().to_string();
         let (upstream, stats) = match reg
@@ -194,7 +211,7 @@ impl ConnHandler {
             .and_then(|b| b.pick(&route.strategy, Some(&ip)))
         {
             Some(u) => (u.0.to_owned(), u.1),
-            None => return send_h3_error(&mut stream, 502).await,
+            None => return send_h3_error(&mut stream, 502, Some(route.as_ref())).await,
         };
         stats.total_requests.fetch_add(1, Ordering::Relaxed);
         stats.active_connections.fetch_add(1, Ordering::Relaxed);
@@ -210,7 +227,7 @@ impl ConnHandler {
             _ => {
                 stats.failures.fetch_add(1, Ordering::Relaxed);
                 stats.active_connections.fetch_add(-1, Ordering::Relaxed);
-                return send_h3_error(&mut stream, 502).await;
+                return send_h3_error(&mut stream, 502, Some(route.as_ref())).await;
             }
         };
 
@@ -401,8 +418,9 @@ type H3Stream = h3::server::RequestStream<h3_quinn::BidiStream<Bytes>, Bytes>;
 async fn send_h3_error(
     stream: &mut H3Stream,
     code: u16,
+    route: Option<&crate::config::Route>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let body = crate::error_page::error_page(code);
+    let body = crate::error_page::error_page_bytes(code, route.map(|r| &r.error_pages));
     let resp = Response::builder()
         .status(code)
         .header("content-type", "text/html")

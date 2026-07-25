@@ -86,3 +86,4 @@ AGENTS.md
 # EcliHalo stuff
 /halo/target/
 /halo/bench-results/
+/halo/config.yml

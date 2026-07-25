@@ -9,6 +9,17 @@ use tracing::warn;
 
 const MAX_HEADERS: usize = 16 * 1024;
 
+pub fn apply_rewrites(path: &str, rewrites: &std::collections::HashMap<String, String>) -> String {
+    for (pattern, replacement) in rewrites {
+        if let Ok(re) = regex::Regex::new(pattern) {
+            if re.is_match(path) {
+                return re.replace(path, replacement.as_str()).to_string();
+            }
+        }
+    }
+    path.to_owned()
+}
+
 fn try_read_fast<S: AsyncRead + Unpin>(
     stream: &mut S,
     buf: &mut BytesMut,
@@ -116,6 +127,36 @@ where
         };
         keep_alive = !req.connection_close && req.version == 1;
 
+        if cfg.metrics && req.path == "/__eclihalo/metrics" {
+            use std::sync::atomic::Ordering;
+            let uptime = crate::START_TIME.elapsed().as_secs();
+            let requests = crate::metrics::REQUESTS.load(Ordering::Relaxed);
+            let failures = crate::metrics::FAILURES.load(Ordering::Relaxed);
+            let bytes_sent = crate::metrics::BYTES_SENT.load(Ordering::Relaxed);
+            let body = format!(
+                "# HELP eclihalo_uptime_seconds Proxy uptime in seconds\n\
+                 # TYPE eclihalo_uptime_seconds gauge\n\
+                 eclihalo_uptime_seconds{{version=\"{ver}\"}} {uptime}\n\
+                 # HELP eclihalo_requests_total Total proxied requests\n\
+                 # TYPE eclihalo_requests_total counter\n\
+                 eclihalo_requests_total {requests}\n\
+                 # HELP eclihalo_failures_total Total upstream failures\n\
+                 # TYPE eclihalo_failures_total counter\n\
+                 eclihalo_failures_total {failures}\n\
+                 # HELP eclihalo_bytes_sent_total Total bytes sent to clients\n\
+                 # TYPE eclihalo_bytes_sent_total counter\n\
+                 eclihalo_bytes_sent_total {bytes_sent}\n",
+                ver = env!("CARGO_PKG_VERSION"),
+            );
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(), body
+            );
+            stream.write_all(resp.as_bytes()).await?;
+            buf.advance(req.headers_end);
+            continue;
+        }
+
         let route = match cfg.route_for(&req.host) {
             Some(r) => r,
             None => {
@@ -154,7 +195,14 @@ where
                         buf.advance(req.headers_end);
                         continue;
                     }
-                    Ok(None) => {}
+                    Ok(None) => {
+                        // Static-only route with no upstreams → 404
+                        if route.upstreams.is_empty() {
+                            let _ = error_response(&mut stream, 404).await;
+                            buf.advance(req.headers_end);
+                            continue;
+                        }
+                    }
                     Err(_) => {
                         let _ = error_response(&mut stream, 500).await;
                         buf.advance(req.headers_end);
@@ -162,6 +210,15 @@ where
                     }
                 }
             }
+        }
+
+        // Rate limit — after static files, before proxying. Static hits/misses
+        // don't consume tokens; only upstream requests do.
+        if !handler.limiter.check(handler.peer.ip()) {
+            keep_alive = false;
+            let _ = error_response(&mut stream, 429).await;
+            buf.advance(req.headers_end);
+            continue;
         }
 
         if req.method == Method::Connect {
@@ -177,6 +234,19 @@ where
             }
         }
 
+        if let Some(ref pc) = route.proxy_cache {
+            if pc.enabled && matches!(req.method, Method::Get | Method::Head) {
+                let method_str = match req.method { Method::Get => "GET", Method::Head => "HEAD", _ => "" };
+                let cache_key = format!("{method_str}:{}", req.path);
+                if let Some(entry) = handler.proxy_cache.get(&cache_key).await {
+                    stream.write_all(&entry.headers).await?;
+                    stream.write_all(&entry.body).await?;
+                    buf.advance(req.headers_end);
+                    continue;
+                }
+            }
+        }
+
         let (upstream, stats) = match reg
             .get(&req.host)
             .and_then(|b| b.pick(&route.strategy, Some(&client_ip)))
@@ -189,6 +259,7 @@ where
                 continue;
             }
         };
+        crate::metrics::REQUESTS.fetch_add(1, Ordering::Relaxed);
         stats
             .active_connections
             .fetch_add(1, Ordering::Relaxed);
@@ -210,7 +281,8 @@ where
             }
         };
 
-        rewrite_request(&buf[..req.headers_end], &req.path, &route, &client_ip, keep_alive, &mut work);
+        let path = apply_rewrites(&req.path, &route.rewrites);
+        rewrite_request(&buf[..req.headers_end], &path, &route, &client_ip, keep_alive, &mut work);
         if let Err(e) = try_write_all(&mut us, &work).await {
             warn!(%upstream, "write: {e}");
             keep_alive = false;
@@ -246,7 +318,7 @@ where
         }
 
         work.clear();
-        match stream_response(&mut stream, &mut us, keep_alive, &mut work).await {
+        match stream_response(&mut stream, &mut us, keep_alive, &mut work, route.as_ref()).await {
             Ok(resp_ka) => {
                 keep_alive = keep_alive && resp_ka;
                 stats
@@ -256,6 +328,17 @@ where
                     handler.pool.release(&upstream, us);
                 } else {
                     handler.pool.discard(&upstream, us);
+                }
+                if let Some(ref pc) = route.proxy_cache {
+                    if pc.enabled && req.method == Method::Get && !work.is_empty() {
+                        let method_str = "GET";
+                        let key = format!("{method_str}:{}", req.path);
+                        let cached = crate::proxy::CachedResponse {
+                            headers: work.clone().freeze(),
+                            body: BytesMut::new().freeze(),
+                        };
+                        handler.proxy_cache.insert(key, cached).await;
+                    }
                 }
             }
             Err(_) => {
@@ -366,6 +449,7 @@ async fn stream_response<S: AsyncRead + AsyncWrite + Unpin>(
     upstream: &mut TcpStream,
     req_ka: bool,
     buf: &mut BytesMut,
+    route: &crate::config::Route,
 ) -> std::io::Result<bool> {
 
     loop {
@@ -375,6 +459,7 @@ async fn stream_response<S: AsyncRead + AsyncWrite + Unpin>(
                 let body_start = hdr_end;
                 let body_buffered = buf.len() - body_start;
 
+                apply_response_filters(buf, hdr_end, route);
                 client.write_all(&buf[..]).await?;
 
                 let ka = !resp.connection_close && req_ka;
@@ -601,7 +686,8 @@ pub fn rewrite_request(
         out.extend_from_slice(client_ip.as_bytes());
         out.extend_from_slice(b"\r\n");
     }
-    if !route.header_rules.set_request.contains_key("x-forwarded-for") {
+    let has_xff = raw.windows(15).any(|w| crate::proto::eq_ic(w, b"x-forwarded-for"));
+    if !route.header_rules.set_request.contains_key("x-forwarded-for") && !has_xff {
         out.extend_from_slice(b"x-forwarded-for: ");
         out.extend_from_slice(client_ip.as_bytes());
         out.extend_from_slice(b"\r\n");
@@ -613,8 +699,11 @@ pub fn rewrite_request(
     let mut skip_arr: [&[u8]; 32] = [b""; 32];
     let mut n = 0;
     for s in [b"host" as &[u8], b"connection", b"keep-alive", b"transfer-encoding", b"upgrade",
-              b"x-real-ip", b"x-forwarded-for", b"x-forwarded-proto"] {
+              b"x-real-ip", b"x-forwarded-proto"] {
         skip_arr[n] = s; n += 1;
+    }
+    if !has_xff && !route.header_rules.set_request.contains_key("x-forwarded-for") {
+        skip_arr[n] = b"x-forwarded-for"; n += 1;
     }
     for r in &route.header_rules.remove_request {
         skip_arr[n] = r.as_bytes(); n += 1;
@@ -653,7 +742,70 @@ async fn error_response<S: AsyncRead + AsyncWrite + Unpin>(
     w: &mut S,
     status: u16,
 ) -> std::io::Result<()> {
-    let body = crate::error_page::error_page(status);
+    error_response_custom(w, status, None).await
+}
+
+fn apply_response_filters(buf: &mut BytesMut, hdr_end: usize, route: &crate::config::Route) {
+    if !route.proxy_redirect.is_empty() {
+        let headers = &buf[..hdr_end];
+        let lower: Vec<u8> = headers.iter().map(|b| b.to_ascii_lowercase()).collect();
+        if let Some(pos) = memchr::memmem::find(&lower, b"\nlocation:") {
+            let val_start = pos + 11; // "\nlocation: "
+            if headers.get(val_start - 1) != Some(&b' ') { return; }
+            if let Some(lf) = memchr::memchr(b'\r', &headers[val_start..]) {
+                let val_end = val_start + lf;
+                let loc_s = std::str::from_utf8(&headers[val_start..val_end]).unwrap_or("");
+                for (old, new) in &route.proxy_redirect {
+                    if let Some(rest) = loc_s.strip_prefix(old.as_str()) {
+                        let rewritten = format!("{new}{rest}");
+                        let r = rewritten.as_bytes();
+                        if r.len() == lf {
+                            buf[val_start..val_end].copy_from_slice(r);
+                        } else {
+                            let mut hdrs = buf[..val_start].to_vec();
+                            hdrs.extend_from_slice(r);
+                            hdrs.extend_from_slice(&buf[val_end..]);
+                            *buf = BytesMut::from(&hdrs[..]);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if !route.sub_filter.is_empty() && buf.len() > hdr_end {
+        if let Ok(body) = std::str::from_utf8(&buf[hdr_end..]) {
+            let mut m = body.to_owned();
+            for (find, replace) in &route.sub_filter {
+                m = m.replace(find.as_str(), replace.as_str());
+            }
+            if m.len() != body.len() {
+                let mut hdrs = buf[..hdr_end].to_vec();
+                hdrs.extend_from_slice(m.as_bytes());
+                *buf = BytesMut::from(&hdrs[..]);
+            }
+        }
+    }
+}
+
+async fn error_response_custom<S: AsyncRead + AsyncWrite + Unpin>(
+    w: &mut S,
+    status: u16,
+    route: Option<&crate::config::Route>,
+) -> std::io::Result<()> {
+    let body = if let Some(r) = route {
+        if let Some(path) = r.error_pages.get(&status) {
+            match tokio::fs::read(path).await {
+                Ok(b) => b,
+                Err(_) => crate::error_page::error_page(status).to_vec(),
+            }
+        } else {
+            crate::error_page::error_page(status).to_vec()
+        }
+    } else {
+        crate::error_page::error_page(status).to_vec()
+    };
     let reason = crate::error_page::status_reason(status);
     let hdr = format!(
         "HTTP/1.1 {status} {reason}\r\n\

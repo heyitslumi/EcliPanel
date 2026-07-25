@@ -1,7 +1,19 @@
 use bytes::Bytes;
+use std::collections::HashMap;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TEMPLATE: &str = include_str!("template.html");
+
+pub fn error_page_bytes(code: u16, error_pages: Option<&HashMap<u16, String>>) -> Bytes {
+    if let Some(map) = error_pages {
+        if let Some(path) = map.get(&code) {
+            if let Ok(b) = std::fs::read(path) {
+                return Bytes::from(b);
+            }
+        }
+    }
+    error_page(code)
+}
 
 pub fn error_page(code: u16) -> Bytes {
     let reason = status_reason(code);

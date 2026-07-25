@@ -30,6 +30,16 @@
       ]
     },
     {
+      "name": "Infrastructure",
+      "pages": [
+        {
+          "name": "EcliHalo Proxy",
+          "href": "/docs/eclihalo",
+          "icon": "Zap"
+        }
+      ]
+    },
+    {
       "name": "Policies",
       "pages": [
         { "name": "Sunset Policy", "href": "/docs/sunset", "icon": "Clock" },

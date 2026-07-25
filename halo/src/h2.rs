@@ -53,10 +53,6 @@ impl ConnHandler {
             .unwrap_or("")
             .to_lowercase();
 
-        if !self.limiter.check(self.peer.ip()) {
-            return send_h2_error(&mut respond, 429).await;
-        }
-
         let cfg = self.config.load();
         let route = match cfg.route_for(&host) {
             Some(r) => r,
@@ -84,7 +80,8 @@ impl ConnHandler {
         route: Arc<crate::config::Route>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let method = request.method().to_string();
-        let path = request.uri().path().to_string();
+        let mut path = request.uri().path().to_string();
+        path = crate::h1::apply_rewrites(&path, &route.rewrites);
 
         if let Some(ref sf) = route.static_files {
             let method_enum = crate::proto::Method::from_bytes(method.as_bytes());
@@ -98,13 +95,32 @@ impl ConnHandler {
                             send_raw_h2(&mut respond, &bytes, route.as_ref()).await?;
                             return Ok(());
                         }
-                        Ok(None) => {}
+                        Ok(None) => {
+                            if route.upstreams.is_empty() {
+                                return send_h2_error(&mut respond, 404, Some(route.as_ref())).await;
+                            }
+                        }
                         Err(_) => {}
                     }
                 }
             }
         }
 
+        let cache_key = if let Some(ref pc) = route.proxy_cache {
+            if pc.enabled && method == "GET" {
+                Some(format!("GET:{path}"))
+            } else { None }
+        } else { None };
+        if let Some(ref key) = cache_key {
+            if let Some(entry) = self.proxy_cache.get(key).await {
+                let resp = Response::builder().status(200).body(()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                let mut s = respond.send_response(resp, false)?;
+                s.send_data(entry.headers.clone(), true)?;
+                return Ok(());
+            }
+        }
+
+        crate::metrics::REQUESTS.fetch_add(1, Ordering::Relaxed);
         let reg = self.registry.load();
         let ip = self.peer.ip().to_string();
         let (upstream, stats) = match reg
@@ -113,7 +129,7 @@ impl ConnHandler {
         {
             Some(u) => (u.0.to_owned(), u.1),
             None => {
-                return send_h2_error(&mut respond, 502).await;
+                return send_h2_error(&mut respond, 502, Some(route.as_ref())).await;
             }
         };
         stats.total_requests.fetch_add(1, Ordering::Relaxed);
@@ -133,7 +149,7 @@ impl ConnHandler {
             _ => {
                 stats.failures.fetch_add(1, Ordering::Relaxed);
                 stats.active_connections.fetch_add(-1, Ordering::Relaxed);
-                return send_h2_error(&mut respond, 502).await;
+                return send_h2_error(&mut respond, 502, Some(route.as_ref())).await;
             }
         };
 
@@ -299,6 +315,17 @@ impl ConnHandler {
                     } else {
                         self.pool.discard(&upstream, us);
                     }
+                    if let Some(ref key) = cache_key {
+                        if let Some(cl) = rh.content_length {
+                            if cl > 0 && cl < 65536 {
+                                let cached = crate::proxy::CachedResponse {
+                                    headers: resp_buf.clone().freeze(),
+                                    body: Bytes::new(),
+                                };
+                                self.proxy_cache.insert(key.clone(), cached).await;
+                            }
+                        }
+                    }
                     return Ok(());
                 }
                 Err(crate::proto::ParseError::Incomplete) => {
@@ -413,8 +440,9 @@ async fn send_raw_h2(
 async fn send_h2_error(
     respond: &mut h2::server::SendResponse<Bytes>,
     code: u16,
+    route: Option<&crate::config::Route>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let body = crate::error_page::error_page(code);
+    let body = crate::error_page::error_page_bytes(code, route.map(|r| &r.error_pages));
     let resp = Response::builder()
         .status(code)
         .header("content-type", "text/html")
