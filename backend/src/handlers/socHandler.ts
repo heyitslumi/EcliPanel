@@ -3,6 +3,8 @@ import { SocData } from '../models/socData.entity';
 import { SecurityFinding } from '../models/securityFinding.entity';
 import { ServerConfig } from '../models/serverConfig.entity';
 import { ServerSubuser } from '../models/serverSubuser.entity';
+import { NodeHeartbeat } from '../models/nodeHeartbeat.entity';
+import { User } from '../models/user.entity';
 import { logAdminAction, getAdminAuditEntries, getAdminTimeReport } from '../services/adminAuditService';
 import { authenticate } from '../middleware/auth';
 import { authorize, hasPermissionSync } from '../middleware/authorize';
@@ -1263,6 +1265,109 @@ echo "Run: wings --config /etc/pterodactyl/config.yml"
     {
       response: { 200: t.Any() },
       detail: { summary: 'One-line Wings install script', tags: ['Wings'] },
+    },
+  );
+
+  app.get(
+    prefix + '/soc/uptime',
+    async (ctx: any) => {
+      const user = ctx.user as any;
+      if (!user) {
+        ctx.set.status = 401;
+        return { error: ctx.t('auth.notLoggedIn') };
+      }
+
+      const cacheKey = `soc:uptime:user:${user.id}`;
+      try {
+        const cached = await redisGet(cacheKey);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+
+      try {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const userRepo = AppDataSource.getRepository(User);
+        const activeUsers = await userRepo
+          .createQueryBuilder('u')
+          .select('u.id')
+          .where('u.lastLoginAt >= :since', { since: thirtyDaysAgo })
+          .getMany();
+        const activeUserIds = new Set(activeUsers.map(u => u.id));
+        const cfgRepo = AppDataSource.getRepository(ServerConfig);
+        const isAdmin = hasPermissionSync(ctx, 'soc:read');
+        const serverFilter = isAdmin
+          ? {}
+          : { userId: user.id };
+        const servers = await cfgRepo.find({ where: serverFilter });
+        const nodeServerCount = new Map<number, number>();
+
+        for (const s of servers) {
+          if (!s.nodeId || !activeUserIds.has(s.userId)) continue;
+          nodeServerCount.set(s.nodeId, (nodeServerCount.get(s.nodeId) || 0) + 1);
+        }
+
+        if (nodeServerCount.size === 0) {
+          const result = { uptime: 100, nodes: 0, servers: 0, period: '30d' };
+          await redisSet(cacheKey, JSON.stringify(result), 300);
+          return result;
+        }
+
+        const hbRepo = AppDataSource.getRepository(NodeHeartbeat);
+        const nodeIds = Array.from(nodeServerCount.keys());
+        const heartbeats = await hbRepo
+          .createQueryBuilder('hb')
+          .select('hb.nodeId', 'nodeId')
+          .addSelect('hb.status', 'status')
+          .where('hb.nodeId IN (:...nodeIds)', { nodeIds })
+          .andWhere('hb.timestamp >= :since', { since: thirtyDaysAgo })
+          .getRawMany();
+
+        const nodeStats = new Map<number, { ok: number; total: number }>();
+        for (const hb of heartbeats) {
+          const nid = Number(hb.nodeId);
+          const stat = nodeStats.get(nid) || { ok: 0, total: 0 };
+          stat.total++;
+          if (hb.status === 'ok') stat.ok++;
+          nodeStats.set(nid, stat);
+        }
+
+        let weightedSum = 0;
+        let totalWeight = 0;
+        for (const [nid, count] of nodeServerCount) { 
+          // memo: if hbs dont exist node is new
+          const stat = nodeStats.get(nid);
+          const nodeUptime = stat && stat.total > 0 ? (stat.ok / stat.total) * 100 : 100;
+          weightedSum += nodeUptime * count;
+          totalWeight += count;
+        }
+
+        const uptime = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 100;
+        const result = {
+          uptime,
+          nodes: nodeServerCount.size,
+          servers: totalWeight,
+          period: '30d',
+        };
+        await redisSet(cacheKey, JSON.stringify(result), 300);
+        return result;
+      } catch (e) {
+        console.error('[soc:uptime] Error:', e);
+        return { uptime: 100, nodes: 0, servers: 0, period: '30d', error: 'Calculation failed, showing 100%' };
+      }
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Object({
+          uptime: t.Number(),
+          nodes: t.Number(),
+          servers: t.Number(),
+          period: t.String(),
+          error: t.Optional(t.String()),
+        }),
+        401: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'SOC uptime over last 30 days', tags: ['SOC'] },
     },
   );
 }

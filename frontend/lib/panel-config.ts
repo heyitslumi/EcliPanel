@@ -364,6 +364,7 @@ export const API_ENDPOINTS = {
 
   // SOC
   socOverview: "/api/soc/overview",
+  socUptime: "/api/soc/uptime",
   socPlans: "/api/soc/plans",
   socUsageUser: "/api/soc/usage/user/:id",
   socUsageOrg: "/api/soc/usage/org/:id",

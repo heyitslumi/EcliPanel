@@ -138,6 +138,7 @@ export default function SOCDashboard() {
   const [findingsExpanded, setFindingsExpanded] = useState(false)
   const [findingsFilter, setFindingsFilter] = useState('open')
   const [findingsSeverity, setFindingsSeverity] = useState('')
+  const [socUptime, setSocUptime] = useState<{ uptime: number; nodes: number; servers: number } | null>(null)
 
   // Load all servers (paginated — same pattern as /dashboard/servers)
   useEffect(() => {
@@ -205,7 +206,17 @@ export default function SOCDashboard() {
       .catch(() => {})
   }, [])
 
-  // Fetch security findings
+  // Fetch security findings & soc uptime
+  useEffect(() => {
+    apiFetch(API_ENDPOINTS.socUptime)
+      .then((data) => {
+        if (data && typeof data.uptime === 'number') {
+          setSocUptime(data)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const fetchFindings = useCallback(() => {
     setFindingsLoading(true)
     const params = new URLSearchParams({ status: findingsFilter || 'open', visibility: 'public' })
@@ -289,8 +300,7 @@ export default function SOCDashboard() {
   const totalServers = servers.length
   const onlineList = [...myOnlineList, ...otherOnlineList]
 
-  const myUptimePct = myServers.length > 0 ? Math.round((myOnlineServers / myServers.length) * 10000) / 100 : 0
-  const totalUptimePct = totalServers > 0 ? Math.round((onlineServers / totalServers) * 10000) / 100 : 0
+  const realUptime = socUptime?.uptime ?? null
 
   const totalCpuPct = onlineList.reduce((a, s) => {
     const cpuVal = Number(s.resources?.cpu_absolute ?? 0)
@@ -425,8 +435,8 @@ export default function SOCDashboard() {
             />
             <StatCard
               title={t("stats.uptime")}
-              value={`${myUptimePct}%`}
-              subtitle={totalServers > 0 ? t("stats.totalUptime", { value: totalUptimePct }) : t("stats.noServers")}
+              value={realUptime != null ? `${realUptime}%` : "—"}
+              subtitle={socUptime ? t("stats.totalUptime", { value: realUptime! }) : t("stats.loading")}
               icon={Activity}
             />
           </div>
