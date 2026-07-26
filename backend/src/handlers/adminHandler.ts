@@ -2805,14 +2805,14 @@ export async function adminRoutes(app: any, prefix = '') {
       if (guideShown !== undefined) user.guideShown = !!guideShown;
       if (limits !== undefined) {
         if (limits && typeof limits === 'object') {
-          const outLimits: any = { ...limits };
+          const existingLimits = (user.limits as Record<string, any>) || {};
           if (limits.memory !== undefined) {
             const pm = parseSizeToMB(limits.memory);
             if (pm === null || pm < 0) {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsMemory') };
             }
-            outLimits.memory = pm;
+            existingLimits.memory = pm;
           }
           if (limits.disk !== undefined) {
             const pd = parseSizeToMB(limits.disk);
@@ -2820,7 +2820,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsDisk') };
             }
-            outLimits.disk = pd;
+            existingLimits.disk = pd;
           }
           if (limits.cpu !== undefined) {
             const pc = parseCpuInput(limits.cpu);
@@ -2828,7 +2828,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsCpu') };
             }
-            outLimits.cpu = pc;
+            existingLimits.cpu = pc;
           }
           if (limits.serverLimit !== undefined) {
             const sl = Number(limits.serverLimit);
@@ -2836,7 +2836,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsServers') };
             }
-            outLimits.serverLimit = Math.round(sl);
+            existingLimits.serverLimit = Math.round(sl);
           }
           if (limits.portsPerServer !== undefined) {
             const pp = Number(limits.portsPerServer);
@@ -2844,7 +2844,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsPorts') };
             }
-            outLimits.portsPerServer = Math.round(pp);
+            existingLimits.portsPerServer = Math.round(pp);
           }
           if (limits.tunnelPortCount !== undefined) {
             const tp = Number(limits.tunnelPortCount);
@@ -2852,7 +2852,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsTunnelPorts') };
             }
-            outLimits.tunnelPortCount = Math.round(tp);
+            existingLimits.tunnelPortCount = Math.round(tp);
           }
           if (limits.databases !== undefined) {
             const d = Number(limits.databases);
@@ -2860,7 +2860,7 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsDatabases') };
             }
-            outLimits.databases = Math.round(d);
+            existingLimits.databases = Math.round(d);
           }
           if (limits.backups !== undefined) {
             const b = Number(limits.backups);
@@ -2868,15 +2868,16 @@ export async function adminRoutes(app: any, prefix = '') {
               ctx.set.status = 400;
               return { error: ctx.t('server.invalidLimitsBackups') };
             }
-            outLimits.backups = Math.round(b);
+            existingLimits.backups = Math.round(b);
           }
-          user.limits = outLimits;
+          user.limits = existingLimits;
         } else {
-          user.limits = limits;
+          // null or false clears all limits
+          user.limits = null as any;
         }
       }
 
-      if (user.portalType === 'enterprise' && user.nodeId) {
+      if (limits === undefined && user.portalType === 'enterprise' && user.nodeId) {
         const node = await nodeRepo.findOneBy({ id: user.nodeId });
         if (node) {
           const enterpriseLimits: Record<string, number> = {};
@@ -2884,7 +2885,7 @@ export async function adminRoutes(app: any, prefix = '') {
           if (node.disk != null) enterpriseLimits.disk = Number(node.disk);
           if (node.cpu != null) enterpriseLimits.cpu = Number(node.cpu);
           if (node.serverLimit != null) enterpriseLimits.serverLimit = Number(node.serverLimit);
-          user.limits = Object.keys(enterpriseLimits).length ? enterpriseLimits : null;
+          if (Object.keys(enterpriseLimits).length) user.limits = enterpriseLimits;
         }
       }
 
@@ -3091,9 +3092,11 @@ export async function adminRoutes(app: any, prefix = '') {
 
       target.studentVerified = false;
       target.studentVerifiedAt = null as any;
+      target.studentVerifiedUntil = null as any;
       target.educationLimits = null as any;
       if (removePortal && target.portalType === 'educational') {
         target.portalType = 'free';
+        target.limits = null as any;
       }
 
       await userRepo.save(target);
@@ -3152,6 +3155,34 @@ export async function adminRoutes(app: any, prefix = '') {
       if (!target.educationLimits) target.educationLimits = {};
       target.educationLimits = { ...target.educationLimits, assignedBy: ctx.user?.id, assignedAt: new Date().toISOString() };
 
+      try {
+        const planRepo2 = AppDataSource.getRepository(Plan);
+        const eduPlan = body.planId
+          ? await planRepo2.findOneBy({ id: Number(body.planId) })
+          : await planRepo2.findOneBy({ type: 'educational', isDefault: true }) ||
+            await planRepo2.findOneBy({ type: 'educational' });
+        if (eduPlan) {
+          const planLimits: Record<string, any> = {};
+          if (eduPlan.memory != null) planLimits.memory = Number(eduPlan.memory);
+          if (eduPlan.disk != null) planLimits.disk = Number(eduPlan.disk);
+          if (eduPlan.cpu != null) planLimits.cpu = Number(eduPlan.cpu);
+          if (eduPlan.serverLimit != null) planLimits.serverLimit = Number(eduPlan.serverLimit);
+          if (eduPlan.databases != null) planLimits.databases = Number(eduPlan.databases);
+          if (eduPlan.backups != null) planLimits.backups = Number(eduPlan.backups);
+          if (eduPlan.emailSendDailyLimit != null) planLimits.emailSendDailyLimit = Number(eduPlan.emailSendDailyLimit);
+          if (eduPlan.emailSendQueueLimit != null) planLimits.emailSendQueueLimit = Number(eduPlan.emailSendQueueLimit);
+          if (eduPlan.portCount != null) {
+            planLimits.portCount = Number(eduPlan.portCount);
+            planLimits.portsPerServer = Number(eduPlan.portCount);
+          }
+          if (eduPlan.tunnelPortCount != null) planLimits.tunnelPortCount = Number(eduPlan.tunnelPortCount);
+          target.educationLimits = { ...target.educationLimits, ...planLimits };
+          target.limits = { ...(target.limits || {}), ...planLimits };
+        }
+      } catch (e) {
+        console.error('[assign-student] Failed to apply educational plan limits:', e);
+      }
+
       await userRepo.save(target);
       await logRepo.save(
         logRepo.create({
@@ -3170,7 +3201,7 @@ export async function adminRoutes(app: any, prefix = '') {
       beforeHandle: [authenticate, authorize('admin:access')],
       schema: {
         params: t.Object({ id: t.String() }),
-        body: t.Object({ durationMonths: t.Optional(t.Number()), portalType: t.Optional(t.String()) }),
+        body: t.Object({ durationMonths: t.Optional(t.Number()), portalType: t.Optional(t.String()), planId: t.Optional(t.Number()) }),
         response: {
           200: t.Object({ success: t.Boolean(), user: t.Any() }),
           400: t.Object({ error: t.String() }),
@@ -3201,8 +3232,15 @@ export async function adminRoutes(app: any, prefix = '') {
 
       target.studentVerified = false;
       target.studentVerifiedAt = null as any;
+      target.studentVerifiedUntil = null as any;
       const clearLimits = !!(ctx.body && ctx.body.clearLimits);
-      if (clearLimits) target.educationLimits = null as any;
+      if (clearLimits) {
+        target.educationLimits = null as any;
+        if (target.portalType === 'educational') {
+          target.portalType = 'free';
+          target.limits = null as any;
+        }
+      }
 
       await userRepo.save(target);
       await logRepo.save(
@@ -8839,15 +8877,20 @@ export async function adminRoutes(app: any, prefix = '') {
                 if (plan.serverLimit != null) limits.serverLimit = plan.serverLimit;
               }
 
-      const existingLimits = (user.limits as Record<string, unknown>) || {};
-              if (Object.keys(limits).length) {
-                for (const key of Object.keys(limits)) {
-                  if (Number(existingLimits[key] ?? 0) < Number(limits[key])) {
-                    existingLimits[key] = limits[key];
-                  }
-                }
-                user.limits = existingLimits;
+              const existingLimits = (user.limits as Record<string, unknown>) || {};
+              for (const key of Object.keys(limits)) {
+                existingLimits[key] = limits[key];
               }
+              if (plan.databases != null) existingLimits.databases = plan.databases;
+              if (plan.backups != null) existingLimits.backups = plan.backups;
+              if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
+              if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
+              if (plan.portCount != null) {
+                existingLimits.portCount = plan.portCount;
+                existingLimits.portsPerServer = plan.portCount;
+              }
+              if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
+              user.limits = existingLimits;
 
               user.portalType = plan.type;
               await userRepo.save(user);
@@ -9307,24 +9350,21 @@ export async function adminRoutes(app: any, prefix = '') {
         return { error: ctx.t('plan.notFound') };
       }
 
-      const limits: Record<string, number> = {};
-      if (plan.type === 'enterprise' && user.nodeId) {
-        const node = await nodeRepo.findOneBy({ id: user.nodeId });
-        if (node) {
-          if (node.memory != null) limits.memory = Number(node.memory);
-          if (node.disk != null) limits.disk = Number(node.disk);
-          if (node.cpu != null) limits.cpu = Number(node.cpu);
-          if (node.serverLimit != null) limits.serverLimit = Number(node.serverLimit);
-        }
-      }
-      if (Object.keys(limits).length === 0) {
-        if (plan.memory != null) limits.memory = plan.memory;
-        if (plan.disk != null) limits.disk = plan.disk;
-        if (plan.cpu != null) limits.cpu = plan.cpu;
-        if (plan.serverLimit != null) limits.serverLimit = plan.serverLimit;
-      }
-
       const existingLimits = (user as any).limits || {};
+
+      if (plan.memory != null) existingLimits.memory = plan.memory;
+      if (plan.disk != null) existingLimits.disk = plan.disk;
+      if (plan.cpu != null) existingLimits.cpu = plan.cpu;
+      if (plan.serverLimit != null) existingLimits.serverLimit = plan.serverLimit;
+      if (plan.databases != null) existingLimits.databases = plan.databases;
+      if (plan.backups != null) existingLimits.backups = plan.backups;
+      if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
+      if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
+      if (plan.portCount != null) {
+        existingLimits.portCount = plan.portCount;
+        existingLimits.portsPerServer = plan.portCount;
+      }
+      if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
 
       const planBoostActive = plan.boostPercent > 0 && plan.boostStartsAt && plan.boostExpiresAt;
       if (planBoostActive) {
@@ -9345,13 +9385,10 @@ export async function adminRoutes(app: any, prefix = '') {
         delete existingLimits.boostReason;
       }
 
-      if (Object.keys(limits).length) {
-        for (const key of Object.keys(limits)) {
-          if ((existingLimits[key] ?? 0) < limits[key]) {
-            existingLimits[key] = limits[key];
-          }
-        }
-        user.limits = existingLimits;
+      user.limits = existingLimits;
+      user.portalType = plan.type;
+      if (plan.type === 'educational') {
+        user.educationLimits = { ...(user.educationLimits || {}), ...existingLimits };
       }
       await userRepo.save(user);
 
@@ -9506,23 +9543,24 @@ export async function adminRoutes(app: any, prefix = '') {
 
         const nodeRepo = AppDataSource.getRepository(Node);
         const limits: Record<string, number> = {};
-        if (chosen.type === 'enterprise' && user.nodeId) {
-          const node = await nodeRepo.findOneBy({ id: user.nodeId });
-          if (node) {
-            if (node.memory != null) limits.memory = Number(node.memory);
-            if (node.disk != null) limits.disk = Number(node.disk);
-            if (node.cpu != null) limits.cpu = Number(node.cpu);
-            if (node.serverLimit != null) limits.serverLimit = Number(node.serverLimit);
-          }
+        if (chosen.memory != null) limits.memory = chosen.memory;
+        if (chosen.disk != null) limits.disk = chosen.disk;
+        if (chosen.cpu != null) limits.cpu = chosen.cpu;
+        if (chosen.serverLimit != null) limits.serverLimit = chosen.serverLimit;
+        if (chosen.databases != null) limits.databases = chosen.databases;
+        if (chosen.backups != null) limits.backups = chosen.backups;
+        if (chosen.emailSendDailyLimit != null) limits.emailSendDailyLimit = chosen.emailSendDailyLimit;
+        if (chosen.emailSendQueueLimit != null) limits.emailSendQueueLimit = chosen.emailSendQueueLimit;
+        if (chosen.portCount != null) {
+          limits.portCount = chosen.portCount;
+          limits.portsPerServer = chosen.portCount;
         }
-        if (Object.keys(limits).length === 0) {
-          if (chosen.memory != null) limits.memory = chosen.memory;
-          if (chosen.disk != null) limits.disk = chosen.disk;
-          if (chosen.cpu != null) limits.cpu = chosen.cpu;
-          if (chosen.serverLimit != null) limits.serverLimit = chosen.serverLimit;
-        }
+        if (chosen.tunnelPortCount != null) limits.tunnelPortCount = chosen.tunnelPortCount;
 
         user.limits = Object.keys(limits).length ? limits : null;
+        if (chosen.type === 'educational') {
+          user.educationLimits = { ...(user.educationLimits || {}), ...limits };
+        }
         user.portalType = chosen.type;
         await userRepo.save(user);
 

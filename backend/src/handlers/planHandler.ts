@@ -5,6 +5,7 @@ import { User } from '../models/user.entity';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
 import { requireFeature } from '../middleware/featureToggle';
+import { createNotification } from '../utils/notificationHelper';
 import type { PlanBoostBody } from '../types/server';
 
 interface PlanCreateBody {
@@ -243,7 +244,7 @@ export async function planRoutes(app: any, prefix = '') {
         ctx.query?.force === 'true' || ctx.query?.force === true || ctx.body?.force === true;
 
       const userRepo = AppDataSource.getRepository(User);
-      const users = await userRepo.find({ where: { portalType: plan.type } });
+      const totalCount = await userRepo.count({ where: { portalType: plan.type } });
 
       const planLimits: Record<string, any> = {};
       if (plan.memory != null) planLimits.memory = Number(plan.memory);
@@ -283,40 +284,80 @@ export async function planRoutes(app: any, prefix = '') {
           const userValue = userLimits[key];
           if (userValue != null && String(userValue) !== String(planLimits[key])) return true;
         }
-
         return false;
       };
+      
+      const adminUserId = (ctx.user as User).id;
 
-      let updated = 0;
-      const toSave: User[] = [];
-      for (const u of users) {
-        const existingPlanScopedLimits =
-          plan.type === 'educational' ? u.educationLimits || u.limits : u.limits;
-        if (!force && isCustomLimits(existingPlanScopedLimits, planLimits)) continue;
+      void (async () => {
+        const batchSize = 200;
+        let offset = 0;
+        let updated = 0;
+        let skipped = 0;
 
-        if (Object.keys(planLimits).length > 0) {
-          if (plan.type === 'educational') {
-            u.educationLimits = { ...(u.educationLimits || {}), ...planLimits };
-            u.limits = { ...(u.limits || {}), ...planLimits };
-          } else {
-            u.limits = { ...planLimits };
+        while (true) {
+          const batch = await userRepo.find({
+            where: { portalType: plan.type },
+            skip: offset,
+            take: batchSize,
+          });
+          if (batch.length === 0) break;
+
+          const toSave: User[] = [];
+          for (const u of batch) {
+            const existingPlanScopedLimits =
+              plan.type === 'educational' ? u.educationLimits || u.limits : u.limits;
+            if (!force && isCustomLimits(existingPlanScopedLimits, planLimits)) {
+              skipped++;
+              continue;
+            }
+
+            if (Object.keys(planLimits).length > 0) {
+              if (plan.type === 'educational') {
+                u.educationLimits = { ...(u.educationLimits || {}), ...planLimits };
+                u.limits = { ...(u.limits || {}), ...planLimits };
+              } else {
+                u.limits = { ...planLimits };
+              }
+            } else {
+              if (plan.type === 'educational') {
+                u.educationLimits = null;
+                u.limits = null;
+              } else {
+                u.limits = null;
+              }
+            }
+
+            toSave.push(u);
+            updated++;
           }
-        } else {
-          if (plan.type === 'educational') {
-            u.educationLimits = null;
-            u.limits = null;
-          } else {
-            u.limits = null;
-          }
+
+          if (toSave.length > 0) await userRepo.save(toSave);
+          offset += batchSize;
         }
 
-        toSave.push(u);
-        updated++;
-      }
+        console.log(
+          `[planReapply] Plan ${plan.id} (${plan.name}): updated ${updated}, skipped ${skipped} (custom limits), total ${totalCount}`
+        );
 
-      if (toSave.length > 0) await userRepo.save(toSave);
+        try {
+          await createNotification({
+            userId: adminUserId,
+            type: 'plan_reapply',
+            title: `Plan limits reapplied: ${plan.name}`,
+            body: `Plan "${plan.name}" (${plan.type}) limits were reapplied to ${updated} user(s). ${skipped} user(s) skipped (custom limits). Total matched: ${totalCount}.`,
+            url: `/dashboard/admin/plans?id=${plan.id}`,
+          });
+        } catch (e) {
+          console.error('[planReapply] Failed to create notification:', e);
+        }
+      })().catch(err => console.error('[planReapply] Error:', err));
 
-      return { success: true, updated };
+      return {
+        success: true,
+        updated: totalCount,
+        message: `Reapplying plan limits to ~${totalCount} users in background`,
+      };
     },
     {
       beforeHandle: [authenticate, authorize('admin:plans:reapply')],

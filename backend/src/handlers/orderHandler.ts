@@ -517,25 +517,21 @@ export async function orderRoutes(app: any, prefix = '') {
                   ctx.set.status = 403;
                   return { error: 'You already have an active student verification. No need to renew.' };
                 }
-                const limits: Record<string, number> = {};
-                if (plan.memory != null) limits.memory = plan.memory;
-                if (plan.disk != null) limits.disk = plan.disk;
-                if (plan.cpu != null) limits.cpu = plan.cpu;
-                if (plan.serverLimit != null) limits.serverLimit = plan.serverLimit;
-                if (plan.databases != null) limits.databases = plan.databases;
-                if (plan.backups != null) limits.backups = plan.backups;
-                if (plan.portCount != null) limits.portCount = plan.portCount;
-                if (plan.tunnelPortCount != null) limits.tunnelPortCount = plan.tunnelPortCount;
-
                 const existingLimits = (userEntity as any).limits || {};
-                if (Object.keys(limits).length) {
-                  for (const key of Object.keys(limits)) {
-                    if ((existingLimits[key] ?? 0) < limits[key]) {
-                      existingLimits[key] = limits[key];
-                    }
-                  }
-                  userEntity.limits = existingLimits;
+                if (plan.memory != null) existingLimits.memory = plan.memory;
+                if (plan.disk != null) existingLimits.disk = plan.disk;
+                if (plan.cpu != null) existingLimits.cpu = plan.cpu;
+                if (plan.serverLimit != null) existingLimits.serverLimit = plan.serverLimit;
+                if (plan.databases != null) existingLimits.databases = plan.databases;
+                if (plan.backups != null) existingLimits.backups = plan.backups;
+                if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
+                if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
+                if (plan.portCount != null) {
+                  existingLimits.portCount = plan.portCount;
+                  existingLimits.portsPerServer = plan.portCount;
                 }
+                if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
+                userEntity.limits = existingLimits;
                 userEntity.portalType = plan.type;
                 await userRepo2.save(userEntity);
               }

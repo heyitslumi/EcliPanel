@@ -68,34 +68,35 @@ async function processRenewals() {
         await orderRepo.save(order);
 
         try {
-          const limits: Record<string, number> = {};
-          if (plan.type === 'enterprise' && (user as any).nodeId) {
-            const node = await nodeRepo.findOneBy({ id: (user as any).nodeId });
-            if (node) {
-              if (node.memory != null) limits.memory = Number(node.memory);
-              if (node.disk != null) limits.disk = Number(node.disk);
-              if (node.cpu != null) limits.cpu = Number(node.cpu);
-              if (node.serverLimit != null) limits.serverLimit = Number(node.serverLimit);
+          if (plan.type === 'educational' && !user.studentVerified) {
+            user.portalType = 'free';
+            user.educationLimits = null as any;
+            user.limits = null as any;
+            await userRepo.save(user);
+          } else {
+            const existingLimits = (user as any).limits || {};
+            if (plan.memory != null) existingLimits.memory = plan.memory;
+            if (plan.disk != null) existingLimits.disk = plan.disk;
+            if (plan.cpu != null) existingLimits.cpu = plan.cpu;
+            if (plan.serverLimit != null) existingLimits.serverLimit = plan.serverLimit;
+            if (plan.databases != null) existingLimits.databases = plan.databases;
+            if (plan.backups != null) existingLimits.backups = plan.backups;
+            if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
+            if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
+            if (plan.portCount != null) {
+              existingLimits.portCount = plan.portCount;
+              existingLimits.portsPerServer = plan.portCount;
             }
-          }
-          if (Object.keys(limits).length === 0) {
-            if (plan.memory != null) limits.memory = plan.memory;
-            if (plan.disk != null) limits.disk = plan.disk;
-            if (plan.cpu != null) limits.cpu = plan.cpu;
-            if (plan.serverLimit != null) limits.serverLimit = plan.serverLimit;
-          }
-
-          const existingLimits = (user as any).limits || {};
-          if (Object.keys(limits).length) {
-            for (const key of Object.keys(limits)) {
-              if ((existingLimits[key] ?? 0) < limits[key]) {
-                existingLimits[key] = limits[key];
-              }
-            }
+            if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
             user.limits = existingLimits;
+
+            if (plan.type === 'educational') {
+              user.educationLimits = { ...(user.educationLimits || {}), ...existingLimits };
+            }
+
+            user.portalType = plan.type;
+            await userRepo.save(user);
           }
-          user.portalType = plan.type;
-          await userRepo.save(user);
         } catch {}
 
         try {

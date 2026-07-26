@@ -25,7 +25,12 @@ export async function runStudentReverifyJob() {
       try {
         u.studentVerified = false;
         u.studentVerifiedAt = null as any;
+        u.studentVerifiedUntil = null as any;
         u.educationLimits = null as any;
+        if (u.portalType === 'educational') {
+          u.portalType = 'free';
+          u.limits = null as any;
+        }
         await userRepo.save(u);
         await logRepo.save(
           logRepo.create({

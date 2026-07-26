@@ -434,23 +434,24 @@ export async function userRoutes(app: any, prefix = '') {
           const chosen = plans.find(p => p.isDefault) || plans[0];
 
           const limits: Record<string, number> = {};
-          if (chosen.type === 'enterprise' && user.nodeId) {
-            const node = await nodeRepo.findOneBy({ id: user.nodeId });
-            if (node) {
-              if (node.memory != null) limits.memory = Number(node.memory);
-              if (node.disk != null) limits.disk = Number(node.disk);
-              if (node.cpu != null) limits.cpu = Number(node.cpu);
-              if (node.serverLimit != null) limits.serverLimit = Number(node.serverLimit);
-            }
+          if (chosen.memory != null) limits.memory = chosen.memory;
+          if (chosen.disk != null) limits.disk = chosen.disk;
+          if (chosen.cpu != null) limits.cpu = chosen.cpu;
+          if (chosen.serverLimit != null) limits.serverLimit = chosen.serverLimit;
+          if (chosen.databases != null) limits.databases = chosen.databases;
+          if (chosen.backups != null) limits.backups = chosen.backups;
+          if (chosen.emailSendDailyLimit != null) limits.emailSendDailyLimit = chosen.emailSendDailyLimit;
+          if (chosen.emailSendQueueLimit != null) limits.emailSendQueueLimit = chosen.emailSendQueueLimit;
+          if (chosen.portCount != null) {
+            limits.portCount = chosen.portCount;
+            limits.portsPerServer = chosen.portCount;
           }
-          if (Object.keys(limits).length === 0) {
-            if (chosen.memory != null) limits.memory = chosen.memory;
-            if (chosen.disk != null) limits.disk = chosen.disk;
-            if (chosen.cpu != null) limits.cpu = chosen.cpu;
-            if (chosen.serverLimit != null) limits.serverLimit = chosen.serverLimit;
-          }
+          if (chosen.tunnelPortCount != null) limits.tunnelPortCount = chosen.tunnelPortCount;
 
           user.limits = Object.keys(limits).length ? limits : null;
+          if (chosen.type === 'educational') {
+            user.educationLimits = { ...(user.educationLimits || {}), ...limits };
+          }
           user.portalType = chosen.type;
           await userRepo.save(user);
 
