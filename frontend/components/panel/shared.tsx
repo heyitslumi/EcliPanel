@@ -1,7 +1,7 @@
 "use client"
 
-import { memo } from "react"
-import { type LucideIcon } from "lucide-react"
+import { memo, type ReactNode } from "react"
+import { type LucideIcon, Loader2, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "next-intl"
 
@@ -122,6 +122,143 @@ export function UsageBar({ label, value, max = 100, color = "primary" }: { label
           style={{ width: `${percentage}%` }}
         />
       </div>
+    </div>
+  )
+}
+
+export function PageLayout({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-6 p-3 sm:p-5 md:p-6 max-w-[100vw] w-full min-w-0 box-border", className)}>
+      {children}
+    </div>
+  )
+}
+
+export function CardStack({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("flex flex-col gap-3", className)}>{children}</div>
+}
+
+export function StatGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", className)}>
+      {children}
+    </div>
+  )
+}
+
+export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3", className)}>
+      {children}
+    </div>
+  )
+}
+
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  return (
+    <div className={cn("relative flex-1 min-w-0", className)}>
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-border bg-card pl-10 pr-9 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+      />
+      {value && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground p-0.5 active:scale-90 transition-all"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function AlertBanner({
+  variant = "warning",
+  icon: Icon,
+  title,
+  children,
+  action,
+  className,
+}: {
+  variant?: "warning" | "destructive" | "info" | "success"
+  icon?: LucideIcon
+  title?: string
+  children?: ReactNode
+  action?: ReactNode
+  className?: string
+}) {
+  const styles: Record<string, string> = {
+    warning: "border-amber-500/30 bg-amber-500/5 text-foreground",
+    destructive: "border-destructive/30 bg-destructive/5 text-foreground",
+    info: "border-info/30 bg-info/5 text-foreground",
+    success: "border-success/30 bg-success/5 text-foreground",
+  }
+  return (
+    <div className={cn("border p-4 text-sm", styles[variant], className)}>
+      <div className="flex items-start gap-2">
+        {Icon && <Icon className={cn("mt-0.5 h-4 w-4 flex-shrink-0", {
+          "text-amber-400": variant === "warning",
+          "text-destructive": variant === "destructive",
+          "text-info": variant === "info",
+          "text-success": variant === "success",
+        })} />}
+        <div className="min-w-0 flex-1">
+          {title && <p className="font-semibold">{title}</p>}
+          {children && <div className={cn(title && "mt-1", "text-xs text-muted-foreground")}>{children}</div>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+    </div>
+  )
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon?: LucideIcon
+  title: string
+  description?: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+      {Icon && (
+        <div className="h-16 w-16 bg-secondary/30 flex items-center justify-center mb-5">
+          <Icon className="h-7 w-7 text-muted-foreground/40" />
+        </div>
+      )}
+      <h3 className="text-base font-semibold text-foreground mb-1.5">{title}</h3>
+      {description && <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">{description}</p>}
+      {action && <div className="mt-6">{action}</div>}
+    </div>
+  )
+}
+
+export function LoadingState({ label }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div className="h-12 w-12 bg-primary/10 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+      {label && <p className="text-sm text-muted-foreground">{label}</p>}
     </div>
   )
 }

@@ -50,10 +50,10 @@ function getInitialMessages(t: any): Message[] {
 
 function getSuggestions(t: any) {
   return [
-    { icon: Zap, text: t("suggestions.optimize"), color: "text-yellow-600" },
-    { icon: MessageSquare, text: t("suggestions.debug"), color: "text-blue-600" },
-    { icon: Bot, text: t("suggestions.configure"), color: "text-green-600" },
-    { icon: Sparkles, text: t("suggestions.bestPractices"), color: "text-purple-600" },
+    { icon: Zap, text: t("suggestions.optimize"), color: "text-warning" },
+    { icon: MessageSquare, text: t("suggestions.debug"), color: "text-info" },
+    { icon: Bot, text: t("suggestions.configure"), color: "text-success" },
+    { icon: Sparkles, text: t("suggestions.bestPractices"), color: "text-primary" },
   ]
 }
 
@@ -337,14 +337,14 @@ Keep responses concise and actionable. Use code blocks for commands, configs, an
                           {modelOptions?.map((opt) => {
                             const sourceColors: Record<string, string> = {
                               BYO: "bg-primary/15 text-primary",
-                              OpenAI: "bg-green-500/15 text-green-600",
-                              Anthropic: "bg-amber-500/15 text-amber-600",
-                              Google: "bg-blue-500/15 text-blue-600",
-                              DeepSeek: "bg-cyan-500/15 text-cyan-600",
+                              OpenAI: "bg-green-500/15 text-success",
+                              Anthropic: "bg-warning/15 text-warning",
+                              Google: "bg-blue-500/15 text-info",
+                              DeepSeek: "bg-info/15 text-info",
                               Meta: "bg-sky-500/15 text-sky-600",
-                              Groq: "bg-orange-500/15 text-orange-600",
+                              Groq: "bg-warning/15 text-warning",
                               Mistral: "bg-indigo-500/15 text-indigo-600",
-                              "OpenCode Go": "bg-purple-500/15 text-purple-600",
+                              "OpenCode Go": "bg-purple-500/15 text-primary",
                             }
                             const sourceColor = sourceColors[opt.source] || "bg-muted text-muted-foreground"
                             return (
@@ -467,7 +467,7 @@ Keep responses concise and actionable. Use code blocks for commands, configs, an
                             title={t("messageActions.copy")}
                            data-telemetry="ai-chat:copy">
                             {copiedId === msg.id ? (
-                              <Check className="h-3 w-3 text-green-600" />
+                              <Check className="h-3 w-3 text-success" />
                             ) : (
                               <Copy className="h-3 w-3" />
                             )}

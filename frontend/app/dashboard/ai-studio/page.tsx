@@ -1,5 +1,6 @@
 "use client"
 
+import { PageLayout } from "@/components/panel/shared"
 import { PanelHeader } from "@/components/panel/header"
 import { SectionHeader } from "@/components/panel/shared"
 import { FeatureGuard } from "@/components/panel/feature-guard"
@@ -258,7 +259,7 @@ export default function AIStudioPage() {
       <>
         <PanelHeader title={t("header.title")} description={t("header.description")} />
         <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-          <div className="flex flex-col gap-6 p-6">
+          <PageLayout>
             {activeTool && (
               <div className="border border-primary/30 bg-card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 bg-primary/5">
@@ -400,10 +401,10 @@ export default function AIStudioPage() {
                     const source = getModelSource((entry as any)._byoai ? { _byoai: true } : model)
                     const sourceColors: Record<string, string> = {
                       BYO: "bg-primary/15 text-primary border-primary/30",
-                      OpenAI: "bg-green-500/15 text-green-400 border-green-500/30",
-                      Anthropic: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-                      Google: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-                      DeepSeek: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+                      OpenAI: "bg-success/15 text-success border-success/30",
+                      Anthropic: "bg-warning/15 text-warning border-warning/30",
+                      Google: "bg-info/15 text-info border-info/30",
+                      DeepSeek: "bg-info/15 text-info border-info/30",
                     }
                     const sourceColor = sourceColors[source] || "bg-muted text-muted-foreground border-border"
                     return (
@@ -437,7 +438,7 @@ export default function AIStudioPage() {
                           <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${sourceColor}`}>
                             {source}
                           </Badge>
-                          <span className="bg-green-500/10 border border-green-500/30 px-3 py-1.5 text-xs text-green-400">
+                          <span className="bg-success/10 border border-success/30 px-3 py-1.5 text-xs text-success">
                             {t("modelStatus.accessGranted")}
                           </span>
                         </div>
@@ -458,10 +459,10 @@ export default function AIStudioPage() {
                     const source = getModelSource(model)
                     const sourceColors: Record<string, string> = {
                       BYO: "bg-primary/15 text-primary border-primary/30",
-                      OpenAI: "bg-green-500/15 text-green-400 border-green-500/30",
-                      Anthropic: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-                      Google: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-                      DeepSeek: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+                      OpenAI: "bg-success/15 text-success border-success/30",
+                      Anthropic: "bg-warning/15 text-warning border-warning/30",
+                      Google: "bg-info/15 text-info border-info/30",
+                      DeepSeek: "bg-info/15 text-info border-info/30",
                     }
                     const sourceColor = sourceColors[source] || "bg-muted text-muted-foreground border-border"
                     return (
@@ -495,7 +496,7 @@ export default function AIStudioPage() {
                             {source}
                           </Badge>
                           {linked ? (
-                            <span className="text-xs text-green-400">{t("modelStatus.assigned")}</span>
+                            <span className="text-xs text-success">{t("modelStatus.assigned")}</span>
                           ) : (
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Lock className="h-3 w-3" /> {t("modelStatus.notAssigned")}
@@ -508,7 +509,7 @@ export default function AIStudioPage() {
                 </div>
               </div>
             )}
-          </div>
+          </PageLayout>
         </ScrollArea>
       </>
     </FeatureGuard>

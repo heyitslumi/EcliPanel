@@ -155,7 +155,7 @@ function renderPostLine(line: string, key: number) {
   }
 
   if (trimmed.startsWith(">") && !trimmed.startsWith(">>")) {
-    return <span key={key} className="block text-green-500/80">{line}</span>
+    return <span key={key} className="block text-success/80">{line}</span>
   }
 
   return (
@@ -204,7 +204,7 @@ function PostHeader({ post, isOp }: { post: Post; isOp?: boolean }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] mb-1 font-mono leading-tight">
-      <span className={`font-bold text-[12px] ${isAnon ? "text-green-500/70" : "text-foreground/70"}`}>
+      <span className={`font-bold text-[12px] ${isAnon ? "text-success/70" : "text-foreground/70"}`}>
         {name}
         {post.authorIsStaff && (
           <span className="ml-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-primary/15 text-primary/80 border border-primary/20 leading-none">
@@ -926,7 +926,7 @@ function BoardSidebarItem({ channel, active, manageable, onClick, onEdit, onDele
         <span className={`text-[11px] font-mono truncate ${active ? "text-primary font-semibold" : "text-muted-foreground/60 hover:text-foreground/60"}`}>
           /{channel.slug}/
         </span>
-        {channel.isMature && <span className="text-[8px] font-mono text-amber-500/70 shrink-0">18+</span>}
+        {channel.isMature && <span className="text-[8px] font-mono text-warning/70 shrink-0">18+</span>}
       </button>
       <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
         {onJoin && (
@@ -1026,7 +1026,7 @@ function BoardIndexRow({ channel, onSelect, onJoin, onCreateVoiceRoom, creatingV
         <span className="font-mono font-semibold text-primary/60 text-[12px] shrink-0 w-auto md:w-28 truncate max-w-[120px] md:max-w-none">
           /{channel.slug}/
         </span>
-        {channel.isMature && <span className="text-[10px] font-mono text-amber-500/60 shrink-0">[18+]</span>}
+        {channel.isMature && <span className="text-[10px] font-mono text-warning/60 shrink-0">[18+]</span>}
         <span className="text-foreground/60 text-[12px] font-medium group-hover:text-foreground/80 transition-colors">
           {channel.name}
         </span>
@@ -1042,7 +1042,7 @@ function BoardIndexRow({ channel, onSelect, onJoin, onCreateVoiceRoom, creatingV
         <button
           onClick={e => { e.stopPropagation(); onCreateVoiceRoom(channel.id) }}
           disabled={creatingVoiceRoom}
-          className="text-green-500/50 hover:text-green-400 disabled:opacity-30 transition-colors font-mono"
+          className="text-success/50 hover:text-success disabled:opacity-30 transition-colors font-mono"
           title="Join voice"
         >
           <Phone className="h-3 w-3 inline" /> Voice
@@ -1143,7 +1143,7 @@ function PostForm({
                 {imageUploading ? "Uploading…" : "Choose File"}
               </button>
               {image && (
-                <span className="ml-2 text-[10px] text-green-500/60 font-mono">
+                <span className="ml-2 text-[10px] text-success/60 font-mono">
                   Image ready
                   <button onClick={() => setImage(null)} className="ml-1 text-destructive/50 hover:text-destructive hover:underline">[x]</button>
                 </span>
@@ -1185,7 +1185,7 @@ function PostForm({
       <div className="mt-2 md:ml-[96px] flex flex-wrap gap-2 text-[10px] text-muted-foreground/25 font-mono">
         <span><strong className="text-muted-foreground/40">**bold**</strong></span>
         <span><em className="text-muted-foreground/40">*italic*</em></span>
-        <span className="text-green-500/40">&gt;greentext</span>
+        <span className="text-success/40">&gt;greentext</span>
         <span className="text-primary/40">&gt;&gt;No.</span>
         <span className="text-primary/40">&gt;&gt;&gt;/board/</span>
         <span><code className="bg-muted/40 px-0.5 rounded text-muted-foreground/40">`code`</code></span>
@@ -1215,13 +1215,13 @@ function BoardPanel({
       <div className="flex-1 overflow-y-auto bg-background scrollbar-thin scrollbar-thumb-border/30 scrollbar-track-transparent">
         <div className="max-w-lg mx-auto px-3 py-20 text-center">
           <div className="border border-amber-500/30 bg-amber-500/5 p-6 space-y-4">
-            <TriangleAlert className="h-6 w-6 text-amber-400/80 mx-auto" />
-            <h2 className="text-base font-semibold text-amber-400/80">Mature Content</h2>
+            <TriangleAlert className="h-6 w-6 text-warning/80 mx-auto" />
+            <h2 className="text-base font-semibold text-warning/80">Mature Content</h2>
             <p className="text-[12px] text-muted-foreground/60 font-mono leading-relaxed">
               This board may contain mature or NSFW content. Are you sure you want to proceed?
             </p>
             <button onClick={() => setShowMature(true)}
-              className="border border-amber-500/40 text-amber-400/80 hover:bg-amber-500/10 px-4 py-2 text-[11px] font-mono font-semibold rounded transition-colors">
+              className="border border-amber-500/40 text-warning/80 hover:bg-warning/10 px-4 py-2 text-[11px] font-mono font-semibold rounded transition-colors">
               I understand, show me
             </button>
           </div>
@@ -1238,7 +1238,7 @@ function BoardPanel({
           <h2 className="text-lg font-semibold text-foreground/60 tracking-tight">
             /{channel.slug}/ — {channel.name}
           </h2>
-          {channel.isMature && <span className="inline-block text-[9px] font-mono text-amber-500/60 mt-1">[ Mature Content ]</span>}
+          {channel.isMature && <span className="inline-block text-[9px] font-mono text-warning/60 mt-1">[ Mature Content ]</span>}
           {channel.description && (
             <p className="text-[11px] text-muted-foreground/30 font-mono mt-0.5">{channel.description}</p>
           )}
@@ -1331,7 +1331,7 @@ function ThreadCard({ thread, onOpen, canModerate, onToggleHide, onDelete, onLoo
               <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-2">
                 {onToggleHide && (
                   <button onClick={e => { e.stopPropagation(); onToggleHide() }}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-amber-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                     {thread.isHidden ? "[unhide]" : "[hide]"}
                   </button>
                 )}
@@ -1343,13 +1343,13 @@ function ThreadCard({ thread, onOpen, canModerate, onToggleHide, onDelete, onLoo
                 )}
                 {onLookupPost && (
                   <button onClick={e => { e.stopPropagation(); onLookupPost() }}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-cyan-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-info/70 transition-colors">
                     [ip]
                   </button>
                 )}
                 {onMassDelete && (
                   <button onClick={e => { e.stopPropagation(); onMassDelete() }}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-orange-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                     [mass]
                   </button>
                 )}
@@ -1400,13 +1400,13 @@ function ThreadViewPanel({
       <div className="flex-1 overflow-y-auto bg-background scrollbar-thin scrollbar-thumb-border/30 scrollbar-track-transparent">
         <div className="max-w-lg mx-auto px-3 py-20 text-center">
           <div className="border border-amber-500/30 bg-amber-500/5 p-6 space-y-4">
-            <TriangleAlert className="h-6 w-6 text-amber-400/80 mx-auto" />
-            <h2 className="text-base font-semibold text-amber-400/80">Mature Content</h2>
+            <TriangleAlert className="h-6 w-6 text-warning/80 mx-auto" />
+            <h2 className="text-base font-semibold text-warning/80">Mature Content</h2>
             <p className="text-[12px] text-muted-foreground/60 font-mono leading-relaxed">
               This board may contain mature or NSFW content. Are you sure you want to proceed?
             </p>
             <button onClick={() => setShowMature(true)}
-              className="border border-amber-500/40 text-amber-400/80 hover:bg-amber-500/10 px-4 py-2 text-[11px] font-mono font-semibold rounded transition-colors">
+              className="border border-amber-500/40 text-warning/80 hover:bg-warning/10 px-4 py-2 text-[11px] font-mono font-semibold rounded transition-colors">
               I understand, show me
             </button>
           </div>
@@ -1423,7 +1423,7 @@ function ThreadViewPanel({
           <h2 className="text-lg font-semibold text-foreground/60 tracking-tight">
             /{channel.slug}/ — {channel.name}
           </h2>
-          {channel.isMature && <span className="inline-block text-[9px] font-mono text-amber-500/60 mt-1">[ Mature Content ]</span>}
+          {channel.isMature && <span className="inline-block text-[9px] font-mono text-warning/60 mt-1">[ Mature Content ]</span>}
           <hr className="mt-2 border-t border-border/40" />
         </div>
 
@@ -1486,7 +1486,7 @@ function ThreadViewPanel({
               <div className="mt-1.5 flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 {onToggleHideMessage && (
                   <button onClick={() => onToggleHideMessage(thread.op.id, !!thread.op.isHidden)}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-amber-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                     {thread.op.isHidden ? "[unhide]" : "[hide]"}
                   </button>
                 )}
@@ -1498,13 +1498,13 @@ function ThreadViewPanel({
                 )}
                 {onLookupPost && thread.op.posterId && (
                   <button onClick={() => onLookupPost(thread.op.posterId!)}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-cyan-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-info/70 transition-colors">
                     [ip]
                   </button>
                 )}
                 {onMassDelete && thread.op.posterId && (
                   <button onClick={() => onMassDelete(thread.op.posterId!)}
-                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-orange-400/70 transition-colors">
+                    className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                     [mass]
                   </button>
                 )}
@@ -1523,7 +1523,7 @@ function ThreadViewPanel({
                   <div className="mt-1.5 flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     {onToggleHideMessage && (
                       <button onClick={() => onToggleHideMessage(reply.id, !!reply.isHidden)}
-                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-amber-400/70 transition-colors">
+                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                         {reply.isHidden ? "[unhide]" : "[hide]"}
                       </button>
                     )}
@@ -1535,13 +1535,13 @@ function ThreadViewPanel({
                     )}
                     {onLookupPost && reply.posterId && (
                       <button onClick={() => onLookupPost(reply.posterId!)}
-                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-cyan-400/70 transition-colors">
+                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-info/70 transition-colors">
                         [ip]
                       </button>
                     )}
                     {onMassDelete && reply.posterId && (
                       <button onClick={() => onMassDelete(reply.posterId!)}
-                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-orange-400/70 transition-colors">
+                        className="text-[10px] font-mono text-muted-foreground/40 hover:text-warning/70 transition-colors">
                         [mass]
                       </button>
                     )}

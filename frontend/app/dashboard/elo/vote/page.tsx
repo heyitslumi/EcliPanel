@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -228,7 +229,7 @@ export default function EloVotePage() {
         description={t("description")}
       />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6 max-w-[100vw] w-full min-w-0 box-border">
+        <PageLayout>
           <Link
             href="/dashboard/elo"
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -282,7 +283,7 @@ export default function EloVotePage() {
                               {project.title}
                             </Link>
                             {project.isWellMade && (
-                              <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-4 w-4 text-orange-500" /></span>
+                              <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-4 w-4 text-warning" /></span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -417,9 +418,9 @@ export default function EloVotePage() {
                         </div>
                         {project.eloScore >= 1150 && (
                           <div className="flex gap-1.5 mt-2 flex-wrap justify-center">
-                            <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400">{t("badges.highRanked")}</Badge>
+                            <Badge variant="outline" className="text-[10px] border-amber-500/30 text-warning">{t("badges.highRanked")}</Badge>
                             {project.totalVotes >= 10 && (
-                              <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-400">{t("badges.veteran")}</Badge>
+                              <Badge variant="outline" className="text-[10px] border-blue-500/30 text-info">{t("badges.veteran")}</Badge>
                             )}
                           </div>
                         )}
@@ -486,7 +487,7 @@ export default function EloVotePage() {
             <section className="border border-emerald-500/30 bg-emerald-500/10 p-6 sm:p-8 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-14 w-14 bg-emerald-500/10 flex items-center justify-center">
-                  <Check className="h-7 w-7 text-emerald-500" />
+                  <Check className="h-7 w-7 text-success" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">{t("vote.voteSubmittedTitle")}</h3>
@@ -506,7 +507,7 @@ export default function EloVotePage() {
               </div>
             </section>
           ) : null}
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       <Dialog open={reportTarget !== null} onOpenChange={(open) => { if (!open) { setReportTarget(null); setReportReason("") } }}>

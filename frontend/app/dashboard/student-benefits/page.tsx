@@ -1,5 +1,6 @@
 "use client"
 
+import { PageLayout } from "@/components/panel/shared"
 import { PanelHeader } from "@/components/panel/header"
 import { SectionHeader } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -123,7 +124,7 @@ export default function StudentBenefitsPage() {
     <>
       <PanelHeader title={t("title")} description={t("description")} />
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
 
           {/* Status banner */}
           <div className={`flex items-center gap-4 border p-5 ${
@@ -355,7 +356,7 @@ export default function StudentBenefitsPage() {
             </div>
           )}
 
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   )

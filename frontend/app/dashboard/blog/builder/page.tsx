@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { Button } from "@/components/ui/button"
@@ -302,7 +303,7 @@ export default function BlogBuilderPage() {
         description={t("builderDescription", { defaultValue: "Design your blog landing page layout" })}
       />
       <ScrollArea className="flex-1 [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
-        <div className="p-3 sm:p-4 md:p-6 space-y-4 max-w-5xl mx-auto w-full overflow-hidden">
+        <PageLayout className="max-w-5xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link href="/dashboard/blog">
               <Button variant="ghost" size="sm" className="gap-1 -ml-2">
@@ -401,7 +402,7 @@ export default function BlogBuilderPage() {
                         </div>
                         <div className="flex items-center gap-1 shrink-0 flex-wrap">
                           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openConfig(section)}>{t("builderConfigure", { defaultValue: "Configure" })}</Button>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleRemove(section.id)}>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleRemove(section.id)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -412,7 +413,7 @@ export default function BlogBuilderPage() {
               </div>
             </div>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>

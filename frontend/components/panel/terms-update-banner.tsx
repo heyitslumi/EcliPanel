@@ -33,7 +33,7 @@ export function TermsUpdateBanner() {
       if (user) (user as any).termsConsentVersion = CURRENT_TERMS_VERSION
       setVisible(false)
     } catch {
-      meow
+      // ignore
     } finally {
       setSaving(false)
     }

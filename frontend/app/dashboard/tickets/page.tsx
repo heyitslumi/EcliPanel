@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { PanelHeader } from "@/components/panel/header"
-import { StatusBadge, StatCard } from "@/components/panel/shared"
+import { StatusBadge, StatCard, PageLayout, StatGrid, SearchInput } from "@/components/panel/shared"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -137,9 +137,9 @@ export default function TicketsPage() {
         </div>
       )}
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
           {/* Stats */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatGrid>
             <StatCard title={t("stats.openTickets")} value={openCount} icon={AlertCircle} />
             <StatCard title={t("stats.pendingReply")} value={pendingCount} icon={Clock} />
             <StatCard title={t("stats.totalTickets")} value={ticketTotal} icon={MessageSquare} />
@@ -149,21 +149,12 @@ export default function TicketsPage() {
               icon={CheckCircle}
               subtitle={globalAvgResponseSampleCount > 0 ? t("stats.samples", { count: globalAvgResponseSampleCount }) : t("stats.noSamples30d")}
             />
-          </div>
+          </StatGrid>
 
           {/* Toolbar */}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 border border-border bg-card px-3 py-2">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder={t("filters.searchPlaceholder")}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-48"
-                />
-              </div>
+              <SearchInput value={search} onChange={setSearch} placeholder={t("filters.searchPlaceholder")} className="!w-48" />
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-border bg-card px-3 py-2 text-sm">
                 <option value="">{t("filters.status.all")}</option>
                 <option value="opened">{t("filters.status.open")}</option>
@@ -273,7 +264,7 @@ export default function TicketsPage() {
               </button>
             </div>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   </FeatureGuard>

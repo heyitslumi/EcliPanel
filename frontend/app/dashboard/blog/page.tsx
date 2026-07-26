@@ -6,6 +6,7 @@ import Link from "next/link"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout, EmptyState, LoadingState } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { Button } from "@/components/ui/button"
@@ -128,7 +129,7 @@ export default function BlogDashboardPage() {
         description={t("description", { defaultValue: "Write, publish, and share your story" })}
       />
       <ScrollArea className="flex-1 overflow-x-hidden">
-        <div className="flex flex-col gap-5 p-3 sm:p-6 max-w-5xl mx-auto w-full pb-10 overflow-hidden">
+        <PageLayout className="max-w-5xl mx-auto">
           {/* Blog selector */}
           {blogList.length > 1 && (
             <div className="flex items-center gap-2">
@@ -179,21 +180,21 @@ export default function BlogDashboardPage() {
                         <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                       )}
                       {slugStatus === "available" && (
-                        <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                        <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-success" />
                       )}
                       {slugStatus === "taken" && (
-                        <X className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                        <X className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
                       )}
                     </div>
                   </div>
                   {slugStatus === "available" && (
-                    <p className="text-[10px] text-green-600">{t("slugAvailable", { defaultValue: "This URL is available!" })}</p>
+                    <p className="text-[10px] text-success">{t("slugAvailable", { defaultValue: "This URL is available!" })}</p>
                   )}
                   {slugStatus === "taken" && (
-                    <p className="text-[10px] text-red-500">{t("slugTaken", { defaultValue: "This URL is already taken. Try another." })}</p>
+                    <p className="text-[10px] text-destructive">{t("slugTaken", { defaultValue: "This URL is already taken. Try another." })}</p>
                   )}
                   {slugStatus === "invalid" && (
-                    <p className="text-[10px] text-red-500">{t("slugInvalid", { defaultValue: "Invalid slug. Use letters, numbers, and hyphens (min 2 chars)." })}</p>
+                    <p className="text-[10px] text-destructive">{t("slugInvalid", { defaultValue: "Invalid slug. Use letters, numbers, and hyphens (min 2 chars)." })}</p>
                   )}
                 </div>
                 <Button
@@ -346,7 +347,7 @@ export default function BlogDashboardPage() {
               </CardContent>
             </Card>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
     </FeatureGuard>
   )

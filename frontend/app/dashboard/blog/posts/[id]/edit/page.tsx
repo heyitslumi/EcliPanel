@@ -240,7 +240,7 @@ export default function EditBlogPostPage({
                 {t("back", { defaultValue: "Back to blog" })}
               </Button>
             </Link>
-            <Button variant="outline" size="sm" className="gap-1 text-red-600" onClick={handleDelete}>
+            <Button variant="outline" size="sm" className="gap-1 text-destructive" onClick={handleDelete}>
               <Trash2 className="h-3.5 w-3.5" />
               {t("delete", { defaultValue: "Delete" })}
             </Button>

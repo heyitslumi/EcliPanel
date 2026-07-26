@@ -339,7 +339,7 @@ function GuideOverlay({ open, onOpenChange, defs, onBuild }: {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Compass className="h-4 w-4 text-purple-400" />
+              <Compass className="h-4 w-4 text-primary" />
               Interactive Guide
             </DialogTitle>
           </DialogHeader>
@@ -427,7 +427,7 @@ function GuideOverlay({ open, onOpenChange, defs, onBuild }: {
         {/* Step indicator */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[9px] font-bold">
+            <div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold">
               {step + 1}
             </div>
             <span className="text-[10px] text-muted-foreground/70">Step {step + 1} of {tmpl.steps.length}</span>
@@ -444,7 +444,7 @@ function GuideOverlay({ open, onOpenChange, defs, onBuild }: {
         </div>
         {completed ? (
           <div className="py-1 text-center space-y-2">
-            <CheckCircle className="h-8 w-8 mx-auto text-green-400" />
+            <CheckCircle className="h-8 w-8 mx-auto text-success" />
             <h4 className="text-sm font-semibold">Guide Complete!</h4>
             <p className="text-[11px] text-muted-foreground">You finished the "{tmpl.name}" walkthrough.</p>
             <div className="flex flex-wrap gap-1.5 justify-center pt-1">
@@ -459,7 +459,7 @@ function GuideOverlay({ open, onOpenChange, defs, onBuild }: {
         <p className="text-[11px] text-muted-foreground mb-2">{s.description}</p>
         {/* Action callout */}
         <div className="flex items-start gap-1.5 p-2 bg-purple-500/5 border border-purple-500/15 mb-3">
-          <ArrowRight className="h-3 w-3 text-purple-400 shrink-0 mt-0.5" />
+          <ArrowRight className="h-3 w-3 text-primary shrink-0 mt-0.5" />
           <p className="text-[10px] text-purple-300/90 leading-relaxed">{s.action}</p>
         </div>
         {/* Block badges */}
@@ -581,8 +581,8 @@ class VEErrorBoundary extends React.Component<{ children: React.ReactNode }, { h
     if (this.state.hasError) return (
       <div className="p-6">
         <Card className="p-8 text-center">
-          <AlertCircle className="h-6 w-6 text-red-400 mx-auto mb-2" />
-          <p className="text-sm text-red-400 mb-1">Visual Editor crashed</p>
+          <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+          <p className="text-sm text-destructive mb-1">Visual Editor crashed</p>
           <p className="text-xs text-muted-foreground mb-3">{this.state.error}</p>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => this.setState({ hasError: false, error: null })}>Try again</Button>
         </Card>
@@ -965,14 +965,14 @@ export default function VisualEditorPage() {
         onDrop={onDropZone}
         className={`border border-dashed transition-all duration-150
           ${over
-            ? 'h-8 border-purple-400/50 bg-purple-500/20 my-2 ring-1 ring-purple-500/20'
+            ? 'h-8 border-purple-400/50 bg-primary/20 my-2 ring-1 ring-purple-500/20'
             : isDragging
-              ? 'h-5 border-purple-500/15 bg-purple-500/5 my-1.5 hover:border-purple-400/30 hover:bg-purple-500/10'
+              ? 'h-5 border-purple-500/15 bg-purple-500/5 my-1.5 hover:border-primary/30 hover:bg-primary/10'
               : 'h-2 border-transparent my-1 hover:border-purple-500/20 hover:bg-purple-500/5'}`}
       >
         {over && (
           <div className="flex items-center justify-center h-full">
-            <span className="text-[9px] text-purple-400/60 font-medium">drop here</span>
+            <span className="text-[9px] text-primary/60 font-medium">drop here</span>
           </div>
         )}
       </div>
@@ -1253,7 +1253,7 @@ export default function VisualEditorPage() {
           className={`flex items-center gap-1.5 p-1.5 border cursor-pointer transition-all text-xs
             ${isGroup ? "border-dashed border-border/40 bg-muted/10" : ""}
             ${d?.canHaveChildren && !isGroup ? "bg-gradient-to-r from-transparent to-transparent hover:to-purple-500/[0.03]" : ""}
-            ${hasBlockError ? "border-red-500/60 bg-red-500/10 ring-1 ring-red-500/20" : hasBlockWarning ? "border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/20" : isSel ? "border-purple-500/50 bg-purple-500/10 ring-1 ring-purple-500/20" : "border-border/30 bg-card/40 hover:border-border/60"}
+            ${hasBlockError ? "border-red-500/60 bg-red-500/10 ring-1 ring-red-500/20" : hasBlockWarning ? "border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/20" : isSel ? "border-purple-500/50 bg-primary/10 ring-1 ring-purple-500/20" : "border-border/30 bg-card/40 hover:border-border/60"}
             ${dropZoneHover?.startsWith(b.id + ":") ? "ring-2 ring-purple-400/40 bg-purple-500/5" : ""}
             ${hasCanvasSearch && matchesSearch ? "ring-1 ring-purple-400/30" : ""}`}
           style={{ borderLeftColor: isGroup ? '#6b7280' : c, borderLeftWidth: 2.5 }}>
@@ -1267,7 +1267,7 @@ export default function VisualEditorPage() {
           )}
           {d?.canHaveChildren && (
             <button onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, blocks: treeUpdate(f.blocks, b.id, node => ({ ...node, collapsed: !node.collapsed })) } : f)) }}
-              className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-purple-400 transition-all">
+              className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-primary transition-all">
               <ChevronRight className={`h-3 w-3 transition-transform ${b.collapsed ? "" : "rotate-90"}`} />
             </button>
           )}
@@ -1285,19 +1285,19 @@ export default function VisualEditorPage() {
             <span className="text-[9px] text-muted-foreground/50 bg-muted/40 px-1 rounded">{safeArr(b.children).length} blocks</span>
           )}
           <button onClick={(e) => { e.stopPropagation(); copyBlock(b) }}
-            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-purple-400 transition-opacity">
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-primary transition-opacity">
             <Copy className="h-3 w-3" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); handleMoveBlock(b.id, -1) }}
-            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-purple-400 transition-opacity">
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-primary transition-opacity">
             <ChevronUp className="h-3 w-3" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); handleMoveBlock(b.id, 1) }}
-            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-purple-400 transition-opacity">
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-primary transition-opacity">
             <ChevronDown className="h-3 w-3" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); removeBlock(b.id) }}
-            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-red-400 transition-opacity">
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 lg:p-0.5 hover:text-destructive transition-opacity">
             <X className="h-3 w-3" />
           </button>
         </div>
@@ -1324,12 +1324,12 @@ export default function VisualEditorPage() {
                 onDragLeave={() => onDragLeaveZone(zoneKey(b.id, safeArr(b.children).length))}
                 onDrop={onDropZone}
                 className={`flex-1 flex items-center justify-center gap-1.5 p-2 border-2 border-dashed text-[10px] transition-colors cursor-default
-                  ${dropZoneHover === zoneKey(b.id, safeArr(b.children).length) ? "border-purple-400/40 bg-purple-500/10 text-purple-400/60" : "border-border/10 text-muted-foreground/20 hover:border-purple-500/30 hover:text-purple-400/40"}`}>
+                  ${dropZoneHover === zoneKey(b.id, safeArr(b.children).length) ? "border-primary/40 bg-primary/10 text-primary/60" : "border-border/10 text-muted-foreground/20 hover:border-primary/30 hover:text-primary/40"}`}>
                 <AddIcon className="h-2.5 w-2.5" /> {safeArr(b.children).length > 0 ? 'drop here' : 'drop blocks here'}
               </div>
               <div className="relative" ref={quickAddParent === b.id ? quickAddRef : undefined}>
                 <button onClick={(e) => { e.stopPropagation(); setQuickAddParent(quickAddParent === b.id ? null : b.id) }}
-                  className="p-1.5 lg:p-1 border border-dashed border-border/20 text-muted-foreground/30 hover:text-purple-400/60 hover:border-purple-400/30 transition-colors text-[10px]">
+                  className="p-1.5 lg:p-1 border border-dashed border-border/20 text-muted-foreground/30 hover:text-primary/60 hover:border-primary/30 transition-colors text-[10px]">
                   <Plus className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
                 </button>
                 {quickAddParent === b.id && (
@@ -1376,7 +1376,7 @@ export default function VisualEditorPage() {
   if (initError) return (
     <div className="p-6">
       <Card className="p-8 text-center">
-        <p className="text-red-400 text-sm mb-2">Failed to initialize Visual Editor</p>
+        <p className="text-destructive text-sm mb-2">Failed to initialize Visual Editor</p>
         <p className="text-xs text-muted-foreground">{initError}</p>
       </Card>
     </div>
@@ -1453,11 +1453,11 @@ export default function VisualEditorPage() {
           <Card className={`p-3 mb-3 border ${validation.hasErrors ? "border-red-500/30 bg-red-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <AlertCircle className={`h-4 w-4 ${validation.hasErrors ? "text-red-400" : "text-amber-400"}`} />
+                <AlertCircle className={`h-4 w-4 ${validation.hasErrors ? "text-destructive" : "text-warning"}`} />
                 <h3 className="text-xs font-semibold">Validation</h3>
                 <span className="text-[10px] text-muted-foreground">{validation.issues.length} issue(s)</span>
               </div>
-              <span className={`text-[10px] font-medium ${validation.hasErrors ? "text-red-400" : "text-amber-400"}`}>
+              <span className={`text-[10px] font-medium ${validation.hasErrors ? "text-destructive" : "text-warning"}`}>
                 {validation.hasErrors ? "Blocking" : "Warnings"}
               </span>
             </div>
@@ -1526,15 +1526,15 @@ export default function VisualEditorPage() {
                 {blueprints.map((bp: Blueprint) => (
                   <div key={bp.id} className="flex items-center justify-between p-1.5 border border-border/30 hover:bg-accent/30 text-xs">
                     <button onClick={() => loadBp(bp.id)} className="flex items-center gap-1.5 font-medium">
-                      <FileCode className="h-3.5 w-3.5 text-purple-400" />{bp.name}
+                      <FileCode className="h-3.5 w-3.5 text-primary" />{bp.name}
                       <span className="text-muted-foreground font-normal">{(bp.updatedAt || "").slice(0, 10)}</span>
                     </button>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => exportBlueprintZip(bp.id)} title="Export as ZIP">
-                        <Download className="h-3 w-3 text-blue-400" />
+                        <Download className="h-3 w-3 text-info" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => delBp(bp.id)}>
-                        <Trash2 className="h-3 w-3 text-red-400" />
+                        <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
                     </div>
                   </div>
@@ -1568,12 +1568,12 @@ export default function VisualEditorPage() {
                 {savedBlocks.map(s => (
                   <div key={s.id} className="flex items-center justify-between p-1.5 border border-border/30 hover:bg-accent/30 text-xs">
                     <button onClick={() => insertFromLib(s.blocks)} className="flex items-center gap-1.5 font-medium">
-                      <Library className="h-3.5 w-3.5 text-purple-400" />{s.name}
+                      <Library className="h-3.5 w-3.5 text-primary" />{s.name}
                       <span className="text-muted-foreground font-normal">({s.blocks.length} blocks)</span>
                     </button>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeFromLib(s.id)}>
-                        <Trash2 className="h-3 w-3 text-red-400" />
+                        <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
                     </div>
                   </div>
@@ -1601,14 +1601,14 @@ export default function VisualEditorPage() {
                     if (e.key === 'Escape') setRenamingFileId(null)
                   }}
                   autoFocus
-                  className="w-32 h-5 px-1.5 text-xs border border-purple-500/30 bg-background focus:outline-none"
+                  className="w-32 h-5 px-1.5 text-xs border border-primary/30 bg-background focus:outline-none"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <span onDoubleClick={(e) => { e.stopPropagation(); setRenamingFileId(f.id); setRenameFileVal(f.name) }}>{f.name}</span>
               )}
               {files.length > 1 && (
-                <button onClick={(e) => { e.stopPropagation(); delFile(f.id) }} className="ml-0.5 hover:text-red-400"><X className="h-2.5 w-2.5" /></button>
+                <button onClick={(e) => { e.stopPropagation(); delFile(f.id) }} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
               )}
             </div>
           ))}
@@ -1620,7 +1620,7 @@ export default function VisualEditorPage() {
         {/* Mobile bottom tab bar */}
         <div className="flex lg:hidden items-center justify-around border-t border-border/20 bg-card/95 backdrop-blur-md fixed bottom-0 left-0 right-0 z-40 pb-1" style={{ paddingBottom: 'env(safe-area-inset-bottom, 4px)' }}>
           <button onClick={() => setMobileView(mobileView === 'palette' ? null : 'palette')}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 text-[10px] transition-colors ${mobileView === 'palette' ? 'text-purple-400' : 'text-muted-foreground/60'}`}>
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 text-[10px] transition-colors ${mobileView === 'palette' ? 'text-primary' : 'text-muted-foreground/60'}`}>
             <Sparkles className="h-4 w-4" />
             <span>Blocks</span>
           </button>
@@ -1630,7 +1630,7 @@ export default function VisualEditorPage() {
             <span>Canvas</span>
           </button>
           <button onClick={() => setMobileView(mobileView === 'config' ? null : 'config')}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 text-[10px] transition-colors ${mobileView === 'config' ? 'text-blue-400' : 'text-muted-foreground/60'}`}>
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 text-[10px] transition-colors ${mobileView === 'config' ? 'text-info' : 'text-muted-foreground/60'}`}>
             <Settings className="h-4 w-4" />
             <span>Config</span>
           </button>
@@ -1658,7 +1658,7 @@ export default function VisualEditorPage() {
                 {safeArr(categories).map(cat => (
                   <button key={cat.id} onClick={() => setActiveCat(cat.id)}
                     className={`px-2 py-0.5 text-[10px] rounded-full whitespace-nowrap font-medium transition-colors
-                      ${activeCat === cat.id ? "bg-purple-500/20 text-purple-400" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30"}`}>
+                      ${activeCat === cat.id ? "bg-primary/20 text-primary" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30"}`}>
                     {cat.name}
                   </button>
                 ))}
@@ -1736,9 +1736,9 @@ export default function VisualEditorPage() {
                       return (
                         <div key={f.name} className="space-y-1">
                           <Label className="text-[10px] font-medium flex items-center gap-0.5">
-                            {f.label}{f.required && <span className="text-red-400">*</span>}
+                            {f.label}{f.required && <span className="text-destructive">*</span>}
                             {fieldIssues.length > 0 && (
-                              <span className={`ml-auto text-[9px] ${hasFieldError ? "text-red-400" : "text-amber-400"}`}>
+                              <span className={`ml-auto text-[9px] ${hasFieldError ? "text-destructive" : "text-warning"}`}>
                                 {hasFieldError ? "error" : "warning"}
                               </span>
                             )}
@@ -1809,7 +1809,7 @@ export default function VisualEditorPage() {
               {safeArr(categories).map(cat => (
                 <button key={cat.id} onClick={() => setActiveCat(cat.id)}
                   className={`px-2 py-0.5 text-[10px] rounded-full whitespace-nowrap font-medium transition-colors
-                    ${activeCat === cat.id ? "bg-purple-500/20 text-purple-400" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30"}`}>
+                    ${activeCat === cat.id ? "bg-primary/20 text-primary" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30"}`}>
                   {cat.name}
                 </button>
               ))}
@@ -1858,7 +1858,7 @@ export default function VisualEditorPage() {
                   <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 pointer-events-none" />
                   <input type="text" placeholder="Find blocks on canvas..."
                     value={canvasSearch} onChange={e => setCanvasSearch(e.target.value)}
-                    className="w-full h-6 pl-6 pr-2 text-[10px] border border-border/20 bg-background/50 focus:outline-none focus:border-purple-500/30 placeholder:text-muted-foreground/30" />
+                    className="w-full h-6 pl-6 pr-2 text-[10px] border border-border/20 bg-background/50 focus:outline-none focus:border-primary/30 placeholder:text-muted-foreground/30" />
                 </div>
               </div>
             )}
@@ -1898,7 +1898,7 @@ export default function VisualEditorPage() {
                 onDragLeave={() => onDragLeaveZone(zoneKey(null, safeArr(activeBlocks).length))}
                 onDrop={onDropZone}
                 className={`mt-1 flex items-center justify-center gap-1 p-2 border-2 border-dashed text-[10px] transition-colors cursor-default
-                  ${dropZoneHover === zoneKey(null, safeArr(activeBlocks).length) ? "border-purple-400/40 bg-purple-500/10 text-purple-400/60" : "border-border/10 text-muted-foreground/20 hover:border-purple-500/30 hover:text-purple-400/40"}`}>
+                  ${dropZoneHover === zoneKey(null, safeArr(activeBlocks).length) ? "border-primary/40 bg-primary/10 text-primary/60" : "border-border/10 text-muted-foreground/20 hover:border-primary/30 hover:text-primary/40"}`}>
                 <AddIcon className="h-3 w-3" /> drop here
               </div>
             </div>
@@ -1947,9 +1947,9 @@ export default function VisualEditorPage() {
                     return (
                       <div key={f.name} className="space-y-1">
                         <Label className="text-[10px] font-medium flex items-center gap-0.5">
-                          {f.label}{f.required && <span className="text-red-400">*</span>}
+                          {f.label}{f.required && <span className="text-destructive">*</span>}
                           {fieldIssues.length > 0 && (
-                            <span className={`ml-auto text-[9px] ${hasFieldError ? "text-red-400" : "text-amber-400"}`}>
+                            <span className={`ml-auto text-[9px] ${hasFieldError ? "text-destructive" : "text-warning"}`}>
                               {hasFieldError ? "error" : "warning"}
                             </span>
                           )}
@@ -2121,14 +2121,14 @@ function FieldInput({ field, block, onUpdate, fieldIssues }: {
       return (
         <div>
           <Input value={String(val)} onChange={e => onUpdate(block.id, field.name, e.target.value)} placeholder={field.placeholder} className={inputCls} />
-          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-red-400/70" : "text-amber-400/70"}`}>{issueMsg}</p>}
+          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-destructive/70" : "text-warning/70"}`}>{issueMsg}</p>}
         </div>
       )
     case "number":
       return (
         <div>
           <Input type="number" value={String(val)} onChange={e => onUpdate(block.id, field.name, Number(e.target.value))} className={inputCls} />
-          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-red-400/70" : "text-amber-400/70"}`}>{issueMsg}</p>}
+          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-destructive/70" : "text-warning/70"}`}>{issueMsg}</p>}
         </div>
       )
     case "boolean":
@@ -2165,7 +2165,7 @@ function FieldInput({ field, block, onUpdate, fieldIssues }: {
               />
             </Suspense>
           </div>
-          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-red-400/70" : "text-amber-400/70"}`}>{issueMsg}</p>}
+          {issueMsg && <p className={`text-[9px] mt-0.5 ${hasError ? "text-destructive/70" : "text-warning/70"}`}>{issueMsg}</p>}
         </div>
       )
     default:
@@ -2187,7 +2187,7 @@ function HandlerParamsFields({
   if (!handlerBlock) {
     return (
       <div className="p-2 border border-amber-500/20 bg-amber-500/5">
-        <p className="text-[10px] text-amber-400/70">Define a "<span className="font-mono">{handlerName}</span>" handler block in the canvas to configure arguments.</p>
+        <p className="text-[10px] text-warning/70">Define a "<span className="font-mono">{handlerName}</span>" handler block in the canvas to configure arguments.</p>
       </div>
     )
   }
@@ -2280,7 +2280,7 @@ function ConditionsBuilder({ block, onUpdate }: { block: Block; onUpdate: (id: s
         <div key={i} className="space-y-1.5 p-2 rounded bg-muted/15 border border-border/10">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-muted-foreground/50">Condition #{i + 1}</span>
-            <Button size="sm" variant="ghost" className="h-5 w-5 text-muted-foreground/50 hover:text-red-400" onClick={() => removeCondition(i)}>
+            <Button size="sm" variant="ghost" className="h-5 w-5 text-muted-foreground/50 hover:text-destructive" onClick={() => removeCondition(i)}>
               <X className="h-3 w-3" />
             </Button>
           </div>

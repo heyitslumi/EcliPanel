@@ -1,7 +1,7 @@
 "use client"
 
 import { PanelHeader } from "@/components/panel/header"
-import { StatCard, SectionHeader } from "@/components/panel/shared"
+import { StatCard, SectionHeader, PageLayout, StatGrid } from "@/components/panel/shared"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -336,9 +336,9 @@ export default function BillingPage() {
         <PanelHeader title={t("header.title")} description={t("header.description")} />
       </div>
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6 max-w-[100vw] w-full min-w-0 box-border">
+        <PageLayout>
           {/* Stats */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 max-w-[100vw] w-full box-border">
+          <StatGrid>
             <StatCard
               title={t("stats.currentPlan")}
               value={activePlanTitle}
@@ -363,7 +363,7 @@ export default function BillingPage() {
               icon={Calendar}
               subtitle={primaryPlan ? undefined : t("stats.managedViaSales")}
             />
-          </div>
+          </StatGrid>
 
           {/* Tax Information */}
           <div className="border border-border bg-card p-5 min-w-0 box-border overflow-hidden">
@@ -418,7 +418,7 @@ export default function BillingPage() {
                             : plan.name}
                         </h3>
                         {order.status === "active" && (
-                          <Badge className="bg-emerald-500/20 text-emerald-600 border-0 text-xs">{t("activeSubscription.activeBadge")}</Badge>
+                          <Badge className="bg-success/20 text-success border-0 text-xs">{t("activeSubscription.activeBadge")}</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -734,7 +734,7 @@ export default function BillingPage() {
               </table>
             </div>
           </div>
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       {confirmSwitch && (

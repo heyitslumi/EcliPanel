@@ -38,13 +38,13 @@ function EloBadge({ score }: { score: number }) {
   let color = "text-zinc-500"
   let bg = "bg-zinc-500/10 border-zinc-500/30"
   if (score >= 1400) {
-    color = "text-amber-400"
+    color = "text-warning"
     bg = "bg-amber-500/10 border-amber-500/30"
   } else if (score >= 1200) {
-    color = "text-emerald-400"
+    color = "text-success"
     bg = "bg-emerald-500/10 border-emerald-500/30"
   } else if (score >= 1000) {
-    color = "text-blue-400"
+    color = "text-info"
     bg = "bg-blue-500/10 border-blue-500/30"
   }
   return (
@@ -139,7 +139,7 @@ export default function EloProjectProfile() {
                     <div className="flex items-center gap-1.5">
                       <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
                       {project.isWellMade && (
-                        <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-5 w-5 text-orange-500" /></span>
+                        <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-5 w-5 text-warning" /></span>
                       )}
                     </div>
                     <EloBadge score={project.eloScore} />
@@ -204,7 +204,7 @@ export default function EloProjectProfile() {
                 <div className={`p-4 border text-sm flex items-start gap-3 ${
                   project.moderationStatus === "disqualified"
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
-                    : "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                    : "border-warning/30 bg-warning/10 text-warning"
                 }`}>
                   <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                   <div>
@@ -369,7 +369,7 @@ export default function EloProjectProfile() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className={`text-xs font-mono tabular-nums ${v.won ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                          <span className={`text-xs font-mono tabular-nums ${v.won ? 'text-success' : 'text-muted-foreground'}`}>
                             {v.eloDelta > 0 ? '+' : ''}{Math.round(v.eloDelta)}
                           </span>
                           <span className="text-[10px] text-muted-foreground/50">

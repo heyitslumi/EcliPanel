@@ -1,7 +1,7 @@
 "use client"
 
 import { PanelHeader } from "@/components/panel/header"
-import { SectionHeader } from "@/components/panel/shared"
+import { SectionHeader, PageLayout, AlertBanner } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -154,7 +154,7 @@ export default function IdentityPage() {
         </DialogContent>
       </Dialog>
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
           {/* Status Banner */}
           {(() => {
             const s = computeSteps(status, passkeyCount, !!user?.twoFactorEnabled, !!user?.emailVerified, !!user?.studentVerified, portalType, euIdDisabled, t);
@@ -440,7 +440,7 @@ export default function IdentityPage() {
               </div>
             </div>
           </div>
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   )

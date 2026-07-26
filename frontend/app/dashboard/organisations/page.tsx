@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PanelHeader } from "@/components/panel/header";
+import { PageLayout, LoadingState, EmptyState } from "@/components/panel/shared";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/panel-config";
@@ -28,7 +29,7 @@ export default function OrganisationsPage() {
     <>
       <PanelHeader title={t("header.title")} description={t("header.description")} />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
           <div className="flex justify-end">
             {(user?.role === 'admin' || user?.role === 'rootAdmin' || user?.tier === 'enterprise') && (
               <button
@@ -82,7 +83,7 @@ export default function OrganisationsPage() {
               })}
             </div>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   );

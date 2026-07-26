@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { PanelHeader } from "@/components/panel/header";
+import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/panel-config";
@@ -38,7 +39,7 @@ export default function CreateOrganisationPage() {
     <>
       <PanelHeader title={t("header.title")} description={t("header.description")} />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex h-full items-center justify-center p-6">
+        <PageLayout className="flex h-full items-center justify-center">
           <div className="w-full max-w-md border border-border bg-card p-6">
             {error && <div className="mb-4 text-sm text-destructive">{error}</div>}
             <form onSubmit={submit} className="flex flex-col gap-4">
@@ -74,7 +75,7 @@ export default function CreateOrganisationPage() {
               </button>
             </form>
           </div>
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   );

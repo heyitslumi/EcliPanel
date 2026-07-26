@@ -1,6 +1,7 @@
 "use client"
 
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { FeedbackSettingsCard } from "@/components/panel/feedback-settings-card"
 import { SlackBotSettings } from "@/components/panel/slack-bot-settings"
 import { useEffect, useState, useRef, useCallback } from "react"
@@ -878,7 +879,7 @@ function TwoFactorManager() {
                       title={t("twoFactor.copyToClipboard")}
                      data-telemetry="settings:copytoclipboard">
                       {copied ? (
-                        <Check className="h-4 w-4 text-green-500" />
+                        <Check className="h-4 w-4 text-success" />
                       ) : (
                         <Copy className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -921,7 +922,7 @@ function TwoFactorManager() {
         <div className="border border-border bg-secondary/20 p-4 md:p-5 min-w-0 overflow-hidden">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Two-factor is enabled</p>
@@ -1034,7 +1035,7 @@ function SessionList() {
                   {t("sessions.session")} {sessionId.slice(0, 10)}...
                 </p>
                 {user?.sessionId === sessionId && (
-                  <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-0 text-[10px] px-2 shrink-0">
+                  <Badge className="bg-success/20 text-success border-0 text-[10px] px-2 shrink-0">
                     {t("sessions.current")}
                   </Badge>
                 )}
@@ -1632,7 +1633,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8 w-full min-w-0">
+        <PageLayout className="max-w-5xl mx-auto">
           {/* Tab Navigation */}
           <div
             className="flex items-center gap-1.5 border border-border bg-card/80 p-1.5 overflow-x-auto scrollbar-none min-w-0 sticky top-0 z-20 backdrop-blur-xl shadow-sm"
@@ -2862,7 +2863,7 @@ export default function SettingsPage() {
                     </div>
                     {isByoaiConfigured(byoaiConfig) && (
                       <div className="mt-3 p-3 bg-green-500/5 border border-green-500/20 text-xs text-muted-foreground">
-                        <p className="font-medium text-green-400">{t("ai.status.active")}</p>
+                        <p className="font-medium text-success">{t("ai.status.active")}</p>
                         <p className="mt-0.5">
                           {byoaiConfig.provider === "opencode-go" ? "OpenCode Go" : t("ai.provider.custom")} &middot; {byoaiConfig.modelId}
                         </p>
@@ -2966,7 +2967,7 @@ export default function SettingsPage() {
                             }}
                             className="w-14 border border-border bg-background px-2 py-1 text-xs rounded outline-none focus:border-primary text-center" />
                           <button onClick={() => updateCalendarSettings({ breaks: calendarSettings.breaks.filter((_, j) => j !== i) })}
-                            className="p-0.5 rounded text-muted-foreground hover:text-red-500 transition-colors">
+                            className="p-0.5 rounded text-muted-foreground hover:text-destructive transition-colors">
                             <X className="h-3 w-3" />
                           </button>
                         </div>
@@ -2981,7 +2982,7 @@ export default function SettingsPage() {
               </SettingsCard>
             </div>
           )}
-        </div>
+        </PageLayout>
       </div>
     </div>
   )

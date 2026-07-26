@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { Button } from "@/components/ui/button"
@@ -178,7 +179,7 @@ export default function BlogMembersPage() {
         description={t("membersDescription")}
       />
       <ScrollArea className="flex-1 overflow-x-hidden">
-        <div className="p-3 sm:p-4 md:p-6 space-y-4 max-w-3xl mx-auto w-full overflow-hidden">
+        <PageLayout className="max-w-3xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link href="/dashboard/blog">
               <Button variant="ghost" size="sm" className="gap-1 -ml-2">
@@ -274,7 +275,7 @@ export default function BlogMembersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 h-8 w-8 p-0"
+                            className="text-destructive h-8 w-8 p-0"
                             onClick={() => handleRemove(member.userId)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -287,7 +288,7 @@ export default function BlogMembersPage() {
               ))}
             </div>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       {/* Add member dialog */}

@@ -29,13 +29,13 @@ function EloBadge({ score }: { score: number }) {
   let color = "text-zinc-500"
   let bg = "bg-zinc-500/10 border-zinc-500/30"
   if (score >= 1400) {
-    color = "text-amber-400"
+    color = "text-warning"
     bg = "bg-amber-500/10 border-amber-500/30"
   } else if (score >= 1200) {
-    color = "text-emerald-400"
-    bg = "bg-emerald-500/10 border-emerald-500/30"
+    color = "text-success"
+    bg = "bg-emerald-500/10 border-success/30"
   } else if (score >= 1000) {
-    color = "text-blue-400"
+    color = "text-info"
     bg = "bg-blue-500/10 border-blue-500/30"
   }
   return (
@@ -108,7 +108,7 @@ export default function DashboardEloUserProfile() {
                         {t("profile.joined", { date: new Date(data.user.createdAt).toLocaleDateString() })}
                       </span>
                       {data.user.studentVerified && (
-                        <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-[10px]">
+                        <Badge variant="outline" className="text-success border-success/30 text-[10px]">
                           {t("profile.hackClub")}
                         </Badge>
                       )}
@@ -152,11 +152,11 @@ export default function DashboardEloUserProfile() {
                               <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
                                 <span>{t("profile.votesCount", { count: p.totalVotes })}</span>
                                 <span className="flex items-center gap-1">
-                                  <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                  <TrendingUp className="h-3 w-3 text-success" />
                                   {t("profile.wins", { count: p.wins })}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                  <TrendingDown className="h-3 w-3 text-red-500" />
+                                  <TrendingDown className="h-3 w-3 text-destructive" />
                                   {t("profile.losses", { count: p.losses })}
                                 </span>
                                 <span>{t("profile.resources", { cpu: res.cpu, memory: (res.memory / 1024).toFixed(1) })}</span>

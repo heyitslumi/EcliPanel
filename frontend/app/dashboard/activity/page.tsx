@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { useAuth } from "@/hooks/useAuth"
+import { PageLayout, AlertBanner, LoadingState, EmptyState } from "@/components/panel/shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -50,27 +51,27 @@ const typeIcons: Record<string, typeof Server> = {
 }
 
 const typeColors: Record<string, string> = {
-  server: "text-blue-600 bg-blue-400/10 border-blue-400/20",
+  server: "text-info bg-info/10 border-info/20",
   auth: "text-primary bg-primary/10 border-primary/20",
-  login: "text-green-600 bg-green-400/10 border-green-400/20",
-  logout: "text-orange-600 bg-orange-400/10 border-orange-400/20",
-  register: "text-emerald-600 bg-emerald-400/10 border-emerald-400/20",
-  billing: "text-yellow-600 bg-yellow-400/10 border-yellow-400/20",
-  security: "text-red-600 bg-red-400/10 border-red-400/20",
-  support: "text-purple-600 bg-purple-400/10 border-purple-400/20",
-  compute: "text-cyan-600 bg-cyan-400/10 border-cyan-400/20",
+  login: "text-success bg-success/10 border-success/20",
+  logout: "text-warning bg-warning/10 border-warning/20",
+  register: "text-success bg-success/10 border-success/20",
+  billing: "text-warning bg-warning/10 border-warning/20",
+  security: "text-destructive bg-destructive/10 border-destructive/20",
+  support: "text-primary bg-primary/10 border-primary/20",
+  compute: "text-info bg-info/10 border-info/20",
 }
 
 const typeBadgeColors: Record<string, string> = {
-  server: "border-blue-500/30 text-blue-600 bg-blue-500/5",
+  server: "border-info/30 text-info bg-info/5",
   auth: "border-primary/30 text-primary bg-primary/5",
-  login: "border-green-500/30 text-green-600 bg-green-500/5",
-  logout: "border-orange-500/30 text-orange-600 bg-orange-500/5",
-  register: "border-emerald-500/30 text-emerald-600 bg-emerald-500/5",
-  billing: "border-yellow-500/30 text-yellow-600 bg-yellow-500/5",
-  security: "border-red-500/30 text-red-600 bg-red-500/5",
-  support: "border-purple-500/30 text-purple-600 bg-purple-500/5",
-  compute: "border-cyan-500/30 text-cyan-600 bg-cyan-500/5",
+  login: "border-success/30 text-success bg-success/5",
+  logout: "border-warning/30 text-warning bg-warning/5",
+  register: "border-success/30 text-success bg-success/5",
+  billing: "border-warning/30 text-warning bg-warning/5",
+  security: "border-destructive/30 text-destructive bg-destructive/5",
+  support: "border-primary/30 text-primary bg-primary/5",
+  compute: "border-info/30 text-info bg-info/5",
 }
 
 function guessType(action: string): string {
@@ -256,31 +257,6 @@ function Entry({ k, v }: { k: string; v: unknown }) {
   )
 }
 
-function EmptyState({ icon: Icon = AlertCircle, title, message }: {
-  icon?: any
-  title?: string
-  message: string
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 text-center">
-      <div className="rounded-full bg-secondary/50 p-4 mb-4">
-        <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
-      </div>
-      {title && <h3 className="text-sm font-medium text-foreground mb-1">{title}</h3>}
-      <p className="text-xs sm:text-sm text-muted-foreground max-w-xs">{message}</p>
-    </div>
-  )
-}
-
-function LoadingState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-16">
-      <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 rounded-full animate-spin text-muted-foreground mb-3" />
-      <p className="text-xs sm:text-sm text-muted-foreground">{message}</p>
-    </div>
-  )
-}
-
 export default function AccountActivity() {
   const t = useTranslations("activityPage")
   const { user } = useAuth()
@@ -385,7 +361,7 @@ export default function AccountActivity() {
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="flex flex-col gap-4 sm:gap-6 p-3 sm:p-4 md:p-6 w-full min-w-0">
+        <PageLayout>
 
           {/* Stats Cards - showing page-relevant stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 min-w-0">
@@ -399,7 +375,7 @@ export default function AccountActivity() {
             </div>
             <div className="border border-border bg-card p-3 sm:p-4 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                <Clock className="h-4 w-4 text-info flex-shrink-0" />
                 <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("stats.today")}</span>
               </div>
               <p className="text-lg sm:text-2xl font-bold text-foreground">{pageStats.today}</p>
@@ -407,7 +383,7 @@ export default function AccountActivity() {
             </div>
             <div className="border border-border bg-card p-3 sm:p-4 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <LogIn className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <LogIn className="h-4 w-4 text-success flex-shrink-0" />
                 <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("stats.logins")}</span>
               </div>
               <p className="text-lg sm:text-2xl font-bold text-foreground">{pageStats.logins}</p>
@@ -415,7 +391,7 @@ export default function AccountActivity() {
             </div>
             <div className="border border-border bg-card p-3 sm:p-4 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Server className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                <Server className="h-4 w-4 text-primary flex-shrink-0" />
                 <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{t("stats.serverEvents")}</span>
               </div>
               <p className="text-lg sm:text-2xl font-bold text-foreground">{pageStats.servers}</p>
@@ -519,12 +495,12 @@ export default function AccountActivity() {
             {/* Content */}
             <div className="min-w-0">
               {loading ? (
-                <LoadingState message={t("states.loadingActivity")} />
+                <LoadingState label={t("states.loadingActivity")} />
               ) : displayLogs.length === 0 ? (
                 <EmptyState
                   icon={Activity}
                   title={t("states.noActivityTitle")}
-                  message={filter ? t("states.noActivityForFilter", { filter }) : t("states.noActivityMessage")}
+                  description={filter ? t("states.noActivityForFilter", { filter }) : t("states.noActivityMessage")}
                 />
               ) : (
                 <div className="divide-y divide-border">
@@ -794,7 +770,7 @@ export default function AccountActivity() {
               </div>
             </div>
           )}
-        </div>
+        </PageLayout>
       </div>
     </div>
   )

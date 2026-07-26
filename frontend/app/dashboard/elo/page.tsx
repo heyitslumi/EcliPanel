@@ -8,7 +8,7 @@ import { PanelHeader } from "@/components/panel/header"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { RolloutGuard } from "@/components/panel/rollout-guard"
-import { SectionHeader } from "@/components/panel/shared"
+import { SectionHeader, PageLayout, EmptyState, LoadingState } from "@/components/panel/shared"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
@@ -45,17 +45,17 @@ import {
 import Link from "next/link"
 
 function EloBadge({ score }: { score: number }) {
-  let color = "text-zinc-500"
-  let bg = "bg-zinc-500/10 border-zinc-500/30"
+  let color = "text-muted-foreground"
+  let bg = "bg-muted-foreground/10 border-muted-foreground/30"
   if (score >= 1400) {
-    color = "text-amber-400"
-    bg = "bg-amber-500/10 border-amber-500/30"
+    color = "text-warning"
+    bg = "bg-warning/10 border-warning/30"
   } else if (score >= 1200) {
-    color = "text-emerald-400"
-    bg = "bg-emerald-500/10 border-emerald-500/30"
+    color = "text-success"
+    bg = "bg-success/10 border-success/30"
   } else if (score >= 1000) {
-    color = "text-blue-400"
-    bg = "bg-blue-500/10 border-blue-500/30"
+    color = "text-info"
+    bg = "bg-info/10 border-info/30"
   }
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold border ${bg} ${color}`}>
@@ -339,7 +339,7 @@ export default function EloDashboard() {
         description={t("description")}
       />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6 max-w-[100vw] w-full min-w-0 box-border">
+        <PageLayout>
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -422,7 +422,7 @@ export default function EloDashboard() {
                                 {project.title || project.serverName || t("dashboard.projectFallback", { id: project.id })}
                               </Link>
                               {project.isWellMade && (
-                                <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-4 w-4 text-orange-500" /></span>
+                                <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-4 w-4 text-warning" /></span>
                               )}
                               {project.githubUrl && (
                                 <a
@@ -440,7 +440,7 @@ export default function EloDashboard() {
                               <EloBadge score={project.eloScore} />
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] ${project.serverStatus === 'suspended' ? 'text-destructive border-destructive/30' : 'text-emerald-500 border-emerald-500/30'}`}
+                                className={`text-[10px] ${project.serverStatus === 'suspended' ? 'text-destructive border-destructive/30' : 'text-success border-success/30'}`}
                               >
                                 {project.serverStatus}
                               </Badge>
@@ -449,7 +449,7 @@ export default function EloDashboard() {
                               <div className={`mt-2 p-3 border text-xs flex items-start gap-2 ${
                                 project.moderationStatus === "disqualified"
                                   ? "border-destructive/30 bg-destructive/10 text-destructive"
-                                  : "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                                  : "border-warning/30 bg-warning/10 text-warning"
                               }`}>
                                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                                 <div>
@@ -480,11 +480,11 @@ export default function EloDashboard() {
                             <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
                               <span>{t("dashboard.votesCount", { count: project.totalVotes })}</span>
                               <span className="flex items-center gap-1">
-                                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                <TrendingUp className="h-3 w-3 text-success" />
                                 {t("dashboard.winsShort", { count: project.wins })}
                               </span>
                               <span className="flex items-center gap-1">
-                                <TrendingDown className="h-3 w-3 text-red-500" />
+                                <TrendingDown className="h-3 w-3 text-destructive" />
                                 {t("dashboard.lossesShort", { count: project.losses })}
                               </span>
                               <span>{'⏭'} {t("dashboard.skipsCount", { current: project.skipTokensRemaining, max: project.maxSkipTokens })}</span>
@@ -568,7 +568,7 @@ export default function EloDashboard() {
               )}
             </>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       {/* Edit Project Dialog */}

@@ -3,8 +3,10 @@
 import React, { useEffect, useState, useCallback } from "react"
 import { useTranslations } from "next-intl"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout, AlertBanner, SearchInput, LoadingState as SharedLoading, EmptyState as SharedEmpty } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { FeatureGuard } from "@/components/panel/feature-guard"
@@ -32,68 +34,6 @@ import {
 
 // ─── Tiny reusable primitives ────────────────────────────────────────────────
 
-function Badge({
-  children,
-  variant = "default",
-}: {
-  children: React.ReactNode
-  variant?: "default" | "success" | "warning" | "danger" | "muted"
-}) {
-  const cls = {
-    default: "bg-muted/60 text-muted-foreground ring-border/40",
-    success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
-    warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
-    danger:  "bg-red-500/10 text-red-600 dark:text-red-400 ring-red-500/20",
-    muted:   "bg-muted/40 text-muted-foreground ring-border/30",
-  }[variant]
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${cls}`}
-    >
-      {children}
-    </span>
-  )
-}
-
-function IconBox({ children, color = "default" }: { children: React.ReactNode; color?: string }) {
-  return (
-    <div className={`flex h-8 w-8 shrink-0 items-center justify-center ${color}`}>
-      {children}
-    </div>
-  )
-}
-
-function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`border border-border/50 bg-card shadow-sm ${className}`}>
-      {children}
-    </section>
-  )
-}
-
-function EmptyState({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center px-6 gap-3">
-      <div className="h-14 w-14 bg-secondary/50 flex items-center justify-center">
-        <Icon className="h-7 w-7 text-muted-foreground/40" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </div>
-  )
-}
-
-function LoadingState({ label }: { label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <Loader2 className="h-6 w-6 rounded-full animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
 function CopyButton({ value, className = "", titleText }: { value: string; className?: string; titleText?: string }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
@@ -107,7 +47,7 @@ function CopyButton({ value, className = "", titleText }: { value: string; class
       title={titleText}
       className={`rounded p-1 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 ${className}`}
      data-telemetry="tunnels:copy">
-      {copied ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <CheckCircle className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
   )
 }
@@ -311,7 +251,7 @@ export default function TunnelsPage() {
         <PanelHeader title={t("header.title")} description={t("header.description")} />
 
         <ScrollArea className="flex-1 overflow-x-hidden">
-          <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-5xl mx-auto w-full pb-10">
+          <PageLayout>
 
                 {error && (
                   <div className="flex items-start gap-2.5 border border-destructive/20 bg-destructive/5 px-4 py-3">
@@ -326,11 +266,11 @@ export default function TunnelsPage() {
 
 
               {/* ── Quick Setup (one-liner generation) ────────────────────────── */}
-              <SectionCard>
+              <section className="border border-border bg-card shadow-sm">
                 <div className="p-4 sm:p-5 border-b border-border/50 flex items-center gap-2">
-                  <IconBox color="bg-primary/10">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-primary/10">
                     <Zap className="h-4 w-4 text-primary" />
-                  </IconBox>
+                  </div>
                   <div>
                     <h2 className="text-sm font-semibold text-foreground">{t("downloads.quickSetup")}</h2>
                     <p className="text-xs text-muted-foreground">{t("downloads.quickSetupDescription")}</p>
@@ -340,9 +280,9 @@ export default function TunnelsPage() {
                 <div className="p-4 sm:p-5">
                   {clientSetup ? (
                     <div className="space-y-3">
-                      <div className="border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                      <div className="border border-success/30 bg-success/10 px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          <CheckCircle className="h-4 w-4 text-success" />
                           <p className="text-sm font-medium text-foreground">
                             Device <code className="text-xs bg-muted/50 px-1 rounded">{clientSetup.name}</code> created
                           </p>
@@ -380,14 +320,14 @@ export default function TunnelsPage() {
                     </div>
                   )}
                 </div>
-              </SectionCard>
+              </section>
 
               {/* ── Create Allocation ───────────────────────────────────────────── */}
-              <SectionCard>
+              <section className="border border-border bg-card shadow-sm">
               <div className="p-4 sm:p-5 border-b border-border/50 flex items-center gap-2">
-                <IconBox color="bg-primary/10">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-primary/10">
                   <Globe className="h-4 w-4 text-primary" />
-                </IconBox>
+                </div>
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">{t("sections.createAllocation")}</h2>
                   <p className="text-xs text-muted-foreground">{t("sections.createAllocationDescription")}</p>
@@ -431,7 +371,7 @@ export default function TunnelsPage() {
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                     </div>
                     {approvedClients.length === 0 && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <p className="text-xs text-warning flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         {t("states.noApprovedClients")}
                       </p>
@@ -501,21 +441,21 @@ export default function TunnelsPage() {
                   </div>
                 </div>
               </div>
-            </SectionCard>
+            </section>
 
             {/* ── Devices ─────────────────────────────────────────────────────── */}
-            <SectionCard>
+            <section className="border border-border bg-card shadow-sm">
               {/* Header */}
               <div className="p-4 sm:p-5 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <IconBox color="bg-secondary/60">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-secondary/60">
                     <Server className="h-4 w-4 text-foreground" />
-                  </IconBox>
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-sm font-semibold text-foreground">{t("sections.devices")}</h2>
                       {pendingCount > 0 && (
-                        <Badge variant="warning">
+                        <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
                           <ShieldCheck className="h-3 w-3" />
                           {pendingCount} {t('states.pending')}
                         </Badge>
@@ -548,9 +488,9 @@ export default function TunnelsPage() {
 
               {/* Body */}
               {loading ? (
-                <LoadingState label={t("states.loading")} />
+                <SharedLoading label={t("states.loading")} />
               ) : filteredDevices.length === 0 ? (
-                <EmptyState
+                <SharedEmpty
                   icon={Server}
                   title={searchTerm ? t("states.noDevicesMatchSearch") : t("states.noDevicesConnected")}
                   description={searchTerm ? t("states.tryDifferentSearchTerm") : t("states.downloadAgentToGetStarted")}
@@ -581,7 +521,7 @@ export default function TunnelsPage() {
                                 <div className="flex items-center gap-2.5">
                                   <span
                                     className={`h-2 w-2 shrink-0 rounded-full ${
-                                      device.online ? "bg-emerald-500" : "bg-muted-foreground/30"
+                                      device.online ? "bg-success" : "bg-muted-foreground/30"
                                     }`}
                                   />
                                   <span className="font-medium text-foreground truncate max-w-[140px]">
@@ -591,7 +531,7 @@ export default function TunnelsPage() {
                               </td>
                               {/* Type */}
                               <td className="px-4 py-3">
-                                <Badge variant="muted">{kindLabel(device.kind)}</Badge>
+                                <Badge variant="secondary">{kindLabel(device.kind)}</Badge>
                               </td>
                               {/* Code */}
                               <td className="px-4 py-3">
@@ -605,11 +545,11 @@ export default function TunnelsPage() {
                               {/* Status (approved/pending) */}
                               <td className="px-4 py-3">
                                 {device.approved ? (
-                                  <Badge variant="success">
+                                  <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
                                     <CheckCircle className="h-3 w-3" /> {t('states.approved')}
                                   </Badge>
                                 ) : (
-                                  <Badge variant="warning">
+                                  <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
                                     <ShieldCheck className="h-3 w-3" /> {t('states.pending')}
                                   </Badge>
                                 )}
@@ -617,11 +557,11 @@ export default function TunnelsPage() {
                               {/* Connection (online/offline) */}
                               <td className="px-4 py-3">
                                 {device.online ? (
-                                  <Badge variant="success">
+                                  <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
                                     <CheckCircle className="h-3 w-3" /> Online
                                   </Badge>
                                 ) : (
-                                  <Badge variant="muted">
+                                  <Badge variant="secondary">
                                     Offline
                                   </Badge>
                                 )}
@@ -705,14 +645,14 @@ export default function TunnelsPage() {
                   </table>
                 </div>
               )}
-            </SectionCard>
+            </section>
 
             {/* ── Allocations ──────────────────────────────────────────────────── */}
-            <SectionCard>
+            <section className="border border-border bg-card shadow-sm">
               <div className="p-4 sm:p-5 border-b border-border/50 flex items-center gap-2">
-                <IconBox color="bg-secondary/60">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-secondary/60">
                   <Network className="h-4 w-4 text-foreground" />
-                </IconBox>
+                </div>
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">{t("sections.allocations")}</h2>
                   <p className="text-xs text-muted-foreground">{t("states.tunnelsAllocated", { count: allocations.length })}</p>
@@ -720,9 +660,9 @@ export default function TunnelsPage() {
               </div>
 
               {loading ? (
-                <LoadingState label={t('states.loading')} />
+                <SharedLoading label={t('states.loading')} />
               ) : allocations.length === 0 ? (
-                <EmptyState
+                <SharedEmpty
                   icon={Network}
                   title={t('states.noAllocationsYet')}
                   description={t('states.createAllocationHint')}
@@ -763,16 +703,16 @@ export default function TunnelsPage() {
                           </td>
                           {/* Protocol */}
                           <td className="px-4 py-3">
-                            <Badge variant="muted">{a.protocol?.toUpperCase()}</Badge>
+                            <Badge variant="secondary">{a.protocol?.toUpperCase()}</Badge>
                           </td>
                           {/* Status */}
                           <td className="px-4 py-3">
                             {a.status === "closed" ? (
-                              <Badge variant="muted">
+                              <Badge variant="secondary">
                                 <XCircle className="h-3 w-3" /> {t('states.closed')}
                               </Badge>
                             ) : (
-                              <Badge variant="success">
+                              <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
                                 <CheckCircle className="h-3 w-3" /> {t('states.active')}
                               </Badge>
                             )}
@@ -799,8 +739,8 @@ export default function TunnelsPage() {
                   </table>
                 </div>
               )}
-            </SectionCard>
-          </div>
+            </section>
+          </PageLayout>
         </ScrollArea>
       </RolloutGuard>
     </FeatureGuard>
@@ -864,7 +804,7 @@ function InfoTile({
           {dot && (
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${
-                dot === "emerald" ? "bg-emerald-500" : "bg-amber-500"
+                dot === "emerald" ? "bg-success" : "bg-warning"
               }`}
             />
           )}

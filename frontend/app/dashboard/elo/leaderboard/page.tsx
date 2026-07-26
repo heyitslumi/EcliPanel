@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { RolloutGuard } from "@/components/panel/rollout-guard"
 import { API_ENDPOINTS } from "@/lib/panel-config"
@@ -12,7 +13,7 @@ import Link from "next/link"
 
 function RankBadge({ rank }: { rank: number }) {
   let cls = "text-sm font-bold tabular-nums"
-  if (rank === 1) cls += " text-amber-400"
+  if (rank === 1) cls += " text-warning"
   else if (rank === 2) cls += " text-zinc-400"
   else if (rank === 3) cls += " text-amber-700"
   else cls += " text-muted-foreground"
@@ -48,7 +49,7 @@ export default function EloLeaderboardPage() {
         description={t("leaderboard.description")}
       />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6 max-w-[100vw] w-full min-w-0 box-border">
+        <PageLayout>
           <Link
             href="/dashboard/elo"
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -119,7 +120,7 @@ export default function EloLeaderboardPage() {
                               {entry.title}
                             </Link>
                             {entry.isWellMade && (
-                              <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-3.5 w-3.5 text-orange-500" /></span>
+                              <span title={t("badges.wellMade")} className="shrink-0"><Flame className="h-3.5 w-3.5 text-warning" /></span>
                             )}
                             {entry.githubUrl && (
                               <a
@@ -143,9 +144,9 @@ export default function EloLeaderboardPage() {
                           {entry.totalVotes}
                         </td>
                         <td className="px-5 py-3 text-right text-xs tabular-nums">
-                          <span className="text-emerald-500">{entry.wins}</span>
+                          <span className="text-success">{entry.wins}</span>
                           <span className="text-muted-foreground mx-0.5">/</span>
-                          <span className="text-red-500">{entry.losses}</span>
+                          <span className="text-destructive">{entry.losses}</span>
                         </td>
                         <td className="px-5 py-3 text-right text-sm text-muted-foreground tabular-nums">
                           {entry.winRate}%
@@ -160,7 +161,7 @@ export default function EloLeaderboardPage() {
               </div>
             </section>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
     </RolloutGuard>
   )

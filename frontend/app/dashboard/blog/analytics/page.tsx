@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { Button } from "@/components/ui/button"
@@ -51,7 +52,7 @@ export default function BlogAnalyticsPage() {
         description={t("analyticsDescription", { defaultValue: "Post performance and view statistics" })}
       />
       <ScrollArea className="flex-1 overflow-x-hidden">
-        <div className="p-3 sm:p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full overflow-hidden">
+        <PageLayout className="max-w-5xl mx-auto">
           <Link href="/dashboard/blog">
             <Button variant="ghost" size="sm" className="gap-1 -ml-2">
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -182,7 +183,7 @@ export default function BlogAnalyticsPage() {
               </Card>
             </>
           ) : null}
-        </div>
+        </PageLayout>
       </ScrollArea>
     </FeatureGuard>
   )

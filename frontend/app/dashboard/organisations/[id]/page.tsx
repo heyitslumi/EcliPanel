@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { PanelHeader } from "@/components/panel/header"
+import { PageLayout } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -488,7 +489,7 @@ export default function OrganisationDetail() {
     <>
       <PanelHeader title={headerTitle} description={headerDescription} />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6 max-w-[100vw] w-full min-w-0 box-border">
+        <PageLayout>
           {/* Org Header / Logo */}
           <div className="border border-border bg-card p-4 flex items-center gap-4 min-w-0 box-border overflow-hidden">
             {org.avatarUrl ? (
@@ -746,7 +747,7 @@ export default function OrganisationDetail() {
                                 variant="outline"
                                 className={
                                   o.status === "active"
-                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs"
+                                    ? "border-success/30 bg-success/10 text-success text-xs"
                                     : o.status === "cancelled"
                                       ? "border-destructive/30 bg-destructive/10 text-destructive text-xs"
                                       : "border-border text-muted-foreground text-xs"
@@ -795,10 +796,10 @@ export default function OrganisationDetail() {
                       const diskBytes = Number(resources?.disk_bytes ?? 0)
                       const stateColor =
                         state === "running" || state === "online"
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                          ? "border-success/30 bg-success/10 text-success"
                           : state === "stopped" || state === "offline"
-                            ? "border-red-500/30 bg-red-500/10 text-red-400"
-                            : "border-yellow-500/30 bg-yellow-500/10 text-yellow-400"
+                            ? "border-destructive/30 bg-destructive/10 text-destructive"
+                            : "border-warning/30 bg-warning/10 text-warning"
                       return (
                         <div key={uuid} className="border border-border bg-secondary/20 p-4">
                           <div className="flex items-center justify-between mb-3">
@@ -1142,7 +1143,7 @@ export default function OrganisationDetail() {
               />
             </TabsContent>
           </Tabs>
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   )

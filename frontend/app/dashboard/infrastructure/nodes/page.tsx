@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useAuth } from "@/hooks/useAuth"
+import { PageLayout } from "@/components/panel/shared"
 import { PanelHeader } from "@/components/panel/header"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -69,10 +70,10 @@ interface Organisation {
 
 function getNodeTypeMeta(t: any): Record<string, { label: string; color: string }> {
   return {
-    free: { label: t("nodeTypes.free"), color: "border-green-500/30 bg-green-500/10 text-green-600" },
-    paid: { label: t("nodeTypes.paid"), color: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
-    free_and_paid: { label: t("nodeTypes.freeAndPaid"), color: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
-    enterprise: { label: t("nodeTypes.enterprise"), color: "border-orange-500/30 bg-orange-500/10 text-orange-400" },
+    free: { label: t("nodeTypes.free"), color: "border-success/30 bg-success/10 text-success" },
+    paid: { label: t("nodeTypes.paid"), color: "border-info/30 bg-info/10 text-info" },
+    free_and_paid: { label: t("nodeTypes.freeAndPaid"), color: "border-primary/30 bg-primary/10 text-primary" },
+    enterprise: { label: t("nodeTypes.enterprise"), color: "border-warning/30 bg-warning/10 text-warning" },
   }
 }
 
@@ -368,7 +369,7 @@ export default function InfraNodesPage() {
           description={t("header.description")}
         />
 
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
           {/* Header row */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">
@@ -429,7 +430,7 @@ export default function InfraNodesPage() {
                       <Badge variant="outline" className={`text-xs ${meta.color}`}>
                         {meta.label}
                       </Badge>
-                      <Badge variant="outline" className={`text-xs ${node.useSSL !== false ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'}`}>
+                      <Badge variant="outline" className={`text-xs ${node.useSSL !== false ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'}`}>
                         {node.useSSL !== false ? t("labels.ssl") : t("labels.noSslProxied")}
                       </Badge>
                       {node.organisation && (
@@ -475,7 +476,7 @@ export default function InfraNodesPage() {
               })}
             </div>
           )}
-        </div>
+        </PageLayout>
       </ScrollArea>
 
       {/* ═══════ Add / Edit Node Dialog ══════════════════════════════════════════ */}
@@ -566,10 +567,10 @@ export default function InfraNodesPage() {
                 </div>
                 {generatedToken && (
                   <div className="flex items-center gap-2 border border-green-500/30 bg-green-500/10 px-3 py-2">
-                    <span className="flex-1 font-mono text-xs text-green-400 break-all">{generatedToken}</span>
+                    <span className="flex-1 font-mono text-xs text-success break-all">{generatedToken}</span>
                     <button
                       onClick={() => navigator.clipboard.writeText(generatedToken)}
-                      className="text-green-400 hover:text-green-300"
+                      className="text-success hover:text-success/80"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
@@ -868,8 +869,8 @@ export default function InfraNodesPage() {
               </div>
 
               <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 flex gap-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-600">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-warning">
                   This will immediately update and sync all affected servers with Wings.
                   Servers may briefly restart or experience a network interruption.
                 </p>
@@ -885,7 +886,7 @@ export default function InfraNodesPage() {
               ) : (
                 <>
                   <div className="border border-green-500/30 bg-green-500/10 p-3">
-                    <p className="text-sm font-medium text-green-600">Completed successfully</p>
+                    <p className="text-sm font-medium text-success">Completed successfully</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="border border-border bg-secondary/30 p-3 text-center">
@@ -968,8 +969,8 @@ export default function InfraNodesPage() {
                 <li>Send <strong>start</strong> to all servers (in parallel)</li>
               </ol>
               <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 flex gap-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-600">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-warning">
                   All servers on this node will briefly go offline. This operation
                   may take 15&ndash;30 seconds to complete.
                 </p>
@@ -1003,10 +1004,10 @@ export default function InfraNodesPage() {
               ) : (
                 <>
                   <div className="border border-green-500/30 bg-green-500/10 p-3">
-                    <p className="text-sm font-medium text-green-600">
+                    <p className="text-sm font-medium text-success">
                       Rebooted {rebootResult.servers?.length || 0} server{(rebootResult.servers?.length || 0) !== 1 ? "s" : ""}
                     </p>
-                    <p className="text-xs text-green-400/70 mt-1">
+                    <p className="text-xs text-success/70 mt-1">
                       {rebootResult.totalServers} total on node &middot;{" "}
                       {rebootResult.onlineCount} were running &middot;{" "}
                       {rebootResult.killedCount || 0} had to be killed
@@ -1022,13 +1023,13 @@ export default function InfraNodesPage() {
                             <span className="font-mono text-foreground truncate flex-1">
                               {s.name || s.uuid}
                             </span>
-                            <span className={s.stop === "stopped" ? "text-green-600" : "text-destructive"} title={`Stop: ${s.stop}`}>
+                            <span className={s.stop === "stopped" ? "text-success" : "text-destructive"} title={`Stop: ${s.stop}`}>
                               {s.stop === "stopped" ? "\u2713" : "\u2717"}
                             </span>
                             {s.kill && (
-                              <span className="text-yellow-600" title="Had to be killed">\u26a0</span>
+                              <span className="text-warning" title="Had to be killed">\u26a0</span>
                             )}
-                            <span className={s.start === "started" ? "text-green-600" : "text-destructive"} title={`Start: ${s.start}`}>
+                            <span className={s.start === "started" ? "text-success" : "text-destructive"} title={`Start: ${s.start}`}>
                               {s.start === "started" ? "\u2713" : "\u2717"}
                             </span>
                           </div>

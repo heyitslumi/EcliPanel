@@ -542,7 +542,7 @@ export function PanelHeader({
 
           <Badge
             variant="outline"
-            className="hidden sm:flex border-primary/30 bg-primary/10 text-primary text-[10px] sm:text-xs rounded-full px-2 py-0.5"
+            className="hidden sm:flex border-primary/30 bg-primary/10 text-primary text-[10px] sm:text-xs px-2 py-0.5"
             style={{
               borderColor: portal?.color ? `${portal.color}40` : undefined,
               backgroundColor: portal?.color

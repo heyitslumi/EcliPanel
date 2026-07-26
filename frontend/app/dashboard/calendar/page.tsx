@@ -221,19 +221,19 @@ function dropTimeFromEvent(e: React.DragEvent, hour: number): { startTime: strin
 function priorityStyle(p: string) {
   if (p === "high")
     return {
-      bg: "bg-red-500/10 border-red-500/20",
-      text: "text-red-600",
+      bg: "bg-destructive/10 border-red-500/20",
+      text: "text-destructive",
       dot: "#dc2626",
     }
   if (p === "medium")
     return {
-      bg: "bg-amber-500/10 border-amber-500/20",
-      text: "text-amber-600",
+      bg: "bg-warning/10 border-amber-500/20",
+      text: "text-warning",
       dot: "#d97706",
     }
   return {
-    bg: "bg-green-500/10 border-green-500/20",
-    text: "text-green-600",
+    bg: "bg-success/10 border-green-500/20",
+    text: "text-success",
     dot: "#16a34a",
   }
 }
@@ -1177,7 +1177,7 @@ function CalendarSidebar({
       {/* Ongoing */}
       {ongoingEvents.length > 0 && (
         <div className="px-3 pt-3 pb-1 border-b border-border/30">
-          <h3 className="text-[10px] font-semibold text-green-500 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+          <h3 className="text-[10px] font-semibold text-success uppercase tracking-wider flex items-center gap-1.5 mb-2">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             Ongoing · {ongoingEvents.length}
           </h3>
@@ -2359,7 +2359,7 @@ function EventDialog({
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="text-red-600 border-red-500/30 hover:bg-red-500/10 mr-auto"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 mr-auto"
              data-telemetry="calendar:delete">
               <Trash2 className="h-3 w-3 mr-1" /> Delete
             </Button>
@@ -2425,10 +2425,10 @@ function TodoDialog({
                 const active = form.priority === p
                 const cls =
                   p === "high"
-                    ? "bg-red-500/10 border-red-500/30 text-red-600"
+                    ? "bg-destructive/10 border-destructive/30 text-destructive"
                     : p === "medium"
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-600"
-                      : "bg-green-500/10 border-green-500/30 text-green-600"
+                      ? "bg-warning/10 border-warning/30 text-warning"
+                      : "bg-success/10 border-success/30 text-success"
                 return (
                   <button
                     key={p}
@@ -2499,13 +2499,13 @@ function TodoDialog({
                 const active = form.category === c.value
                 const cls =
                   c.value === "freetime"
-                    ? "bg-green-500/10 border-green-500/30 text-green-600"
+                    ? "bg-success/10 border-success/30 text-success"
                     : c.value === "work"
-                      ? "bg-blue-500/10 border-blue-500/30 text-blue-600"
+                      ? "bg-info/10 border-info/30 text-info"
                       : c.value === "personal"
-                        ? "bg-purple-500/10 border-purple-500/30 text-purple-600"
+                        ? "bg-primary/10 border-primary/30 text-primary"
                         : c.value === "study"
-                          ? "bg-amber-500/10 border-amber-500/30 text-amber-600"
+                          ? "bg-warning/10 border-warning/30 text-warning"
                           : "bg-primary/10 border-primary/30 text-primary"
                 return (
                   <button
@@ -2530,7 +2530,7 @@ function TodoDialog({
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="text-red-600 border-red-500/30 hover:bg-red-500/10 mr-auto"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 mr-auto"
              data-telemetry="calendar:delete">
               <Trash2 className="h-3 w-3 mr-1" /> Delete
             </Button>
@@ -2672,7 +2672,7 @@ function SettingsDialog({
                         breaks: local.breaks.filter((_, j) => j !== i),
                       })
                     }
-                    className="p-0.5 rounded text-muted-foreground hover:text-red-500 transition-colors"
+                    className="p-0.5 rounded text-muted-foreground hover:text-destructive transition-colors"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -3088,7 +3088,7 @@ function TodoView({
                         <span
                           className={cn(
                             "text-[10px]",
-                            isOverdue ? "text-red-500" : "text-muted-foreground",
+                            isOverdue ? "text-destructive" : "text-muted-foreground",
                           )}
                         >
                           {isOverdue && (
@@ -3349,7 +3349,7 @@ function BookingsView({ onEventsChange }: { onEventsChange: () => void }) {
                           className={cn(
                             "text-[10px] px-2.5 py-1.5 rounded-lg border transition-colors",
                             copiedSlug === s.slug
-                              ? "border-green-500/30 text-green-600 bg-green-500/10"
+                              ? "border-success/30 text-success bg-success/10"
                               : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
                           )}
                         >
@@ -3381,7 +3381,7 @@ function BookingsView({ onEventsChange }: { onEventsChange: () => void }) {
                         <button
                           onClick={() => del(s.id)}
                           disabled={deletingId === s.id}
-                          className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           {deletingId === s.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -3602,7 +3602,7 @@ function BookingsView({ onEventsChange }: { onEventsChange: () => void }) {
                             ),
                           })
                         }
-                        className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
                       >
                         <X className="h-3 w-3" />
                       </button>

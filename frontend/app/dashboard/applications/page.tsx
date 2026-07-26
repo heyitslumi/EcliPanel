@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { PanelHeader } from "@/components/panel/header"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { PageLayout, AlertBanner, LoadingState, EmptyState } from "@/components/panel/shared"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { apiFetch } from "@/lib/api-client"
@@ -59,29 +60,29 @@ function getSubmissionDisplay(status: ApplicationSubmission["status"]) {
       return {
         label: "Approved",
         icon: BadgeCheck,
-        className: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
-        dot: "bg-emerald-400",
+        className: "text-success bg-success/10 border-success/20",
+        dot: "bg-success",
       }
     case "rejected":
       return {
         label: "Rejected",
         icon: Ban,
-        className: "text-red-600 bg-red-500/10 border-red-500/20",
-        dot: "bg-red-400",
+        className: "text-destructive bg-destructive/10 border-destructive/20",
+        dot: "bg-destructive",
       }
     case "archived":
       return {
         label: "Archived",
         icon: Archive,
-        className: "text-gray-400 bg-gray-500/10 border-gray-500/20",
-        dot: "bg-gray-400",
+        className: "text-muted-foreground bg-muted-foreground/10 border-muted-foreground/20",
+        dot: "bg-muted-foreground",
       }
     default:
       return {
         label: "Processing",
         icon: Clock,
-        className: "text-yellow-600 bg-yellow-500/10 border-yellow-500/20",
-        dot: "bg-yellow-400 animate-pulse",
+        className: "text-warning bg-warning/10 border-warning/20",
+        dot: "bg-warning animate-pulse",
       }
   }
 }
@@ -90,7 +91,7 @@ function getKindConfig(kind: FormKind) {
   return kind === "abuse_report"
     ? {
         label: "Abuse Report",
-        className: "text-orange-600 bg-orange-500/10 border-orange-500/20",
+        className: "text-destructive bg-destructive/10 border-destructive/20",
       }
     : {
         label: "Staff Application",
@@ -103,12 +104,12 @@ function getVisibilityConfig(
   requiresAccount: boolean
 ) {
   if (visibility === "public_anonymous" || !requiresAccount) {
-    return { label: "Public", icon: Globe, className: "text-blue-600" }
+    return { label: "Public", icon: Globe, className: "text-info" }
   }
   if (visibility === "private_invite") {
-    return { label: "Invite Only", icon: Lock, className: "text-orange-600" }
+    return { label: "Invite Only", icon: Lock, className: "text-warning" }
   }
-  return { label: "Account Required", icon: Users, className: "text-purple-600" }
+  return { label: "Account Required", icon: Users, className: "text-primary" }
 }
 
 function StatusPill({
@@ -148,7 +149,7 @@ function FormCard({
   const visibilityConfig = getVisibilityConfig(form.visibility, form.requiresAccount)
   const kindConfig =
     form.slug === 'ip-request'
-      ? { label: 'IP Request', className: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' }
+      ? { label: 'IP Request', className: 'text-info bg-info/10 border-info/20' }
       : getKindConfig(form.kind)
   const VisibilityIcon = visibilityConfig.icon
 
@@ -267,7 +268,7 @@ function FormCard({
 
           {action.type === "submitted" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
               <span>
                 Application submitted •{" "}
                 <span className="font-medium text-foreground">
@@ -317,30 +318,6 @@ function FormCard({
             </a>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  className,
-}: {
-  label: string
-  value: number
-  icon: React.ElementType
-  className?: string
-}) {
-  return (
-    <div className="border border-border bg-card/50 p-4 flex items-center gap-3">
-      <div className={cn("w-9 h-9 flex items-center justify-center shrink-0", className)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xl font-bold text-foreground tabular-nums">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </div>
   )
@@ -436,71 +413,45 @@ export default function ApplicationsPage() {
           description="Apply for roles and track your submissions"
         />
         <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-          <div className="p-4 md:p-6 flex flex-col gap-5 max-w-4xl mx-auto">
+          <PageLayout>
 
             {/* Suspended Banner */}
             {user?.suspended && (
-              <div className="flex items-start gap-3 border border-destructive/30 bg-destructive/10 p-4">
-                <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-destructive">Account Suspended</p>
-                  <p className="text-xs text-destructive/80 mt-0.5">
-                    You cannot submit applications while your account is suspended.
-                  </p>
-                </div>
-              </div>
+              <AlertBanner variant="destructive" icon={ShieldAlert} title="Account Suspended">
+                You cannot submit applications while your account is suspended.
+              </AlertBanner>
             )}
 
             {/* Error Banner */}
             {error && (
-              <div className="flex items-start gap-3 border border-destructive/30 bg-destructive/10 p-4">
-                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-destructive">{error}</p>
-                </div>
-                <button
-                  onClick={() => setError(null)}
-                  className="shrink-0 text-destructive/60 hover:text-destructive transition-colors"
-                >
-                  ×
-                </button>
-              </div>
+              <AlertBanner variant="destructive" icon={AlertTriangle}>
+                {error}
+              </AlertBanner>
             )}
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 className="h-8 w-8 rounded-full animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading applications...</p>
-              </div>
+              <LoadingState label="Loading applications..." />
             ) : (
               <>
                 {/* Stats Row */}
                 {forms.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <StatCard
-                      label="Available Forms"
-                      value={stats.total}
-                      icon={FileText}
-                      className="bg-primary/10 text-primary"
-                    />
-                    <StatCard
-                      label="Open Now"
-                      value={stats.active}
-                      icon={CheckCircle2}
-                      className="bg-emerald-500/10 text-emerald-600"
-                    />
-                    <StatCard
-                      label="My Submissions"
-                      value={stats.submitted}
-                      icon={Clock}
-                      className="bg-blue-500/10 text-blue-600"
-                    />
-                    <StatCard
-                      label="Approved"
-                      value={stats.approved}
-                      icon={BadgeCheck}
-                      className="bg-purple-500/10 text-purple-600"
-                    />
+                    <div className="border border-border bg-card p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 flex items-center justify-center shrink-0 bg-primary/10 text-primary"><FileText className="h-4 w-4" /></div>
+                      <div className="min-w-0"><p className="text-xl font-bold text-foreground tabular-nums">{stats.total}</p><p className="text-xs text-muted-foreground">Available Forms</p></div>
+                    </div>
+                    <div className="border border-border bg-card p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 flex items-center justify-center shrink-0 bg-success/10 text-success"><CheckCircle2 className="h-4 w-4" /></div>
+                      <div className="min-w-0"><p className="text-xl font-bold text-foreground tabular-nums">{stats.active}</p><p className="text-xs text-muted-foreground">Open Now</p></div>
+                    </div>
+                    <div className="border border-border bg-card p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 flex items-center justify-center shrink-0 bg-info/10 text-info"><Clock className="h-4 w-4" /></div>
+                      <div className="min-w-0"><p className="text-xl font-bold text-foreground tabular-nums">{stats.submitted}</p><p className="text-xs text-muted-foreground">My Submissions</p></div>
+                    </div>
+                    <div className="border border-border bg-card p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 flex items-center justify-center shrink-0 bg-primary/10 text-primary"><BadgeCheck className="h-4 w-4" /></div>
+                      <div className="min-w-0"><p className="text-xl font-bold text-foreground tabular-nums">{stats.approved}</p><p className="text-xs text-muted-foreground">Approved</p></div>
+                    </div>
                   </div>
                 )}
 
@@ -524,24 +475,13 @@ export default function ApplicationsPage() {
 
                 {/* Forms List */}
                 {forms.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <div className="w-16 h-16 rounded-full bg-secondary/30 flex items-center justify-center">
-                      <Inbox className="h-8 w-8 text-muted-foreground/50" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-foreground">No forms available</p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                        Application forms will appear here when they're available.
-                      </p>
-                    </div>
-                    <button
-                      onClick={loadData}
-                      className="flex items-center gap-2 px-4 py-2 border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                     data-telemetry="applications:loaddata">
-                      <RefreshCw className="h-4 w-4" />
-                      Refresh
-                    </button>
-                  </div>
+                  <EmptyState icon={Inbox} title="No forms available" description="Application forms will appear here when they're available."
+                    action={
+                      <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                        <RefreshCw className="h-4 w-4" />Refresh
+                      </button>
+                    }
+                  />
                 ) : (
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
@@ -569,7 +509,7 @@ export default function ApplicationsPage() {
                 )}
               </>
             )}
-          </div>
+          </PageLayout>
         </ScrollArea>
       </>
     </FeatureGuard>

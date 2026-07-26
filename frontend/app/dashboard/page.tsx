@@ -3,7 +3,7 @@
 import { PanelHeader } from "@/components/panel/header"
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { StatCard, SectionHeader, UsageBar } from "@/components/panel/shared"
+import { StatCard, SectionHeader, UsageBar, PageLayout, StatGrid, AlertBanner, EmptyState, LoadingState } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { apiFetch } from "@/lib/api-client"
@@ -111,14 +111,14 @@ const typeIcons: Record<string, typeof Server> = {
 }
 
 const typeIconColors: Record<string, string> = {
-  server: "text-blue-600",
+  server: "text-info",
   auth: "text-primary",
-  login: "text-green-600",
-  logout: "text-orange-600",
-  register: "text-emerald-600",
-  billing: "text-yellow-600",
-  security: "text-red-600",
-  support: "text-purple-600",
+  login: "text-success",
+  logout: "text-warning",
+  register: "text-success",
+  billing: "text-warning",
+  security: "text-destructive",
+  support: "text-primary",
 }
 
 // -------------------------------------------------
@@ -365,55 +365,46 @@ export default function SOCDashboard() {
         <PanelHeader title={t("header.title")} description={t("header.description")} />
       </div>
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
-        <div className="flex flex-col gap-6 p-6">
+        <PageLayout>
           {user?.inactive && (
-            <div className="border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-400 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground">{t("warnings.inactiveTitle")}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t("warnings.inactiveDescription")}</p>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await apiFetch(API_ENDPOINTS.reactivate, { method: "POST" });
-                        window.location.reload();
-                      } catch {}
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    {t("warnings.reactivateNow")}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AlertBanner variant="warning" icon={AlertTriangle} title={t("warnings.inactiveTitle")}
+              action={
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiFetch(API_ENDPOINTS.reactivate, { method: "POST" });
+                      window.location.reload();
+                    } catch {}
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-warning hover:text-warning/80 transition-colors"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  {t("warnings.reactivateNow")}
+                </button>
+              }
+            >
+              {t("warnings.inactiveDescription")}
+            </AlertBanner>
           )}
           {unhealthyNodes.length > 0 && (
-            <div className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-foreground">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4 text-destructive flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground">
-                    {unhealthyNodes.length === 1
-                      ? t("warnings.nodeIssueTitle", { node: unhealthyNodes[0].name })
-                      : t("warnings.nodesIssueTitle")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {unhealthyNodes.length === 1
-                      ? t("warnings.nodeIssueDescription", { node: unhealthyNodes[0].name })
-                      : t("warnings.nodesIssueDescription", { nodes: unhealthyNodes.map(n => n.name).join(", ") })}
-                  </p>
-                  <Link href="/status" className="mt-2 inline-block text-xs font-medium text-primary hover:underline">
-                    {t("warnings.learnMore")}
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <AlertBanner variant="destructive" icon={AlertCircle}
+              title={unhealthyNodes.length === 1
+                ? t("warnings.nodeIssueTitle", { node: unhealthyNodes[0].name })
+                : t("warnings.nodesIssueTitle")}
+              action={
+                <Link href="/status" className="inline-block text-xs font-medium text-primary hover:underline">
+                  {t("warnings.learnMore")}
+                </Link>
+              }
+            >
+              {unhealthyNodes.length === 1
+                ? t("warnings.nodeIssueDescription", { node: unhealthyNodes[0].name })
+                : t("warnings.nodesIssueDescription", { nodes: unhealthyNodes.map(n => n.name).join(", ") })}
+            </AlertBanner>
           )}
 
           {/* Stats Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatGrid>
               <StatCard
               title={t("stats.yourServersOnline")}
               value={`${myOnlineServers}/${myServers.length}`}
@@ -439,7 +430,7 @@ export default function SOCDashboard() {
               subtitle={socUptime ? t("stats.totalUptime", { value: realUptime! }) : t("stats.loading")}
               icon={Activity}
             />
-          </div>
+          </StatGrid>
 
           {/* Security Findings — primary SOC content */}
           <div className="border border-border bg-card p-3 md:p-5">
@@ -619,21 +610,21 @@ export default function SOCDashboard() {
                                 title={t("securityFindings.actions.resolve")}
                                 className="p-2.5 md:p-1 hover:bg-secondary/50 rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                data-telemetry="dashboard:resolve">
-                                <CheckCircle className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-green-600" />
+                                <CheckCircle className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-success" />
                               </button>
                               <button
                                 onClick={() => handleUpdateFinding(item.id, 'false_positive')}
                                 title={t("securityFindings.actions.falsePositive")}
                                 className="p-2.5 md:p-1 hover:bg-secondary/50 rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                data-telemetry="dashboard:falsepositive">
-                                <Flag className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-orange-600" />
+                                <Flag className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-warning" />
                               </button>
                               <button
                                 onClick={() => handleEscalate(item.id)}
                                 title="Escalate to staff"
                                 className="p-2.5 md:p-1 hover:bg-secondary/50 rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                               >
-                                <Send className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-blue-600" />
+                                <Send className="h-5 w-5 md:h-3.5 md:w-3.5 text-muted-foreground hover:text-info" />
                               </button>
                             </div>
                           </div>
@@ -729,7 +720,7 @@ export default function SOCDashboard() {
             </div>
           </div>
           </div>
-        </div>
+        </PageLayout>
       </ScrollArea>
     </>
   )
