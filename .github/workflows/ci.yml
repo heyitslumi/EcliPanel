@@ -1,4 +1,4 @@
-name: CI - Build
+name: CI
 
 permissions:
   contents: read
@@ -8,6 +8,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -30,42 +31,6 @@ jobs:
         working-directory: backend
         run: bun run build
 
-  tunnel-client:
-    name: Tunnel Client (Rust)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Run tunnel cargo check
-        working-directory: tunnel/client
-        run: cargo check
-
-  tunnel-server:
-    name: Tunnel Server (Rust)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Run tunnel cargo check
-        working-directory: tunnel/server
-        run: cargo check
-
   frontend:
     name: Frontend (Bun)
     runs-on: ubuntu-latest
@@ -86,6 +51,34 @@ jobs:
         working-directory: frontend
         run: bun run build
 
+  tunnel-client:
+    name: Tunnel Client (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tunnel cargo check
+        working-directory: tunnel/client
+        run: cargo check
+
+  tunnel-server:
+    name: Tunnel Server (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tunnel cargo check
+        working-directory: tunnel/server
+        run: cargo check
+
   wings:
     name: Wings (Rust)
     runs-on: ubuntu-latest
@@ -94,11 +87,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake libndpi-dev
@@ -114,3 +103,17 @@ jobs:
         with:
           name: wings-rs-linux-x86_64
           path: wings/output/target/release/wings-rs
+
+  eclihalo:
+    name: EcliHalo (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build eclihalo
+        working-directory: halo
+        run: cargo build --release
