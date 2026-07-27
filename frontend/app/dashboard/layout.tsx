@@ -10,6 +10,7 @@ import { SunsetNoticeBanner } from "@/components/panel/sunset-notice-banner";
 import { KycBanner } from "@/components/panel/kyc-banner";
 import { TermsUpdateBanner } from "@/components/panel/terms-update-banner";
 import { FeedbackDialog } from "@/components/panel/feedback-dialog";
+import { CookieConsent } from "@/components/panel/cookie-consent";
 import { Footer } from "@/components/Footer";
 import { createContext, useContext } from "react";
 
@@ -68,6 +69,7 @@ export default function DashboardLayout({
         <KycBanner />
         <TermsUpdateBanner />
         <FeedbackDialog />
+        <CookieConsent />
         <div className={"flex-1 min-h-0"}>
           <SidebarContext.Provider value={{ show: showSidebar, toggle: () => setShowSidebar(s => !s) }}>
             {children}

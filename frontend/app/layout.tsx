@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { API_ENDPOINTS } from "@/lib/panel-config";
 import { createMetadata } from "@/lib/metadata";
+import { CookieConsent } from "@/components/panel/cookie-consent";
 
 function getBackendBaseUrl(): string {
   return (
@@ -178,6 +179,7 @@ export default async function RootLayout({
             </Suspense>
             <div className="flex-1 flex flex-col min-w-0">{children}</div>
             <Footer hideOnDashboard />
+            <CookieConsent />
           </AuthProvider>
         </NextIntlClientProvider>
       </body>
