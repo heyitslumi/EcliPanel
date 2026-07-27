@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { PanelHeader } from "@/components/panel/header"
 import { StatusBadge, UsageBar, AlertBanner, SearchInput, LoadingState, EmptyState, PageLayout, CardGrid } from "@/components/panel/shared"
@@ -32,6 +33,7 @@ import {
   Star,
   Check,
   ChevronDown,
+  Building2,
 } from "lucide-react"
 
 const GAMBLING_THEME_NAMES = new Set(["gambling mode dark", "gambling mode white"])
@@ -467,7 +469,7 @@ function NodeSelector({
 /*  NewServerModal                                                     */
 /* ------------------------------------------------------------------ */
 
-function NewServerModal({ onClose, onCreated, gamblingModeEnabled }: { onClose: () => void; onCreated: () => void; gamblingModeEnabled: boolean }) {
+function NewServerModal({ onClose, onCreated, gamblingModeEnabled, preselectedOrgId }: { onClose: () => void; onCreated: () => void; gamblingModeEnabled: boolean; preselectedOrgId?: string | null }) {
   const t = useTranslations("serversPage.newServerModal")
   const [name, setName] = useState("")
   const [eggId, setEggId] = useState<string>("")
@@ -520,15 +522,40 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled }: { onClose: 
   }, [isFreePlan])
 
   useEffect(() => {
-    apiFetch(API_ENDPOINTS.session)
-      .then((data: any) => {
-        const l = data?.user?.limits || data?.limits || null
-        setLimits(l)
-        if (l?.memory) setMemory(l.memory)
-        if (l?.disk) setDisk(l.disk)
-        if (l?.cpu) setCpu(l.cpu)
-      })
-      .catch(() => {})
+    const loadLimits = async () => {
+      try {
+        if (preselectedOrgId) {
+          try {
+            const org = await apiFetch(API_ENDPOINTS.organisationDetail.replace(":id", preselectedOrgId));
+            if (org?.planId) {
+              const plans = await apiFetch(API_ENDPOINTS.plans);
+              const list = Array.isArray(plans) ? plans : [];
+              const plan = list.find((p: any) => Number(p.id) === Number(org.planId));
+              if (plan) {
+                const l = {
+                  memory: plan.memory ?? undefined,
+                  disk: plan.disk ?? undefined,
+                  cpu: plan.cpu ?? undefined,
+                  serverLimit: plan.serverLimit ?? undefined,
+                };
+                setLimits(l);
+                if (l.memory) setMemory(l.memory);
+                if (l.disk) setDisk(l.disk);
+                if (l.cpu) setCpu(l.cpu);
+                return;
+              }
+            }
+          } catch (_e) { /* meow */ }
+        }
+        const data = await apiFetch(API_ENDPOINTS.session);
+        const l = data?.user?.limits || data?.limits || null;
+        setLimits(l);
+        if (l?.memory) setMemory(l.memory);
+        if (l?.disk) setDisk(l.disk);
+        if (l?.cpu) setCpu(l.cpu);
+      } catch (_e) {}
+    };
+    loadLimits();
 
     apiFetch(isAdmin ? API_ENDPOINTS.adminEggs : API_ENDPOINTS.eggs)
       .then((data) => {
@@ -545,7 +572,10 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled }: { onClose: 
       .catch(() => {})
       .finally(() => setEggsLoading(false))
 
-    apiFetch(API_ENDPOINTS.nodesAvailable)
+    const nodesUrl = preselectedOrgId
+      ? `${API_ENDPOINTS.nodesAvailable}?orgId=${preselectedOrgId}`
+      : API_ENDPOINTS.nodesAvailable
+    apiFetch(nodesUrl)
       .then((data) => {
         const list = Array.isArray(data) ? data : []
         setNodes(list)
@@ -638,6 +668,8 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled }: { onClose: 
         startup: finalStartup,
         environment: envObject,
       }
+
+      if (preselectedOrgId) createPayload.orgId = Number(preselectedOrgId)
 
       if (isEloServer) {
         createPayload.isEloServer = true
@@ -745,7 +777,16 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled }: { onClose: 
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">{t("header.title")}</h2>
-              <p className="text-xs text-muted-foreground hidden sm:block">{t("header.subtitle")}</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                {preselectedOrgId && user?.orgs ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    {t("header.forOrg", { org: user.orgs.find((o: any) => String(o.id) === String(preselectedOrgId))?.name || `#${preselectedOrgId}` })}
+                  </span>
+                ) : (
+                  t("header.subtitle")
+                )}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all active:scale-95" data-telemetry="servers:close">
@@ -1337,13 +1378,14 @@ function ResourceSlider({
 /*  ServerCard                                                         */
 /* ------------------------------------------------------------------ */
 
-function ServerCard({
+export function ServerCard({
   server,
   powerLoading,
   onPower,
   isFavorite,
   onToggleFavorite,
   isElo,
+  orgs,
 }: {
   server: any
   powerLoading: string | null
@@ -1351,6 +1393,7 @@ function ServerCard({
   isFavorite: boolean
   onToggleFavorite: (serverId: string) => void
   isElo?: boolean
+  orgs?: any[]
 }) {
   const t = useTranslations("serversPage")
   const sid = server.uuid || server.id
@@ -1384,6 +1427,11 @@ function ServerCard({
               {isElo && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 border border-purple-500/30 leading-none flex-shrink-0">
                   ELO
+                </span>
+              )}
+              {server.orgId && orgs && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/30 leading-none flex-shrink-0 truncate max-w-[120px]">
+                  {orgs.find((o: any) => Number(o.id) === Number(server.orgId))?.name || `Org #${server.orgId}`}
                 </span>
               )}
             </div>
@@ -1515,6 +1563,8 @@ function ServerCard({
 export default function ServersPage() {
   const t = useTranslations("serversPage")
   const { user, refreshUser } = useAuth()
+  const searchParams = useSearchParams()
+  const preselectedOrgId = searchParams.get("org")
   const [search, setSearch] = useState("")
 
   const needsAgeVerification = !!(
@@ -1822,13 +1872,16 @@ export default function ServersPage() {
   })
 
   const myServersAll = nonFavAll.filter((s) => (user ? s.userId === user.id : true))
+  const orgServersAll = myServersAll.filter((s) => s.orgId)
+  const personalServersAll = myServersAll.filter((s) => !s.orgId)
   const otherServersAll = nonFavAll.filter((s) => (user ? s.userId !== user.id : false))
 
-  const sortedNonFav = [...myServersAll, ...otherServersAll]
+  const sortedNonFav = [...orgServersAll, ...personalServersAll, ...otherServersAll]
   const totalPaginated = sortedNonFav.length
   const totalPaginationPages = Math.max(1, Math.ceil(totalPaginated / perPage))
   const paginatedNonFav = sortedNonFav.slice((page - 1) * perPage, page * perPage)
-  const myServers = paginatedNonFav.filter((s) => (user ? s.userId === user.id : true))
+  const orgServers = paginatedNonFav.filter((s) => s.orgId)
+  const myServers = paginatedNonFav.filter((s) => (user ? s.userId === user.id && !s.orgId : true))
   const otherServers = paginatedNonFav.filter((s) => (user ? s.userId !== user.id : false))
 
   const onlineCount = allServers.filter((s) => s.status === "online" || s.status === "running").length
@@ -1874,7 +1927,7 @@ export default function ServersPage() {
         </div>
       )}
 
-      {showNewModal && <NewServerModal onClose={() => setShowNewModal(false)} onCreated={loadServers} gamblingModeEnabled={gamblingModeEnabled} />}
+      {showNewModal && <NewServerModal onClose={() => setShowNewModal(false)} onCreated={loadServers} gamblingModeEnabled={gamblingModeEnabled} preselectedOrgId={preselectedOrgId} />}
 
       <PanelHeader title={t("header.title")} description={t("header.description")} />
 
@@ -1939,6 +1992,7 @@ export default function ServersPage() {
                     isFavorite={true}
                     onToggleFavorite={toggleFavorite}
                     isElo={eloServers.has(server.uuid || server.id)}
+                    orgs={user?.orgs}
                   />
                 ))}
               </CardGrid>
@@ -1972,6 +2026,31 @@ export default function ServersPage() {
           {/* Server sections */}
           {!loading && (
             <div className="flex flex-col gap-6 sm:gap-8">
+              {orgServers.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-sm font-semibold text-foreground">{t("sections.orgServers")}</h3>
+                    <span className="text-xs text-muted-foreground tabular-nums px-2 py-0.5 rounded-full bg-secondary/50">{orgServers.length}</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                    {orgServers.map((server) => {
+                      const sid = String(server.uuid || server.id)
+                      return (
+                        <ServerCard
+                          key={`${sid}-${server.nodeId ?? ""}`}
+                          server={server}
+                          powerLoading={powerLoading}
+                          onPower={sendPower}
+                          isFavorite={favoriteServerIds.includes(sid)}
+                          onToggleFavorite={toggleFavorite}
+                          isElo={eloServers.has(server.uuid || server.id)}
+                          orgs={user?.orgs}
+                        />
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
               {myServers.length > 0 && (
                 <section>
                   <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -1990,6 +2069,7 @@ export default function ServersPage() {
                           isFavorite={favoriteServerIds.includes(sid)}
                           onToggleFavorite={toggleFavorite}
                           isElo={eloServers.has(server.uuid || server.id)}
+                          orgs={user?.orgs}
                         />
                       )
                     })}
@@ -2015,6 +2095,7 @@ export default function ServersPage() {
                           isFavorite={favoriteServerIds.includes(sid)}
                           onToggleFavorite={toggleFavorite}
                           isElo={eloServers.has(server.uuid || server.id)}
+                          orgs={user?.orgs}
                         />
                       )
                     })}

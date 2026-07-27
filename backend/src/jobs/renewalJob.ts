@@ -124,6 +124,7 @@ async function processRenewals() {
 
         const renewalOrder = orderRepo.create({
           userId: order.userId,
+          orgId: (order as any).orgId || undefined,
           description: `${order.description || plan.name} (Auto-Renewal)`,
           planId: order.planId,
           amount: renewalAmount,
@@ -131,7 +132,9 @@ async function processRenewals() {
           taxRate: order.taxRate ?? 0,
           items: renewalItems,
           status: 'pending',
-          notes: `Auto-renewal of order #${order.id}`,
+          notes: (order as any).orgId
+            ? `org_order:${(order as any).orgId}; Auto-renewal of order #${order.id}`
+            : `Auto-renewal of order #${order.id}`,
           createdAt: new Date(),
           expiresAt: extensionDate,
         });
@@ -162,6 +165,20 @@ async function processRenewals() {
   if (extended > 0 || issued > 0) {
     console.log(`[renewalJob] extended ${extended} free orders, issued ${issued} paid renewal orders`);
   }
+
+  try {
+    const orgRepo = AppDataSource.getRepository(require('../models/organisation.entity').Organisation);
+    const expiredOrgs = await orgRepo.find({ where: { status: 'active' } });
+    const graceCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    for (const org of expiredOrgs) {
+      if (org.expiresAt && new Date(org.expiresAt) < graceCutoff && org.portalTier !== 'none') {
+        org.portalTier = 'none';
+        org.planId = undefined as any;
+        org.expiresAt = undefined as any;
+        await orgRepo.save(org);
+      }
+    }
+  } catch (_e) { /* oh hi honey honey honey pie */ }
 }
 
 export function scheduleRenewalJob() {

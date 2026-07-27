@@ -30,6 +30,12 @@ export class OrganisationDnsZone {
   @Column({ default: 'active' })
   status: string;
 
+  @Column({ nullable: true, type: 'text' })
+  cloudflareToken?: string;
+
+  @Column({ nullable: true })
+  externalZoneId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

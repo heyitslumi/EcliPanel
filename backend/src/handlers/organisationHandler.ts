@@ -1,4 +1,5 @@
 import { AppDataSource } from '../config/typeorm';
+import { In } from 'typeorm';
 import { Organisation } from '../models/organisation.entity';
 import { OrganisationDnsZone } from '../models/organisationDnsZone.entity';
 import { OrganisationInvite } from '../models/organisationInvite.entity';
@@ -15,7 +16,9 @@ import sharp from 'sharp';
 import { resizeImage } from '../workers/imageWorker';
 import { WingsApiService } from '../services/wingsApiService';
 import { createActivityLog } from './logHandler';
+import { normalizeServer } from '../handlers/serverHandler';
 import { CloudflareService } from '../services/cloudflareService';
+import { renderInvoicePdf, activateOrderPlan } from '../handlers/orderHandler';
 import { t } from 'elysia';
 import { errorMessage, sanitizeError } from '../utils/sanitizeError';
 import { consumeRateLimit, redisDelByPrefix, withRedisCache } from '../config/redis';
@@ -36,6 +39,37 @@ function parseDnsRecordBody(body: unknown): DnsRecordBody | null {
 
 function createDnsService() {
   return new CloudflareService();
+}
+
+interface ResolvedZone { zone: { id: string; recordsList?: CloudflareRecord[]; rrsets?: CloudflareRecord[] }; isCustom: boolean }
+
+async function resolveCloudflareZone(orgZone: OrganisationDnsZone): Promise<ResolvedZone | null> {
+  const zoneName = String(orgZone.name || '').replace(/\.$/, '');
+  const baseZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
+  const isSubdomain = zoneName.endsWith('.' + baseZoneName) || zoneName === baseZoneName;
+
+  if (!isSubdomain && orgZone.cloudflareToken) {
+    try {
+      const svc = new CloudflareService(orgZone.cloudflareToken);
+      const customZone = await svc.getZone(orgZone.externalZoneId || zoneName);
+      if (customZone) return { zone: customZone, isCustom: true };
+    } catch (_e) { /* erm */ }
+  }
+
+  const svc = createDnsService();
+  if (!isSubdomain) {
+    try {
+      const customZone = await svc.getZone(zoneName);
+      if (customZone) return { zone: customZone, isCustom: true };
+    } catch (_e) { /* erm */ }
+  }
+
+  try {
+    const mainZone = await svc.getZone(baseZoneName);
+    return { zone: mainZone, isCustom: false };
+  } catch (_e) {
+    return null;
+  }
 }
 
 async function acceptInviteLogic(
@@ -88,6 +122,9 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       handle: o.handle,
       ownerId: o.ownerId,
       portalTier: o.portalTier,
+      planId: o.planId,
+      status: o.status,
+      createdAt: o.createdAt,
       avatarUrl: o.avatarUrl,
       isStaff: !!o.isStaff,
       orgRole: opts?.orgRole,
@@ -141,7 +178,7 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         'Retry-After': String(result.retryAfterSeconds),
       };
       return { error: 'rate_limited', retryAfter: result.retryAfterSeconds };
-    } catch {
+    } catch (_e) {
       return null;
     }
   }
@@ -165,15 +202,131 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         'Retry-After': String(result.retryAfterSeconds),
       };
       return { error: 'rate_limited', retryAfter: result.retryAfterSeconds };
-    } catch {
+    } catch (_e) {
       return null;
     }
   }
+
+  app.post(
+    prefix + '/organisations/:id/select',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const orgId = Number(ctx.params['id']);
+      const user = ctx.user as User;
+      const membership = await memberRepo.findOne({ where: { userId: user.id, organisationId: orgId } });
+      if (!membership) {
+        ctx.set.status = 403;
+        return { error: 'Not a member of this organisation' };
+      }
+      const maxAge = 30 * 24 * 60 * 60;
+      ctx.cookie['selectedOrgId'] = {
+        value: String(orgId),
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge,
+      };
+      return { success: true, orgId };
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Object({ success: t.Boolean(), orgId: t.Number() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Select active organisation', tags: ['Organisations'] },
+    }
+  );
+
+  app.delete(
+    prefix + '/organisations/:id',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
+      if (!org) {
+        ctx.set.status = 404;
+        return { error: ctx.t('organisation.notFound') };
+      }
+      const user = ctx.user as User;
+      if (user.id !== org.ownerId && !hasPermissionSync(ctx, 'org:write')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('organisation.onlyOwnerCanDelete') };
+      }
+      const nodeRepo = AppDataSource.getRepository(require('../models/node.entity').Node);
+      const nodes = await nodeRepo.find({ where: { organisation: { id: org.id } } });
+      if (nodes.length > 0) {
+        ctx.set.status = 400;
+        return { error: ctx.t('organisation.hasNodes') };
+      }
+      await memberRepo.delete({ organisationId: org.id });
+      await inviteRepo.delete({ organisation: { id: org.id } });
+      await dnsZoneRepo.delete({ organisationId: org.id });
+      try {
+        const cfgRepo3 = AppDataSource.getRepository(require('../models/serverConfig.entity').ServerConfig);
+        const nodeService2 = require('../services/nodeService').nodeService;
+        const orgServers = await cfgRepo3.find({ where: { orgId: org.id } as any });
+        for (const srv of orgServers) {
+          try {
+            const svc = await nodeService2.getServiceForNode(srv.nodeId);
+            if (svc && typeof svc.deleteServer === 'function') {
+              await svc.deleteServer(srv.uuid);
+            }
+          } catch (_e) { /* um */ }
+          try { await cfgRepo3.remove(srv); } catch (_e) {}
+        }
+      } catch (_e) { /* uwu */ }
+      try {
+        const orderRepo3 = AppDataSource.getRepository(require('../models/order.entity').Order);
+        await orderRepo3.createQueryBuilder().update().set({ orgId: null as any }).where('orgId = :id', { id: org.id }).execute();
+      } catch (_e) {}
+      await orgRepo.remove(org);
+      await createActivityLog({
+        userId: user.id,
+        action: 'org:delete',
+        targetId: String(org.id),
+        targetType: 'organisation',
+        metadata: { orgName: org.name, handle: org.handle },
+        ipAddress: ctx.ip,
+      });
+      return { success: true };
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Object({ success: t.Boolean() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Delete organisation', tags: ['Organisations'] },
+    }
+  );
 
   app.get(
     prefix + '/organisations',
     async (ctx: AuthenticatedHandlerContext) => {
       const user = ctx.user as User;
+      const checkHandle = ctx.query?.checkHandle ? String(ctx.query.checkHandle).trim() : '';
+      if (checkHandle) {
+        const existing = await orgRepo.findOneBy({ handle: checkHandle });
+        return { taken: !!existing };
+      }
+      void (async () => {
+        try {
+          const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          const pendingOrgs = await orgRepo.find({ where: { status: 'pending', ownerId: user.id } });
+          for (const po of pendingOrgs) {
+            try {
+              if (po.createdAt && new Date(po.createdAt) > cutoff) continue;
+              await memberRepo.delete({ organisationId: po.id });
+              await inviteRepo.delete({ organisation: { id: po.id } });
+              await dnsZoneRepo.delete({ organisationId: po.id });
+              await orgRepo.remove(po);
+            } catch (_e) { /* bru */ }
+          }
+        } catch (_e) { /* beh */ }
+      })();
+
       return withRedisCache(`organisations:list:${user.id}:v1`, 20, async () => {
         const memberships = await memberRepo.find({
           where: { userId: user.id },
@@ -186,11 +339,22 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         for (const o of owned) {
           if (!orgs.some(x => x.id === o.id)) orgs.push(o);
         }
-        return orgs.map(org =>
-          sanitizeOrg(org, {
-            orgRole: roleByOrgId.get(org.id) || (org.ownerId === user.id ? 'owner' : 'member'),
-          })
-        );
+        const filtered = orgs.filter(org => {
+          if (org.status !== 'pending') return true;
+          if (hasPermissionSync(ctx, 'org:create')) return true;
+          const userTier = ((ctx.user as User).portalType || ((ctx.user as any).portalType || (ctx.user as any).tier || 'free') || 'free').toString().toLowerCase();
+          return org.ownerId === (ctx.user as User).id && (userTier === 'paid' || userTier === 'enterprise');
+        });
+        const result = await Promise.all(filtered.map(async (org) => {
+          const count = await memberRepo.count({ where: { organisationId: org.id } });
+          return {
+            ...sanitizeOrg(org, {
+              orgRole: roleByOrgId.get(org.id) || (org.ownerId === user.id ? 'owner' : 'member'),
+            }),
+            memberCount: count,
+          };
+        }));
+        return result;
       });
     },
     {
@@ -222,7 +386,16 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         ctx.set.status = 409;
         return { error: ctx.t('organisation.handleTaken') };
       }
-      const org = orgRepo.create({ name, handle, ownerId: user.id });
+
+      const hasCreatePerm = hasPermissionSync(ctx, 'org:create');
+      const userTier = (user as any).portalType || (user as any).tier || 'free';
+      const canCreatePending = userTier === 'paid' || userTier === 'enterprise';
+      if (!hasCreatePerm && !canCreatePending) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      const org = orgRepo.create({ name, handle, ownerId: user.id, status: 'pending', portalTier: 'none' });
       await orgRepo.save(org);
       const ownerMembership = memberRepo.create({
         userId: user.id,
@@ -234,39 +407,18 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       });
       await memberRepo.save(ownerMembership);
 
-      void (async () => {
-        try {
-          const zoneName = handle.replace(/\.$/, '');
-          const existingZone = await dnsZoneRepo.findOne({
-            where: { organisationId: org.id, name: zoneName },
-          });
-          if (!existingZone) {
-            const zone = dnsZoneRepo.create({
-              organisation: org,
-              organisationId: org.id,
-              name: zoneName,
-              kind: 'cloudflare',
-              status: 'active',
-            });
-            await dnsZoneRepo.save(zone);
-          }
-        } catch (e) {
-          // skip
-        }
-      })();
-
       await createActivityLog({
         userId: user.id,
         action: 'org:create',
         targetId: String(org.id),
         targetType: 'organisation',
-        metadata: { orgName: name, handle },
+        metadata: { orgName: name, handle, status: 'pending' },
         ipAddress: ctx.ip,
       });
       return { success: true, org: sanitizeOrg(org, { orgRole: 'owner' }) };
     },
     {
-      beforeHandle: [authenticate, authorize('org:create')],
+      beforeHandle: authenticate,
       response: {
         200: t.Object({ success: t.Boolean(), org: t.Any() }),
         400: t.Object({ error: t.String() }),
@@ -328,16 +480,36 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
     }
   );
 
+  async function requireEnterpriseDns(ctx: AuthenticatedHandlerContext, orgId: number) {
+    const f = await requireFeature(ctx, 'dns');
+    if (f !== true) return f;
+    const org = await orgRepo.findOne({ where: { id: orgId } });
+    if (!org) {
+      ctx.set.status = 404;
+      return { error: ctx.t('organisation.notFound') };
+    }
+    if (org.portalTier === 'enterprise') return org;
+
+    const orderRepo = AppDataSource.getRepository(require('../models/order.entity').Order);
+    const dnsOrder = await orderRepo
+      .createQueryBuilder('o')
+      .where('o.orgId = :orgId', { orgId })
+      .andWhere('o.status = :status', { status: 'active' })
+      .andWhere("o.notes LIKE '%dns_addon%'")
+      .orderBy('o.createdAt', 'DESC')
+      .getOne();
+    if (!dnsOrder) {
+      ctx.set.status = 402;
+      return { error: ctx.t('organisation.dnsRequiresAddon') };
+    }
+    return org;
+  }
+
   app.get(
     prefix + '/organisations/:id/dns/zones',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
-      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-      if (!org) {
-        ctx.set.status = 404;
-        return { error: ctx.t('organisation.notFound') };
-      }
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       const user = ctx.user as User;
       try {
         ctx.log?.info?.(
@@ -350,7 +522,7 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           },
           'org DNS delete auth check'
         );
-      } catch {}
+      } catch (_e) {}
 
       if (!(await userCanManageOrg(ctx, user, org))) {
         ctx.log?.info?.(
@@ -404,13 +576,8 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.post(
     prefix + '/organisations/:id/dns/zones',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
-      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-      if (!org) {
-        ctx.set.status = 404;
-        return { error: ctx.t('organisation.notFound') };
-      }
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       const user = ctx.user as User;
       if (!(await userCanManageOrg(ctx, user, org))) {
         ctx.set.status = 403;
@@ -427,11 +594,15 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         ctx.set.status = 400;
         return { error: ctx.t('organisation.subdomainRequired') };
       }
+      const cloudflareToken = String(body.cloudflareToken || '').trim() || undefined;
+      const externalZoneId = String(body.externalZoneId || '').trim() || undefined;
 
-      const handle = org.handle.replace(/\.$/, '');
-      if (rawName !== handle) {
-        ctx.set.status = 403;
-        return { error: ctx.t('system.onlyOrgZone') };
+      const baseZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
+      const isCustomDomain = !rawName.endsWith('.' + baseZoneName) && rawName !== baseZoneName;
+
+      if (isCustomDomain && !cloudflareToken) {
+        ctx.set.status = 400;
+        return { error: ctx.t('organisation.cloudflareTokenRequired') };
       }
 
       try {
@@ -442,13 +613,31 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
             organisationId: org.id,
             name: rawName,
             kind: 'cloudflare',
-            status: 'active',
+            status: 'pending',
+            cloudflareToken,
+            externalZoneId,
           });
           zone = await dnsZoneRepo.save(zone);
+        } else if (cloudflareToken) {
+          zone.cloudflareToken = cloudflareToken;
+          zone.externalZoneId = externalZoneId;
+          await dnsZoneRepo.save(zone);
         }
         try {
-          await redisDelByPrefix(`organisations:dns-zones:${org.id}:`);
-        } catch {}
+          if (isCustomDomain) {
+            const svc = new CloudflareService(cloudflareToken);
+            await svc.getZone(externalZoneId || rawName);
+          } else {
+            const svc = createDnsService();
+            await svc.createZone({ name: rawName });
+          }
+          zone.status = 'active';
+          await dnsZoneRepo.save(zone);
+        } catch (e) {
+          zone.status = 'pending';
+          await dnsZoneRepo.save(zone);
+        }
+        try { await redisDelByPrefix(`organisations:dns-zones:${org.id}:`); } catch (_e) {}
         return { id: zone.id, name: zone.name, kind: zone.kind, status: zone.status };
       } catch (e: unknown) {
         ctx.set.status = 500;
@@ -472,13 +661,8 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.get(
     prefix + '/organisations/:id/dns/zones/:zoneId',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
-      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-      if (!org) {
-        ctx.set.status = 404;
-        return { error: ctx.t('organisation.notFound') };
-      }
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       const user = ctx.user as User;
       if (!(await userCanManageOrg(ctx, user, org))) {
         ctx.set.status = 403;
@@ -493,25 +677,33 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       }
 
       const zoneName = String(zone.name || '').replace(/\.$/, '');
-      const orgHandle = String(org.handle || '').replace(/\.$/, '');
-
-      const mainZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
+      const baseZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
+      const isSubdomain = zoneName.endsWith('.' + baseZoneName) || zoneName === baseZoneName;
       const svc = createDnsService();
+
       try {
-        const mainZone = await svc.getZone(mainZoneName);
+        if (!isSubdomain) {
+          try {
+            const customZone = await svc.getZone(zoneName);
+            const records: CloudflareRecord[] = customZone?.recordsList || customZone?.rrsets || [];
+            return {
+              id: zone.id, name: zone.name, kind: zone.kind, status: zone.status,
+              recordsList: records,
+            };
+          } catch (_e) {
+            // ber
+          }
+        }
+
+        const mainZone = await svc.getZone(baseZoneName);
         const records: CloudflareRecord[] = [];
         const allRecords: CloudflareRecord[] = mainZone.recordsList || mainZone.rrsets || [];
         const prefix = zone.name.replace(/\.$/, '');
 
         for (const r of allRecords) {
           const name = String(r.name || '').replace(/\.$/, '');
-          if (prefix === mainZoneName) {
-            records.push(r);
-            continue;
-          }
-          if (name === prefix || name.endsWith(`.${prefix}`)) {
-            records.push(r);
-          }
+          if (prefix === baseZoneName) { records.push(r); continue; }
+          if (name === prefix || name.endsWith(`.${prefix}`)) { records.push(r); }
         }
 
         return {
@@ -547,16 +739,11 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.post(
     prefix + '/organisations/:id/dns/zones/:zoneId/records',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       try {
-        const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-        if (!org) {
-          ctx.set.status = 404;
-          return { error: ctx.t('organisation.notFound') };
-        }
         const user = ctx.user as User;
-        if (!(await userCanManageOrg(ctx, user, org))) {
+        if (!(await userCanManageOrg(ctx, user, org as any))) {
           ctx.set.status = 403;
           return { error: ctx.t('common.forbidden') };
         }
@@ -588,20 +775,25 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           return { error: `Only ${allowedTypes.join(', ')} records are allowed` };
         }
 
-        const svc = createDnsService();
-        const mainZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
-        const mainZone = await svc.getZone(mainZoneName);
+        const resolved = await resolveCloudflareZone(zone);
+        if (!resolved) throw new Error('Cloudflare zone not found');
+
         const zoneName = zone.name.replace(/\.$/, '');
         let recordName = zoneName;
         if (name && name !== '@') {
-          if (name === zoneName || name.endsWith(`.${zoneName}`)) {
-            recordName = name;
+          if (resolved.isCustom) {
+            recordName = name === zoneName || name.endsWith(`.${zoneName}`) ? name : `${name}.${zoneName}`;
           } else {
-            recordName = `${name}.${zoneName}`;
+            if (name === zoneName || name.endsWith(`.${zoneName}`)) {
+              recordName = name;
+            } else {
+              recordName = `${name}.${zoneName}`;
+            }
           }
         }
 
-        const created = await svc.addRecord(mainZone.id, {
+        const svc = createDnsService();
+        const created = await svc.addRecord(resolved.zone.id, {
           name: recordName,
           type,
           ttl,
@@ -632,16 +824,11 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.put(
     prefix + '/organisations/:id/dns/zones/:zoneId/records/:recordId',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       try {
-        const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-        if (!org) {
-          ctx.set.status = 404;
-          return { error: ctx.t('organisation.notFound') };
-        }
         const user = ctx.user as User;
-        if (!(await userCanManageOrg(ctx, user, org))) {
+        if (!(await userCanManageOrg(ctx, user, org as any))) {
           ctx.set.status = 403;
           return { error: ctx.t('common.forbidden') };
         }
@@ -674,20 +861,17 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           return { error: `Only ${allowedTypes.join(', ')} records are allowed` };
         }
 
-        const svc = createDnsService();
-        const mainZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
-        const mainZone = await svc.getZone(mainZoneName);
+        const resolved = await resolveCloudflareZone(zone);
+        if (!resolved) throw new Error('Cloudflare zone not found');
+
         const zoneName = zone.name.replace(/\.$/, '');
         let recordName = zoneName;
         if (name && name !== '@') {
-          if (name === zoneName || name.endsWith(`.${zoneName}`)) {
-            recordName = name;
-          } else {
-            recordName = `${name}.${zoneName}`;
-          }
+          recordName = (name === zoneName || name.endsWith(`.${zoneName}`)) ? name : `${name}.${zoneName}`;
         }
 
-        const updated = await svc.updateRecord(mainZone.id, recordId, {
+        const svc = createDnsService();
+        const updated = await svc.updateRecord(resolved.zone.id, recordId, {
           name: recordName,
           type,
           ttl,
@@ -718,13 +902,8 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.delete(
     prefix + '/organisations/:id/dns/zones/:zoneId/records/:recordId',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
-      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-      if (!org) {
-        ctx.set.status = 404;
-        return { error: ctx.t('organisation.notFound') };
-      }
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       const user = ctx.user as User;
       if (!(await userCanManageOrg(ctx, user, org))) {
         ctx.set.status = 403;
@@ -741,11 +920,11 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       }
 
       const recordId = String(ctx.params['recordId']);
+      const resolved = await resolveCloudflareZone(zone);
+      if (!resolved) throw new Error('Cloudflare zone not found');
       const svc = createDnsService();
-      const mainZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
       try {
-        const mainZone = await svc.getZone(mainZoneName);
-        const result = await svc.deleteRecord(mainZone.id, recordId);
+        const result = await svc.deleteRecord(resolved.zone.id, recordId);
         return result;
       } catch (e: unknown) {
         ctx.set.status = 502;
@@ -769,13 +948,8 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
   app.delete(
     prefix + '/organisations/:id/dns/zones/:zoneId',
     async (ctx: AuthenticatedHandlerContext) => {
-      const f = await requireFeature(ctx, 'dns');
-      if (f !== true) return f;
-      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
-      if (!org) {
-        ctx.set.status = 404;
-        return { error: ctx.t('organisation.notFound') };
-      }
+      const org = await requireEnterpriseDns(ctx, Number(ctx.params['id']));
+      if (!(org as any).id) return org as any;
       const user = ctx.user as User;
       if (!(await userCanManageOrg(ctx, user, org))) {
         ctx.set.status = 403;
@@ -791,32 +965,33 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         return { error: ctx.t('organisation.zoneNotFound') };
       }
 
-      const mainZoneName = (process.env.CLOUDFLARE_BASE_ZONE || 'ecli.app').replace(/\.$/, '');
+      const resolved = await resolveCloudflareZone(zone);
       const svc = createDnsService();
 
       try {
-        const mainZone = await svc.getZone(mainZoneName);
-        const records = (mainZone.recordsList || mainZone.rrsets || []).filter((r: CloudflareRecord) => {
-          const name = String(r.name || '').replace(/\.$/, '');
-          const zoneName = zone.name.replace(/\.$/, '');
-          return name === zoneName || name.endsWith(`.${zoneName}`);
-        });
+        if (resolved) {
+          const records = (resolved.zone.recordsList || resolved.zone.rrsets || []).filter((r: CloudflareRecord) => {
+            const name = String(r.name || '').replace(/\.$/, '');
+            const zoneName = zone.name.replace(/\.$/, '');
+            return name === zoneName || name.endsWith(`.${zoneName}`);
+          });
 
-        for (const r of records) {
-          try {
-            await svc.deleteRecord(mainZone.id, String(r.id));
-          } catch {
-            // skip
+          for (const r of records) {
+            try {
+              await svc.deleteRecord(resolved.zone.id, String(r.id));
+            } catch (_e) {
+              // skip
+            }
           }
         }
-      } catch {
+      } catch (_e) {
         // skip
       }
 
       await dnsZoneRepo.delete({ id: zoneId, organisationId: org.id });
       try {
         await redisDelByPrefix(`organisations:dns-zones:${org.id}:`);
-      } catch {}
+      } catch (_e) {}
       return { success: true };
     },
     {
@@ -852,7 +1027,13 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       const body = ctx.body as Record<string, unknown>;
       const { name, portalTier } = body as OrgUpdateBody;
       if (name) org.name = name;
-      if (portalTier) org.portalTier = portalTier;
+      if (portalTier) {
+        if (portalTier === 'free') {
+          ctx.set.status = 400;
+          return { error: ctx.t('organisation.freeTierNotAllowed') };
+        }
+        org.portalTier = portalTier;
+      }
       await orgRepo.save(org);
       const actorMembership = await getMembership(user.id, org.id);
       return {
@@ -1546,21 +1727,200 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
     }
   );
 
+  app.post(
+    prefix + '/organisations/:id/orders',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
+      if (!org) { ctx.set.status = 404; return { error: ctx.t('organisation.notFound') }; }
+      const user = ctx.user as User;
+      const membership = await getMembership(user.id, org.id);
+      if (!membership || (membership.orgRole !== 'admin' && membership.orgRole !== 'owner')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('organisation.insufficientPrivileges') };
+      }
+      const body = ctx.body as Record<string, unknown>;
+      const planId = Number(body.planId);
+      const amount = Number(body.amount || 0);
+      const description = String(body.description || '');
+      const activateMode = String(body.activateMode || 'now');
+      const items = String(body.items || '[]');
+      const notes = body.notes ? String(body.notes) : undefined;
+
+      const orderRepo2 = AppDataSource.getRepository(require('../models/order.entity').Order);
+      let plan: any = null;
+      if (planId && !isNaN(planId)) {
+        const planRepo2 = AppDataSource.getRepository(require('../models/plan.entity').Plan);
+        plan = await planRepo2.findOneBy({ id: planId });
+        if (!plan) { ctx.set.status = 400; return { error: 'Plan not found' }; }
+        if (plan.type === 'free' || plan.type === 'educational') {
+          ctx.set.status = 400;
+          return { error: ctx.t('organisation.cannotPurchaseTier') };
+        }
+        if (plan.type === 'enterprise') {
+          ctx.set.status = 403;
+          return { error: 'Enterprise plans require admin activation' };
+        }
+      }
+
+      const isFree = amount === 0;
+      const order = orderRepo2.create({
+        userId: user.id,
+        orgId: org.id,
+        planId,
+        amount,
+        description: description || `Org #${org.id}: ${plan?.name || 'Add-on'}`,
+        items,
+        notes: notes ? `org_order:${org.id};${notes}` : `org_order:${org.id}`,
+        status: isFree ? 'active' : 'pending',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      });
+      await orderRepo2.save(order);
+
+      if (isFree && plan) {
+        await activateOrderPlan(order, plan);
+      }
+
+      return { success: true, order: { id: order.id, amount: order.amount, status: order.status } };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Create organisation-scoped order', tags: ['Organisations'] },
+    }
+  );
+
+  app.post(
+    prefix + '/organisations/:id/activate',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
+      if (!org) { ctx.set.status = 404; return { error: ctx.t('organisation.notFound') }; }
+      if (org.status !== 'pending') return { success: true, message: 'Already active' };
+
+      const user = ctx.user as User;
+      if (user.id !== org.ownerId && !hasPermissionSync(ctx, 'org:write')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      const orderRepo2 = AppDataSource.getRepository(require('../models/order.entity').Order);
+      const activeOrder = await orderRepo2.findOne({
+        where: { orgId: org.id, status: In(['active', 'paid']) } as any,
+        order: { createdAt: 'DESC' },
+      });
+
+      if (activeOrder?.planId) {
+        const planRepo2 = AppDataSource.getRepository(require('../models/plan.entity').Plan);
+        const plan = await planRepo2.findOneBy({ id: activeOrder.planId });
+        if (plan) {
+          await activateOrderPlan(activeOrder, plan);
+          return { success: true, message: 'Organisation activated' };
+        }
+      }
+
+      ctx.set.status = 400;
+      return { error: 'No active paid order found for this organisation' };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Activate pending organisation', tags: ['Organisations'] },
+    }
+  );
+
+  app.get(
+    prefix + '/organisations/:id/orders/:orderId/invoice',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const org = await orgRepo.findOne({ where: { id: Number(ctx.params['id']) } });
+      if (!org) { ctx.set.status = 404; return { error: ctx.t('organisation.notFound') }; }
+      const user = ctx.user as User;
+      const membership = await getMembership(user.id, org.id);
+      if (user.id !== org.ownerId && !membership && !hasPermissionSync(ctx, 'org:read')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+      const orderRepo2 = AppDataSource.getRepository(require('../models/order.entity').Order);
+      const order = await orderRepo2.findOneBy({ id: Number(ctx.params['orderId']), orgId: org.id });
+      if (!order) { ctx.set.status = 404; return { error: 'Invoice not found' }; }
+      try {
+        const pdfBuf = await renderInvoicePdf(order as any);
+        if (!pdfBuf) {
+          ctx.set.status = 500;
+          return { error: 'Failed to generate invoice PDF' };
+        }
+        ctx.set.headers['Content-Type'] = 'application/pdf';
+        ctx.set.headers['Content-Disposition'] = `attachment; filename="invoice-org-${order.id}.pdf"`;
+        ctx.set.status = 200;
+        return pdfBuf;
+      } catch (e: any) {
+        console.error('[org-invoice] render failed', e?.message || e);
+        ctx.set.status = 500;
+        return { error: 'Failed to generate invoice' };
+      }
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Download organisation order invoice', tags: ['Organisations'] },
+    }
+  );
+
   app.get(
     prefix + '/organisations/:id/servers',
     async (ctx: AuthenticatedHandlerContext) => {
       const orgId = Number(ctx.params['id']);
-      return withRedisCache(`organisations:servers:${orgId}:v1`, 10, async () => {
-        const repo = AppDataSource.getRepository(require('../models/node.entity').Node);
-        const nodes = await repo.find({ where: { organisation: { id: orgId } } });
-        const results: Record<string, unknown>[] = [];
-        for (const n of nodes) {
-          const base = n.backendWingsUrl || n.url;
-          const svc = new WingsApiService(base, n.token);
-          const res = await svc.getServers();
-          results.push(...(res.data || []).map((s: Record<string, unknown>) => ({ ...s, node: n.id })));
+      return withRedisCache(`organisations:servers:${orgId}:v4`, 5, async () => {
+        const nodeRepo = AppDataSource.getRepository(require('../models/node.entity').Node);
+        const cfgRepo = AppDataSource.getRepository(require('../models/serverConfig.entity').ServerConfig);
+        const orgConfigs = await cfgRepo.find({ where: { orgId } });
+        const orgNodes = await nodeRepo.find({ where: { organisation: { id: orgId } } });
+        const allResults: Record<string, unknown>[] = [];
+        const seen = new Set<string>();
+
+        for (const n of orgNodes) {
+          try {
+            const svc = new WingsApiService(n.backendWingsUrl || n.url, n.token);
+            const res = await svc.getServers();
+            for (const s of (res.data || [])) {
+              const norm = normalizeServer(s as Record<string, unknown>);
+              if (norm) {
+                seen.add(norm.uuid as string);
+                allResults.push({ ...norm, node: n.id, nodeName: n.name });
+              }
+            }
+          } catch (_e) {}
         }
-        return results;
+
+        for (const cfg of orgConfigs) {
+          if (seen.has(cfg.uuid)) continue;
+          try {
+            const n = await nodeRepo.findOneBy({ id: cfg.nodeId });
+            if (n) {
+              const svc = new WingsApiService(n.backendWingsUrl || n.url, n.token);
+              const res = await svc.getServers();
+              const match = (res.data || []).find((s: any) => (s.configuration?.uuid || s.uuid) === cfg.uuid);
+              if (match) {
+                const norm = normalizeServer(match as Record<string, unknown>, undefined, cfg);
+                if (norm) {
+                  seen.add(cfg.uuid);
+                  allResults.push({ ...norm, name: cfg.name || norm.name, node: cfg.nodeId, nodeName: n.name });
+                }
+              }
+            }
+          } catch (_e) {}
+
+          if (!seen.has(cfg.uuid)) {
+            allResults.push({
+              uuid: cfg.uuid,
+              name: cfg.name || cfg.uuid,
+              status: cfg.dmca ? 'dmca' : cfg.suspended ? 'suspended' : cfg.hibernated ? 'hibernated' : 'unavailable',
+              hibernated: !!cfg.hibernated,
+              is_suspended: cfg.suspended,
+              resources: null,
+              build: { memory_limit: cfg.memory, disk_space: cfg.disk, cpu_limit: cfg.cpu },
+              container: { image: cfg.dockerImage },
+              node: cfg.nodeId,
+            });
+          }
+        }
+        return allResults;
       });
     },
     {
@@ -1624,7 +1984,7 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
         try {
           const meta = await sharp(buffer, { animated: true }).metadata();
           isAnimated = Number(meta.pages || 1) > 1;
-        } catch {
+        } catch (_e) {
           isAnimated = false;
         }
       }

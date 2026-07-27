@@ -188,7 +188,14 @@
     "recordTypeAndContentRequired": "रिकॉर्ड प्रकार और सामग्री आवश्यक हैं",
     "subdomainRequired": "उपडोमेन नाम आवश्यक",
     "inviteNotFound_1": "आमंत्रण_नहीं_मिला",
-    "featureDnsIsDisabled": "सुविधा 'dns' अक्षम है"
+    "featureDnsIsDisabled": "सुविधा 'dns' अक्षम है",
+    "freeTierNotAllowed": "Free tier is not available for organisations. Choose Paid or Enterprise.",
+    "dnsRequiresAddon": "DNS management requires the $3/mo DNS add-on",
+    "cloudflareTokenRequired": "Cloudflare API token is required for custom domains",
+    "onlyOwnerCanDelete": "Only the organisation owner can delete the organisation",
+    "hasNodes": "Cannot delete organisation with active nodes. Unassign all nodes first.",
+    "dnsRequiresEnterprise": "DNS management requires Enterprise tier",
+    "cannotPurchaseTier": "Organisations cannot purchase free or educational plans"
   },
   "server": {
     "notFound": "सर्वर नहीं मिला",

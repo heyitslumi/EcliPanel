@@ -188,7 +188,14 @@
     "recordTypeAndContentRequired": "Требуются тип записи и содержимое",
     "subdomainRequired": "Требуется имя поддомена",
     "inviteNotFound_1": "invite_not_found",
-    "featureDnsIsDisabled": "Функция DNS отключена"
+    "featureDnsIsDisabled": "Функция DNS отключена",
+    "freeTierNotAllowed": "Free tier is not available for organisations. Choose Paid or Enterprise.",
+    "dnsRequiresAddon": "DNS management requires the $3/mo DNS add-on",
+    "cloudflareTokenRequired": "Cloudflare API token is required for custom domains",
+    "onlyOwnerCanDelete": "Only the organisation owner can delete the organisation",
+    "hasNodes": "Cannot delete organisation with active nodes. Unassign all nodes first.",
+    "dnsRequiresEnterprise": "DNS management requires Enterprise tier",
+    "cannotPurchaseTier": "Organisations cannot purchase free or educational plans"
   },
   "server": {
     "notFound": "Сервер не найден",

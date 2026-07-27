@@ -2808,7 +2808,9 @@
       "quickExamples": "快速示例",
       "taxRulesLabel": "税务规则（国家/组:百分比）",
       "ageRulesLabel": "最低年龄规则",
-      "ageRulesHint": "使用国家代码、国家名称、EU、UK 或 default。每行一条规则。"
+      "ageRulesHint": "使用国家代码、国家名称、EU、UK 或 default。每行一条规则。",
+      "orgFormationFeeLabel": "组织创建费用（美元）",
+      "orgDnsAddonPriceLabel": "DNS 附加功能价格（美元/月）"
     },
     "geoRules": {
       "title": "地理阻止规则",
@@ -4185,7 +4187,8 @@
       "favorites": "收藏",
       "code": "代码",
       "yourServers": "您的服务器",
-      "sharedWithYou": "与您共享"
+      "sharedWithYou": "与您共享",
+      "orgServers": "组织服务器"
     },
     "warnings": {
       "legalInfoTitle": "完成所需的法律信息",
@@ -4369,7 +4372,8 @@
           "push": "Push - hand tied."
         }
       }
-    }
+    },
+    "serverDetail": {}
   },
   "serverConsoleTab": {
     "status": {
@@ -5242,7 +5246,9 @@
       "editSubuser": "编辑子用户",
       "editPermissions": "编辑权限",
       "savePermissions": "保存",
-      "failedUpdatePerms": "更新权限失败：{reason}"
+      "failedUpdatePerms": "更新权限失败：{reason}",
+      "orgMember": "组织{role}",
+      "orgFullAccess": "作为组织成员拥有完全访问权限"
     },
     "settings": {
       "confirmReinstall": "重装此服务器？所有文件将被清除。",
@@ -5768,6 +5774,11 @@
     "labels": {
       "role": "角色：{value}",
       "tier": "等级：{value}"
+    },
+    "description": {},
+    "empty": {
+      "title": "暂无组织",
+      "description": "创建一个组织，开始与团队在服务器和基础设施上协作。"
     }
   },
   "organisationsCreatePage": {
@@ -5790,6 +5801,10 @@
     },
     "errors": {
       "failedCreate": "创建组织失败"
+    },
+    "whatIs": {
+      "title": "什么是组织？",
+      "description": "组织是一个团队工作区，成员可以在其中协作管理游戏服务器、基础设施节点和 DNS。每个组织拥有自己的资源和账单。"
     }
   },
   "organisationsDetailPage": {
@@ -5800,15 +5815,23 @@
       "dash": "—"
     },
     "labels": {
-      "orgLogoAlt": "org logo",
+      "orgLogoAlt": "组织标志",
       "cpu": "CPU",
       "ram": "RAM",
-      "disk": "磁盘"
+      "disk": "磁盘",
+      "tier": "等级",
+      "subscription": "订阅",
+      "dnsAddonActive": "DNS 附加功能已激活"
     },
     "tiers": {
       "free": "免费",
       "pro": "专业版",
-      "enterprise": "企业"
+      "enterprise": "企业",
+      "none": "无套餐",
+      "freeDesc": "基础功能、1 个节点、社区支持",
+      "proDesc": "无限节点、优先支持、自定义 DNS",
+      "enterpriseDesc": "专用节点、SLA、白标、API 访问",
+      "noneDesc": "无活跃套餐 — 请在账单中购买"
     },
     "tabs": {
       "members": "成员",
@@ -5829,7 +5852,7 @@
       "organisationNotFound": "未找到组织。",
       "loadingActivity": "加载活动中…",
       "noActivityTitle": "未找到活动",
-      "noActivityMessage": "No activity recorded for this organisation yet.",
+      "noActivityMessage": "此组织尚未记录任何活动。",
       "noActivityForFilter": "尚未记录 {filter} 事件。"
     },
     "members": {
@@ -5891,7 +5914,19 @@
       "content": "内容",
       "autoTtl": "自动 TTL",
       "addRecordTitle": "添加 DNS 记录（根 = @）",
-      "nameExample": "名称（例如 @、www、api）"
+      "nameExample": "名称（例如 @、www、api）",
+      "domainPlaceholder": "域名（例如 myteam.com 或 app.ecli.app）",
+      "nameserverHint": "自定义域名：请在下方提供您的 Cloudflare API 令牌。",
+      "customDomainHelp": "此域名必须在您的 Cloudflare 账户上。创建一个具有 Zone:DNS:Edit 权限的 API 令牌并粘贴到下方。",
+      "cfTokenPlaceholder": "Cloudflare API 令牌",
+      "cfZoneIdPlaceholder": "区域 ID（可选，从域名自动检测）",
+      "upsellTitle": "DNS 管理附加功能",
+      "upsellDescription": "DNS 管理为 $3/月。添加后可为此组织启用自定义域名和 DNS 记录。",
+      "upsellAction": "启用 DNS — $3/月",
+      "upsellProcessing": "处理中…",
+      "upsellSuccess": "DNS 附加功能已激活！您现在可以管理 DNS 记录。",
+      "upsellFailed": "激活 DNS 附加功能失败{reason}",
+      "checking": "正在检查 DNS 访问权限…"
     },
     "activity": {
       "title": "组织活动",
@@ -5976,13 +6011,18 @@
       "create": "创建",
       "save": "保存",
       "cancel": "取消",
-      "addRecord": "添加记录"
+      "addRecord": "添加记录",
+      "deleteOrg": "删除组织",
+      "manageSubscription": "管理订阅",
+      "addDnsAddon": "添加 DNS — $3/月"
     },
     "confirm": {
       "leaveOrg": "离开组织？这将移除您的访问权限和相关子用户链接。",
       "deleteRecord": "删除此记录？",
       "revokeInvite": "撤销此邀请？",
-      "removeSubdomain": "从组织中移除子域名 {name}？"
+      "removeSubdomain": "从组织中移除子域名 {name}？",
+      "deleteOrg": "删除此组织？此操作不可撤销。所有成员、DNS 区域和发票将被清除。",
+      "deleteOrgServers": "ALL organisation servers will be permanently deleted. This cannot be undone. Delete \"{name}\"?"
     },
     "alerts": {
       "leftOrg": "您已离开组织",
@@ -6001,6 +6041,24 @@
       "inviteRevoked": "邀请已撤销",
       "failedDeleteSubdomain": "删除子域名失败：{reason}",
       "failedChangeRole": "更改角色失败"
+    },
+    "settings": {
+      "avatar": "组织标志",
+      "avatarHint": "PNG、JPG 或 WebP。将被缩放至 256x256。",
+      "name": "组织名称",
+      "namePrompt": "新组织名称：",
+      "handle": "标识（域名）",
+      "handleLocked": "联系管理员更改",
+      "handlePrompt": "新标识（域名）：",
+      "subscription": "订阅等级",
+      "transferOwnership": "转让所有权",
+      "transferOwnershipHint": "将组织所有权转让给其他成员。此操作不可撤销。",
+      "transferUserIdPrompt": "输入要转让所有权的成员用户 ID：",
+      "transfer": "转让",
+      "userNotMember": "此用户不是组织成员。",
+      "ownershipTransferred": "所有权已成功转让。",
+      "deleteOrg": "删除组织",
+      "deleteOrgHint": "永久删除此组织及其所有服务器。此操作不可撤销。"
     }
   },
   "aiChatPage": {
@@ -6687,5 +6745,70 @@
     "analyticsTableCreated": "创建时间",
     "views": "次浏览",
     "handbook": "手册"
+  },
+  "orgBilling": {
+    "title": "组织账单",
+    "loading": "加载账单信息中…",
+    "pendingTitle": "组织待激活",
+    "pendingDesc": "购买下方套餐以激活您的组织。首笔付款包含一次性 $1 创建费用。",
+    "inclFee": "+$1 费用",
+    "formationFee": "组织创建费用（一次性）",
+    "payFormationFee": "支付 $1 创建费用以激活",
+    "confirmFormationFee": "支付 $1 创建费用以激活此组织？管理员标记付款后，您的组织将激活。",
+    "formationFeePaid": "创建费用订单已创建！管理员将很快激活您的组织。",
+    "formationFeeFailed": "创建费用订单失败",
+    "contactSales": "联系销售",
+    "unauthorized": "仅组织管理员和所有者可以管理账单。",
+    "currentPlan": "当前套餐",
+    "currentPlanDesc": "您组织当前的订阅等级。",
+    "plan": "套餐",
+    "enterpriseDesc": "专用节点、SLA、白标、包含 DNS、API 访问。",
+    "paidDesc": "无限节点、优先支持、自定义 DNS 可作为附加功能。",
+    "freeDesc": "基础功能、1 个节点、社区支持。",
+    "enterpriseBadge": "企业版",
+    "upgradePlan": "升级套餐",
+    "availablePlans": "可用套餐",
+    "availablePlansDesc": "切换您组织的套餐。",
+    "availablePlansPendingDesc": "选择一个套餐以激活您的组织。包含一次性 $1 创建费用。",
+    "current": "当前",
+    "switchTo": "切换",
+    "currentPlan_label": "当前套餐",
+    "confirmSwitch": "将组织切换到 {plan} 套餐？",
+    "planSwitched": "套餐已切换！更改可能需要一些时间生效。",
+    "switchFailed": "切换套餐失败",
+    "addons": "附加功能",
+    "addonsDesc": "组织的附加服务。",
+    "dnsAddon": "DNS 管理",
+    "dnsAddonDesc": "通过 Cloudflare 管理自定义域名和 DNS 记录。$3/月。",
+    "buyDnsButton": "购买 — $3/月",
+    "dnsActive": "已激活",
+    "included": "已包含",
+    "confirmDnsAddon": "购买 DNS 管理附加功能 $3/月？",
+    "dnsPurchased": "DNS 附加功能已购买！访问 DNS 标签页配置域名。",
+    "dnsPurchaseFailed": "购买 DNS 附加功能失败",
+    "invoices": "发票历史",
+    "invoicesDesc": "此组织的历史订单和付款记录。",
+    "noInvoices": "暂无发票。",
+    "columns": {
+      "description": "描述",
+      "amount": "金额",
+      "status": "状态",
+      "date": "日期"
+    },
+    "invoiceFailed": "下载发票失败",
+    "specs": {
+      "memory": "内存：{val}MB",
+      "disk": "磁盘：{val}MB",
+      "cpu": "CPU：{val}%",
+      "servers": "服务器：{val}",
+      "databases": "数据库：{val}",
+      "backups": "备份：{val}"
+    },
+    "confirmSwitchDesc": "确认从 {current} 切换到 {target}？",
+    "noPlan": "无套餐",
+    "pendingHint": "在下方选择一个套餐以支付创建费用并激活您的组织。",
+    "retryActivation": "重新激活",
+    "activationFailed": "激活失败",
+    "syncFailed": "同步失败"
   }
 }

@@ -92,21 +92,42 @@ export async function nodeRoutes(app: NodeApp, prefix = '') {
       }
 
       const isAdmin = hasPermissionSync(ctx, 'nodes:read');
+      const requestedOrgId = ctx.query?.orgId ? Number(ctx.query.orgId) : undefined;
 
       const effectivePortalType = user.portalType;
       const portalType =
         effectivePortalType === 'educational' ? 'free' : effectivePortalType || 'free';
 
-      const cacheKey = `nodes:available:${user.id}:${portalType}:${isAdmin ? 'admin' : 'user'}:v1`;
+      const cacheKey = `nodes:available:${user.id}:${portalType}:${isAdmin ? 'admin' : 'user'}:${requestedOrgId || 'all'}:v1`;
       return withRedisCache(cacheKey, 10, async () => {
+        const unhealthyNodeIds = await getUnhealthyNodeIds();
+        const baseOptions: Record<string, unknown> = { relations: { organisation: true } };
+        const deploymentFilter = { deploymentsDisabled: false };
+
+        if (requestedOrgId && Number.isFinite(requestedOrgId)) {
+          const orgMemberships = await orgMemberRepo().find({ where: { userId: user.id } });
+          const orgIds = orgMemberships
+            .map((m: OrganisationMember) => Number(m.organisationId))
+            .filter((v: number) => Number.isFinite(v));
+          if (!isAdmin && !orgIds.includes(requestedOrgId)) {
+            ctx.set.status = 403;
+            return { error: 'Not a member of this organisation' };
+          }
+          const orgWhere: Record<string, unknown> = { organisation: { id: requestedOrgId }, ...deploymentFilter };
+          if (unhealthyNodeIds.length) orgWhere.id = Not(In(unhealthyNodeIds));
+          const orgNodes = await nodeRepo().find({ where: orgWhere, relations: { organisation: true } });
+          if (orgNodes.length > 0) return sanitizeNodes(orgNodes);
+
+          const fallbackWhere: Record<string, unknown> = { nodeType: In(['paid', 'free_and_paid']), ...deploymentFilter };
+          if (unhealthyNodeIds.length) fallbackWhere.id = Not(In(unhealthyNodeIds));
+          const fallbackNodes = await nodeRepo().find({ where: fallbackWhere, relations: { organisation: true } });
+          return sanitizeNodes(fallbackNodes);
+        }
+
         if (isAdmin) {
           const nodes = await nodeRepo().find({ relations: { organisation: true } });
           return sanitizeNodes(nodes);
         }
-
-        const unhealthyNodeIds = await getUnhealthyNodeIds();
-        const baseOptions: Record<string, unknown> = { relations: { organisation: true } };
-        const deploymentFilter = { deploymentsDisabled: false };
 
         if (portalType === 'enterprise') {
           const memberships = await orgMemberRepo().find({ where: { userId: user.id } });

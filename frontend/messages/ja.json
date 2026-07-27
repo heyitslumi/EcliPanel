@@ -2540,7 +2540,9 @@
       "quickExamples": "クイック例",
       "taxRulesLabel": "税ルール（国/グループ:パーセント）",
       "ageRulesLabel": "最低年齢ルール",
-      "ageRulesHint": "国コード、国名、EU、UK、またはdefaultを使用。1行に1ルール。"
+      "ageRulesHint": "国コード、国名、EU、UK、またはdefaultを使用。1行に1ルール。",
+      "orgFormationFeeLabel": "組織形成手数料（$）",
+      "orgDnsAddonPriceLabel": "DNSアドオン価格（$/月）"
     },
     "geoRules": {
       "title": "Geoブロックルール",
@@ -3917,7 +3919,8 @@
       "favorites": "お気に入り",
       "code": "コード",
       "yourServers": "あなたのサーバー",
-      "sharedWithYou": "共有されたサーバー"
+      "sharedWithYou": "共有されたサーバー",
+      "orgServers": "組織のサーバー"
     },
     "warnings": {
       "legalInfoTitle": "必要な法的情報を入力してください",
@@ -4101,7 +4104,8 @@
           "push": "プッシュ - 引き分けです。"
         }
       }
-    }
+    },
+    "serverDetail": {}
   },
   "serverConsoleTab": {
     "status": {
@@ -5242,7 +5246,9 @@
       "editSubuser": "サブユーザーを編集",
       "editPermissions": "権限を編集",
       "savePermissions": "保存",
-      "failedUpdatePerms": "権限更新失敗：{reason}"
+      "failedUpdatePerms": "権限更新失敗：{reason}",
+      "orgMember": "組織{role}",
+      "orgFullAccess": "組織メンバーとしてフルアクセス"
     },
     "settings": {
       "confirmReinstall": "このサーバーを再インストールしますか？すべてのファイルが削除されます。",
@@ -5768,6 +5774,11 @@
     "labels": {
       "role": "ロール：{value}",
       "tier": "ティア：{value}"
+    },
+    "description": {},
+    "empty": {
+      "title": "まだ組織はありません",
+      "description": "組織を作成して、チームでサーバーとインフラストラクチャの共同作業を始めましょう。"
     }
   },
   "organisationsCreatePage": {
@@ -5790,6 +5801,10 @@
     },
     "errors": {
       "failedCreate": "組織の作成に失敗しました"
+    },
+    "whatIs": {
+      "title": "組織とは？",
+      "description": "組織は、メンバーがゲームサーバー、インフラノード、DNSを共同で管理できるチームワークスペースです。各組織には独自のリソースと請求があります。"
     }
   },
   "organisationsDetailPage": {
@@ -5803,12 +5818,20 @@
       "orgLogoAlt": "組織ロゴ",
       "cpu": "CPU",
       "ram": "RAM",
-      "disk": "ディスク"
+      "disk": "ディスク",
+      "tier": "ティア",
+      "subscription": "サブスクリプション",
+      "dnsAddonActive": "DNSアドオン有効"
     },
     "tiers": {
       "free": "無料",
       "pro": "Pro",
-      "enterprise": "エンタープライズ"
+      "enterprise": "エンタープライズ",
+      "none": "プランなし",
+      "freeDesc": "基本機能、1ノード、コミュニティサポート",
+      "proDesc": "無制限ノード、優先サポート、カスタムDNS",
+      "enterpriseDesc": "専用ノード、SLA、ホワイトラベル、APIアクセス",
+      "noneDesc": "有効なプランがありません — 請求から購入してください"
     },
     "tabs": {
       "members": "メンバー",
@@ -5891,7 +5914,19 @@
       "content": "内容",
       "autoTtl": "自動TTL",
       "addRecordTitle": "DNSレコードを追加（ルート = @）",
-      "nameExample": "名前（例：@、www、api）"
+      "nameExample": "名前（例：@、www、api）",
+      "domainPlaceholder": "ドメイン（例：myteam.com または app.ecli.app）",
+      "nameserverHint": "カスタムドメイン：以下にCloudflare APIトークンを入力してください。",
+      "customDomainHelp": "このドメインはCloudflareアカウント上にある必要があります。Zone:DNS:Edit権限を持つAPIトークンを作成し、以下に貼り付けてください。",
+      "cfTokenPlaceholder": "Cloudflare APIトークン",
+      "cfZoneIdPlaceholder": "ゾーンID（任意、ドメインから自動検出）",
+      "upsellTitle": "DNS管理アドオン",
+      "upsellDescription": "DNS管理はプランで$3/月です。この組織のカスタムドメインとDNSレコードを有効にするには追加してください。",
+      "upsellAction": "DNSを有効にする — $3/月",
+      "upsellProcessing": "処理中…",
+      "upsellSuccess": "DNSアドオンが有効になりました！DNSレコードを管理できるようになりました。",
+      "upsellFailed": "DNSアドオンの有効化に失敗しました{reason}",
+      "checking": "DNSアクセスを確認中…"
     },
     "activity": {
       "title": "組織アクティビティ",
@@ -5976,13 +6011,18 @@
       "create": "作成",
       "save": "保存",
       "cancel": "キャンセル",
-      "addRecord": "レコードを追加"
+      "addRecord": "レコードを追加",
+      "deleteOrg": "Delete organisation",
+      "manageSubscription": "Manage subscription",
+      "addDnsAddon": "Add DNS — $3/mo"
     },
     "confirm": {
       "leaveOrg": "組織を退出しますか？これによりアクセスと関連するサブユーザーリンクが削除されます。",
       "deleteRecord": "このレコードを削除しますか？",
       "revokeInvite": "この招待を取り消しますか？",
-      "removeSubdomain": "サブドメイン {name} を組織から削除しますか？"
+      "removeSubdomain": "サブドメイン {name} を組織から削除しますか？",
+      "deleteOrg": "Delete this organisation? This action cannot be undone. All members, DNS zones, and invoices will be cleared.",
+      "deleteOrgServers": "ALL organisation servers will be permanently deleted. This cannot be undone. Delete \"{name}\"?"
     },
     "alerts": {
       "leftOrg": "組織から退出しました",
@@ -6001,6 +6041,24 @@
       "inviteRevoked": "招待が取り消されました",
       "failedDeleteSubdomain": "サブドメイン削除失敗：{reason}",
       "failedChangeRole": "ロール変更に失敗しました"
+    },
+    "settings": {
+      "avatar": "組織ロゴ",
+      "avatarHint": "PNG、JPG、またはWebP。256x256にリサイズされます。",
+      "name": "組織名",
+      "namePrompt": "新しい組織名：",
+      "handle": "ハンドル（ドメイン）",
+      "handleLocked": "変更するには管理者に連絡してください",
+      "handlePrompt": "新しいハンドル（ドメイン）：",
+      "subscription": "サブスクリプションティア",
+      "transferOwnership": "所有権を移行",
+      "transferOwnershipHint": "組織の所有権を別のメンバーに移行します。この操作は取り消せません。",
+      "transferUserIdPrompt": "所有権を移行するメンバーのユーザーIDを入力してください：",
+      "transfer": "移行",
+      "userNotMember": "このユーザーは組織のメンバーではありません。",
+      "ownershipTransferred": "所有権が正常に移行されました。",
+      "deleteOrg": "組織を削除",
+      "deleteOrgHint": "この組織とすべてのサーバーを完全に削除します。この操作は取り消せません。"
     }
   },
   "aiChatPage": {
@@ -6687,5 +6745,70 @@
     "analyticsTableCreated": "作成日",
     "views": "閲覧数",
     "handbook": "ハンドブック"
+  },
+  "orgBilling": {
+    "title": "組織の請求",
+    "loading": "請求情報を読み込み中…",
+    "pendingTitle": "組織は有効化待ちです",
+    "pendingDesc": "以下からプランを購入して組織を有効化してください。初回支払いには$1の形成手数料が含まれます。",
+    "inclFee": "+$1手数料",
+    "formationFee": "組織形成手数料（1回限り）",
+    "payFormationFee": "有効化するには$1の形成手数料を支払う",
+    "confirmFormationFee": "この組織を有効化するために$1の形成手数料を支払いますか？管理者が支払いを確認すると組織が有効になります。",
+    "formationFeePaid": "形成手数料の注文が作成されました！管理者がまもなく組織を有効化します。",
+    "formationFeeFailed": "形成手数料の注文作成に失敗しました",
+    "contactSales": "営業に問い合わせ",
+    "unauthorized": "組織の管理者と所有者のみが請求を管理できます。",
+    "currentPlan": "現在のプラン",
+    "currentPlanDesc": "組織の有効なサブスクリプションティアです。",
+    "plan": "プラン",
+    "enterpriseDesc": "専用ノード、SLA、ホワイトラベル、DNS付属、APIアクセス。",
+    "paidDesc": "無制限ノード、優先サポート、カスタムDNSアドオン利用可能。",
+    "freeDesc": "基本機能、1ノード、コミュニティサポート。",
+    "enterpriseBadge": "エンタープライズ",
+    "upgradePlan": "プランをアップグレード",
+    "availablePlans": "利用可能なプラン",
+    "availablePlansDesc": "組織のプランを切り替えます。",
+    "availablePlansPendingDesc": "組織を有効化するプランを選択してください。$1の形成手数料（1回限り）が含まれます。",
+    "current": "現在",
+    "switchTo": "切り替え",
+    "currentPlan_label": "現在のプラン",
+    "confirmSwitch": "組織を{plan}プランに切り替えますか？",
+    "planSwitched": "プランが切り替わりました！反映まで少々お待ちください。",
+    "switchFailed": "プランの切り替えに失敗しました",
+    "addons": "アドオン",
+    "addonsDesc": "組織の追加サービス。",
+    "dnsAddon": "DNS管理",
+    "dnsAddonDesc": "Cloudflare経由のカスタムドメインとDNSレコード管理。$3/月。",
+    "buyDnsButton": "購入 — $3/月",
+    "dnsActive": "有効",
+    "included": "含まれています",
+    "confirmDnsAddon": "DNS管理アドオンを$3/月で購入しますか？",
+    "dnsPurchased": "DNSアドオンを購入しました！DNSタブからドメインを設定してください。",
+    "dnsPurchaseFailed": "DNSアドオンの購入に失敗しました",
+    "invoices": "請求履歴",
+    "invoicesDesc": "この組織の過去の注文と支払い。",
+    "noInvoices": "まだ請求はありません。",
+    "columns": {
+      "description": "説明",
+      "amount": "金額",
+      "status": "ステータス",
+      "date": "日付"
+    },
+    "invoiceFailed": "請求書のダウンロードに失敗しました",
+    "specs": {
+      "memory": "メモリ: {val}MB",
+      "disk": "ディスク: {val}MB",
+      "cpu": "CPU: {val}%",
+      "servers": "サーバー: {val}",
+      "databases": "データベース: {val}",
+      "backups": "バックアップ: {val}"
+    },
+    "confirmSwitchDesc": "{current}から{target}に切り替えますか？",
+    "noPlan": "プランなし",
+    "pendingHint": "以下のプランを選択して形成手数料を支払い、組織を有効化してください。",
+    "retryActivation": "有効化を再試行",
+    "activationFailed": "有効化に失敗しました",
+    "syncFailed": "同期に失敗しました"
   }
 }

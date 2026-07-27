@@ -2540,7 +2540,9 @@
       "quickExamples": "त्वरित उदाहरण",
       "taxRulesLabel": "कर नियम (देश/समूह:प्रतिशत)",
       "ageRulesLabel": "न्यूनतम आयु नियम",
-      "ageRulesHint": "देश कोड, देश के नाम, EU, UK या default का उपयोग करें। प्रति पंक्ति एक नियम।"
+      "ageRulesHint": "देश कोड, देश के नाम, EU, UK या default का उपयोग करें। प्रति पंक्ति एक नियम।",
+      "orgFormationFeeLabel": "संगठन गठन शुल्क ($)",
+      "orgDnsAddonPriceLabel": "DNS ऐड-ऑन मूल्य ($/माह)"
     },
     "geoRules": {
       "title": "भू-अवरोध नियम",
@@ -3917,7 +3919,8 @@
       "favorites": "पसंदीदा",
       "code": "कोड",
       "yourServers": "आपके सर्वर",
-      "sharedWithYou": "आपके साथ साझा"
+      "sharedWithYou": "आपके साथ साझा",
+      "orgServers": "संगठन सर्वर"
     },
     "warnings": {
       "legalInfoTitle": "आवश्यक कानूनी जानकारी पूर्ण करें",
@@ -4101,7 +4104,8 @@
           "push": "पुश - हैंड बराबर।"
         }
       }
-    }
+    },
+    "serverDetail": {}
   },
   "serverConsoleTab": {
     "status": {
@@ -5242,7 +5246,9 @@
       "editSubuser": "सबयूज़र संपादित करें",
       "editPermissions": "अनुमतियां संपादित करें",
       "savePermissions": "सहेजें",
-      "failedUpdatePerms": "अनुमतियां अपडेट करने में विफल: {reason}"
+      "failedUpdatePerms": "अनुमतियां अपडेट करने में विफल: {reason}",
+      "orgMember": "संगठन {role}",
+      "orgFullAccess": "संगठन सदस्य के रूप में पूर्ण पहुंच"
     },
     "settings": {
       "confirmReinstall": "यह सर्वर पुनः स्थापित करें? सभी फ़ाइलें मिटा दी जाएंगी।",
@@ -5768,6 +5774,11 @@
     "labels": {
       "role": "भूमिका: {value}",
       "tier": "स्तर: {value}"
+    },
+    "description": {},
+    "empty": {
+      "title": "अभी तक कोई संगठन नहीं",
+      "description": "सर्वर और इंफ्रास्ट्रक्चर पर अपनी टीम के साथ सहयोग शुरू करने के लिए एक संगठन बनाएं।"
     }
   },
   "organisationsCreatePage": {
@@ -5790,6 +5801,10 @@
     },
     "errors": {
       "failedCreate": "संगठन बनाने में विफल"
+    },
+    "whatIs": {
+      "title": "संगठन क्या है?",
+      "description": "संगठन एक टीम कार्यक्षेत्र है जहां सदस्य गेम सर्वर, इंफ्रास्ट्रक्चर नोड्स और DNS पर एक साथ सहयोग कर सकते हैं। प्रत्येक संगठन को अपने स्वयं के संसाधन और बिलिंग मिलती है।"
     }
   },
   "organisationsDetailPage": {
@@ -5803,12 +5818,20 @@
       "orgLogoAlt": "संगठन लोगो",
       "cpu": "CPU",
       "ram": "RAM",
-      "disk": "डिस्क"
+      "disk": "डिस्क",
+      "tier": "Tier",
+      "subscription": "Subscription",
+      "dnsAddonActive": "DNS Add-on active"
     },
     "tiers": {
       "free": "मुफ़्त",
       "pro": "प्रो",
-      "enterprise": "एंटरप्राइज़"
+      "enterprise": "एंटरप्राइज़",
+      "none": "No plan",
+      "freeDesc": "Basic features, 1 node, community support",
+      "proDesc": "Unlimited nodes, priority support, custom DNS",
+      "enterpriseDesc": "Dedicated nodes, SLA, white-label, API access",
+      "noneDesc": "No active plan — purchase one in Billing"
     },
     "tabs": {
       "members": "सदस्य",
@@ -5891,7 +5914,19 @@
       "content": "सामग्री",
       "autoTtl": "स्वतः TTL",
       "addRecordTitle": "DNS रिकॉर्ड जोड़ें (root = @)",
-      "nameExample": "नाम (जैसे @, www, api)"
+      "nameExample": "नाम (जैसे @, www, api)",
+      "domainPlaceholder": "डोमेन (जैसे myteam.com या app.ecli.app)",
+      "nameserverHint": "कस्टम डोमेन: नीचे अपना Cloudflare API टोकन प्रदान करें।",
+      "customDomainHelp": "यह डोमेन आपके Cloudflare खाते में होना चाहिए। Zone:DNS:Edit अनुमति के साथ एक API टोकन बनाएं और नीचे पेस्ट करें।",
+      "cfTokenPlaceholder": "Cloudflare API टोकन",
+      "cfZoneIdPlaceholder": "ज़ोन ID (वैकल्पिक, डोमेन से स्वतः पता लगाया जाएगा)",
+      "upsellTitle": "DNS प्रबंधन ऐड-ऑन",
+      "upsellDescription": "DNS प्रबंधन आपके प्लान के लिए $3/माह है। इस संगठन के लिए कस्टम डोमेन और DNS रिकॉर्ड सक्षम करने के लिए इसे जोड़ें।",
+      "upsellAction": "DNS सक्षम करें — $3/माह",
+      "upsellProcessing": "प्रसंस्करण हो रहा है…",
+      "upsellSuccess": "DNS ऐड-ऑन सक्रिय! अब आप DNS रिकॉर्ड प्रबंधित कर सकते हैं।",
+      "upsellFailed": "DNS ऐड-ऑन सक्रिय करने में विफल{reason}",
+      "checking": "DNS पहुंच की जांच हो रही है…"
     },
     "activity": {
       "title": "संगठन गतिविधि",
@@ -5976,13 +6011,18 @@
       "create": "बनाएं",
       "save": "सहेजें",
       "cancel": "रद्द करें",
-      "addRecord": "रिकॉर्ड जोड़ें"
+      "addRecord": "रिकॉर्ड जोड़ें",
+      "deleteOrg": "Delete organisation",
+      "manageSubscription": "Manage subscription",
+      "addDnsAddon": "Add DNS — $3/mo"
     },
     "confirm": {
       "leaveOrg": "संगठन छोड़ें? यह आपकी पहुंच और संबंधित सबयूज़र लिंक हटा देगा।",
       "deleteRecord": "यह रिकॉर्ड हटाएं?",
       "revokeInvite": "यह आमंत्रण रद्द करें?",
-      "removeSubdomain": "संगठन से सबडोमेन {name} हटाएं?"
+      "removeSubdomain": "संगठन से सबडोमेन {name} हटाएं?",
+      "deleteOrg": "Delete this organisation? This action cannot be undone. All members, DNS zones, and invoices will be cleared.",
+      "deleteOrgServers": "ALL organisation servers will be permanently deleted. This cannot be undone. Delete \"{name}\"?"
     },
     "alerts": {
       "leftOrg": "आपने संगठन छोड़ दिया है",
@@ -6001,6 +6041,24 @@
       "inviteRevoked": "आमंत्रण रद्द किया गया",
       "failedDeleteSubdomain": "सबडोमेन हटाने में विफल: {reason}",
       "failedChangeRole": "भूमिका बदलने में विफल"
+    },
+    "settings": {
+      "avatar": "संगठन लोगो",
+      "avatarHint": "PNG, JPG या WebP। 256x256 में आकार बदला जाएगा।",
+      "name": "संगठन का नाम",
+      "namePrompt": "नया संगठन नाम:",
+      "handle": "हैंडल (डोमेन)",
+      "handleLocked": "बदलने के लिए एडमिन से संपर्क करें",
+      "handlePrompt": "नया हैंडल (डोमेन):",
+      "subscription": "सदस्यता स्तर",
+      "transferOwnership": "स्वामित्व स्थानांतरित करें",
+      "transferOwnershipHint": "संगठन का स्वामित्व किसी अन्य सदस्य को स्थानांतरित करें। इसे पूर्ववत नहीं किया जा सकता।",
+      "transferUserIdPrompt": "जिस सदस्य को स्वामित्व स्थानांतरित करना है उसका उपयोगकर्ता ID दर्ज करें:",
+      "transfer": "स्थानांतरित करें",
+      "userNotMember": "यह उपयोगकर्ता संगठन का सदस्य नहीं है।",
+      "ownershipTransferred": "स्वामित्व सफलतापूर्वक स्थानांतरित किया गया।",
+      "deleteOrg": "संगठन हटाएं",
+      "deleteOrgHint": "इस संगठन और इसके सभी सर्वरों को स्थायी रूप से हटाएं। इसे पूर्ववत नहीं किया जा सकता।"
     }
   },
   "aiChatPage": {
@@ -6687,5 +6745,70 @@
     "analyticsTableCreated": "बनाया गया",
     "views": "दृश्य",
     "handbook": "हैंडबुक"
+  },
+  "orgBilling": {
+    "title": "संगठन बिलिंग",
+    "loading": "बिलिंग जानकारी लोड हो रही है…",
+    "pendingTitle": "संगठन सक्रियण लंबित",
+    "pendingDesc": "अपने संगठन को सक्रिय करने के लिए नीचे एक प्लान खरीदें। आपके पहले भुगतान में एक बार का $1 गठन शुल्क शामिल है।",
+    "inclFee": "+$1 शुल्क",
+    "formationFee": "संगठन गठन शुल्क (एक बार)",
+    "payFormationFee": "सक्रिय करने के लिए $1 गठन शुल्क का भुगतान करें",
+    "confirmFormationFee": "इस संगठन को सक्रिय करने के लिए $1 गठन शुल्क का भुगतान करें? जब कोई एडमिन भुगतान को चिह्नित करेगा तब आपका संगठन सक्रिय हो जाएगा।",
+    "formationFeePaid": "गठन शुल्क ऑर्डर बनाया गया! एक एडमिन जल्द ही आपका संगठन सक्रिय करेगा।",
+    "formationFeeFailed": "गठन शुल्क ऑर्डर बनाने में विफल",
+    "contactSales": "बिक्री से संपर्क करें",
+    "unauthorized": "केवल संगठन एडमिन और मालिक ही बिलिंग प्रबंधित कर सकते हैं।",
+    "currentPlan": "वर्तमान प्लान",
+    "currentPlanDesc": "आपके संगठन का सक्रिय सदस्यता स्तर।",
+    "plan": "प्लान",
+    "enterpriseDesc": "समर्पित नोड्स, SLA, व्हाइट-लेबल, DNS शामिल, API पहुंच।",
+    "paidDesc": "असीमित नोड्स, प्राथमिकता सहायता, कस्टम DNS ऐड-ऑन के रूप में उपलब्ध।",
+    "freeDesc": "बुनियादी सुविधाएं, 1 नोड, सामुदायिक सहायता।",
+    "enterpriseBadge": "एंटरप्राइज़",
+    "upgradePlan": "प्लान अपग्रेड करें",
+    "availablePlans": "उपलब्ध प्लान",
+    "availablePlansDesc": "अपने संगठन का प्लान बदलें।",
+    "availablePlansPendingDesc": "अपने संगठन को सक्रिय करने के लिए एक प्लान चुनें। एक बार का $1 गठन शुल्क शामिल है।",
+    "current": "वर्तमान",
+    "switchTo": "बदलें",
+    "currentPlan_label": "वर्तमान प्लान",
+    "confirmSwitch": "संगठन को {plan} प्लान में बदलें?",
+    "planSwitched": "प्लान बदल दिया गया! बदलाव होने में थोड़ा समय लग सकता है।",
+    "switchFailed": "प्लान बदलने में विफल",
+    "addons": "ऐड-ऑन",
+    "addonsDesc": "आपके संगठन के लिए अतिरिक्त सेवाएं।",
+    "dnsAddon": "DNS प्रबंधन",
+    "dnsAddonDesc": "Cloudflare के माध्यम से कस्टम डोमेन और DNS रिकॉर्ड प्रबंधन। $3/माह।",
+    "buyDnsButton": "खरीदें — $3/माह",
+    "dnsActive": "सक्रिय",
+    "included": "शामिल",
+    "confirmDnsAddon": "$3/माह के लिए DNS प्रबंधन ऐड-ऑन खरीदें?",
+    "dnsPurchased": "DNS ऐड-ऑन खरीदा गया! डोमेन कॉन्फ़िगर करने के लिए DNS टैब पर जाएं।",
+    "dnsPurchaseFailed": "DNS ऐड-ऑन खरीदने में विफल",
+    "invoices": "चालान इतिहास",
+    "invoicesDesc": "इस संगठन के लिए पिछले ऑर्डर और भुगतान।",
+    "noInvoices": "अभी तक कोई चालान नहीं।",
+    "columns": {
+      "description": "विवरण",
+      "amount": "राशि",
+      "status": "स्थिति",
+      "date": "दिनांक"
+    },
+    "invoiceFailed": "चालान डाउनलोड करने में विफल",
+    "specs": {
+      "memory": "मेमोरी: {val}MB",
+      "disk": "डिस्क: {val}MB",
+      "cpu": "CPU: {val}%",
+      "servers": "सर्वर: {val}",
+      "databases": "डेटाबेस: {val}",
+      "backups": "बैकअप: {val}"
+    },
+    "confirmSwitchDesc": "{current} से {target} में बदलें?",
+    "noPlan": "कोई प्लान नहीं",
+    "pendingHint": "गठन शुल्क का भुगतान करने और अपने संगठन को सक्रिय करने के लिए नीचे एक प्लान चुनें।",
+    "retryActivation": "सक्रियण पुनः प्रयास करें",
+    "activationFailed": "सक्रियण विफल",
+    "syncFailed": "सिंक विफल"
   }
 }

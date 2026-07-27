@@ -1594,6 +1594,7 @@ export async function saveServerConfig(params: {
   uuid: string;
   nodeId: number;
   userId: number;
+  orgId?: number;
   name?: string;
   description?: string;
   dockerImage?: string;
@@ -1634,6 +1635,7 @@ export async function saveServerConfig(params: {
       uuid: params.uuid,
       nodeId: params.nodeId,
       userId: params.userId,
+      orgId: params.orgId ?? null,
       name: params.name,
       description: params.description,
       dockerImage: params.dockerImage ?? '',
@@ -1671,6 +1673,7 @@ export async function saveServerConfig(params: {
   const keep = existing[0];
   keep.nodeId = params.nodeId;
   keep.userId = params.userId;
+  keep.orgId = params.orgId !== undefined ? (params.orgId ?? null) : keep.orgId;
   keep.name = params.name ?? keep.name;
   keep.description = params.description ?? keep.description;
   keep.dockerImage = params.dockerImage ?? keep.dockerImage;

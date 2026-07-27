@@ -18,6 +18,10 @@ export class ServerConfig {
   @Column()
   userId: number;
 
+  @Index()
+  @Column({ nullable: true })
+  orgId?: number;
+
   @Column({ nullable: true })
   name?: string;
 

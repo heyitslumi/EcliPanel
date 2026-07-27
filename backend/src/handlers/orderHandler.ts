@@ -6,6 +6,7 @@ import { User } from '../models/user.entity';
 import { Plan } from '../models/plan.entity';
 import { PanelSetting } from '../models/panelSetting.entity';
 import { authenticate } from '../middleware/auth';
+import { hasPermissionSync } from '../middleware/authorize';
 import { requireFeature } from '../middleware/featureToggle';
 import { t } from 'elysia';
 import PDFDocument from 'pdfkit';
@@ -24,6 +25,47 @@ async function resolvePaymentMethodLabel(methodId: string): Promise<string | nul
     return found?.label || null;
   } catch {
     return null;
+  }
+}
+
+export async function activateOrderPlan(order: any, plan: any): Promise<void> {
+  let resolvedOrgId = order.orgId;
+  if (!resolvedOrgId) {
+    const match = String(order.notes || '').match(/org_order:(\d+)/);
+    if (match) resolvedOrgId = Number(match[1]);
+  }
+  if (resolvedOrgId) {
+    const orgRepo = AppDataSource.getRepository(require('../models/organisation.entity').Organisation);
+    const org = await orgRepo.findOneBy({ id: Number(resolvedOrgId) });
+    if (org) {
+      org.portalTier = plan.type;
+      org.planId = plan.id;
+      org.status = 'active';
+      org.expiresAt = order.expiresAt || new Date(Date.now() + 30 * 24 * 3600 * 1000);
+      await orgRepo.save(org);
+    }
+  } else {
+    const userRepo = AppDataSource.getRepository(require('../models/user.entity').User);
+    const user = await userRepo.findOneBy({ id: order.userId });
+    if (user) {
+      const existing = (user.limits as Record<string, unknown>) || {};
+      if (plan.memory != null) existing.memory = plan.memory;
+      if (plan.disk != null) existing.disk = plan.disk;
+      if (plan.cpu != null) existing.cpu = plan.cpu;
+      if (plan.serverLimit != null) existing.serverLimit = plan.serverLimit;
+      if (plan.databases != null) existing.databases = plan.databases;
+      if (plan.backups != null) existing.backups = plan.backups;
+      if (plan.emailSendDailyLimit != null) existing.emailSendDailyLimit = plan.emailSendDailyLimit;
+      if (plan.emailSendQueueLimit != null) existing.emailSendQueueLimit = plan.emailSendQueueLimit;
+      if (plan.portCount != null) {
+        existing.portCount = plan.portCount;
+        existing.portsPerServer = plan.portCount;
+      }
+      if (plan.tunnelPortCount != null) existing.tunnelPortCount = plan.tunnelPortCount;
+      user.limits = existing;
+      user.portalType = plan.type;
+      await userRepo.save(user);
+    }
   }
 }
 
@@ -391,6 +433,14 @@ export async function orderRoutes(app: any, prefix = '') {
           const planRepo = AppDataSource.getRepository(Plan);
           const plan = await planRepo.findOneBy({ id: Number(planId) });
           if (plan) {
+            if (orgId != null && (plan.type === 'free' || plan.type === 'educational')) {
+              ctx.set.status = 400;
+              return { error: ctx.t('organisation.cannotPurchaseTier') };
+            }
+            if (plan.type === 'enterprise' && !hasPermissionSync(ctx, 'orders:update')) {
+              ctx.set.status = 403;
+              return { error: 'Enterprise plans require admin activation. Contact sales.' };
+            }
             if (amount == null) {
               effectiveAmount = plan.price ?? 0;
               try {
@@ -467,9 +517,9 @@ export async function orderRoutes(app: any, prefix = '') {
       }
 
       if (isFree) {
-        const prevActive = await orderRepo.find({
+        const prevActive = (await orderRepo.find({
           where: { userId: user.id, status: 'active' },
-        });
+        })).filter(o => !(o.notes || '').includes('dns_addon') && !(o.notes || '').includes('org_order') && !o.orgId);
 
         if (!isQueuedForRenewal) {
           if (prevActive.length > 0) {
@@ -507,36 +557,16 @@ export async function orderRoutes(app: any, prefix = '') {
             const userRepo2 = AppDataSource.getRepository(require('../models/user.entity').User);
             const plan = await planRepo2.findOneBy({ id: Number(planId) });
             if (plan) {
-              const userEntity = await userRepo2.findOneBy({ id: user.id });
-              if (userEntity) {
-                if (plan.type === 'educational' && !userEntity.studentVerified) {
+              if (!orgId && plan.type === 'educational') {
+                const userEntity = await userRepo2.findOneBy({ id: user.id });
+                if (userEntity && !userEntity.studentVerified) {
                   ctx.set.status = 403;
-                  return { error: 'Student verification required for educational plan. Please verify your student status first.' };
+                  return { error: 'Student verification required for educational plan.' };
                 }
-                if (plan.type === 'educational' && userEntity.studentVerified && (userEntity as any).studentVerifiedUntil && new Date((userEntity as any).studentVerifiedUntil) > new Date()) {
-                  ctx.set.status = 403;
-                  return { error: 'You already have an active student verification. No need to renew.' };
-                }
-                const existingLimits = (userEntity as any).limits || {};
-                if (plan.memory != null) existingLimits.memory = plan.memory;
-                if (plan.disk != null) existingLimits.disk = plan.disk;
-                if (plan.cpu != null) existingLimits.cpu = plan.cpu;
-                if (plan.serverLimit != null) existingLimits.serverLimit = plan.serverLimit;
-                if (plan.databases != null) existingLimits.databases = plan.databases;
-                if (plan.backups != null) existingLimits.backups = plan.backups;
-                if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
-                if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
-                if (plan.portCount != null) {
-                  existingLimits.portCount = plan.portCount;
-                  existingLimits.portsPerServer = plan.portCount;
-                }
-                if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
-                userEntity.limits = existingLimits;
-                userEntity.portalType = plan.type;
-                await userRepo2.save(userEntity);
               }
+              await activateOrderPlan(order, plan);
             }
-          } catch {}
+          } catch (_e) {}
         }
 
         return { success: true, order: normalizeOrder(order), autoActivated: true };
@@ -563,9 +593,16 @@ export async function orderRoutes(app: any, prefix = '') {
       const f = await requireFeature(ctx, 'billing');
       if (f !== true) return f;
       const user = ctx.user as any;
+      const filterOrgId = ctx.query?.orgId ? Number(ctx.query.orgId) : undefined;
       let rows: any[] = [];
       const managedOrgIds = await getManagedOrgIds(user.id);
-      if (managedOrgIds.length > 0) {
+      if (filterOrgId && Number.isFinite(filterOrgId)) {
+        if (!managedOrgIds.includes(filterOrgId)) {
+          ctx.set.status = 403;
+          return { error: 'Not a member of this organisation' };
+        }
+        rows = await orderRepo.find({ where: { orgId: filterOrgId } as any });
+      } else if (managedOrgIds.length > 0) {
         rows = await orderRepo.find({
           where: [{ userId: user.id }, ...managedOrgIds.map(orgId => ({ orgId }))] as any,
         });

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Index, CreateDateColumn } from 'typeorm';
 
 @Entity()
 export class Organisation {
@@ -15,8 +15,17 @@ export class Organisation {
   @Column()
   ownerId: number;
 
-  @Column({ default: 'free' })
+  @Column({ default: 'none' })
   portalTier: string;
+
+  @Column({ nullable: true })
+  planId?: number;
+
+  @Column({ default: 'active' })
+  status: string;
+
+  @Column({ nullable: true, type: 'datetime' })
+  expiresAt?: Date;
 
   @Column({ default: false })
   isStaff: boolean;
@@ -35,4 +44,7 @@ export class Organisation {
     (membership: any) => membership.organisation
   )
   memberships: import('./organisationMember.entity').OrganisationMember[];
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

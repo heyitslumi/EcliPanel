@@ -188,7 +188,14 @@
     "recordTypeAndContentRequired": "レコードタイプとコンテンツが必要です",
     "subdomainRequired": "サブドメイン名が必要です",
     "inviteNotFound_1": "招待が見つかりません",
-    "featureDnsIsDisabled": "DNS機能は無効です"
+    "featureDnsIsDisabled": "DNS機能は無効です",
+    "freeTierNotAllowed": "Free tier is not available for organisations. Choose Paid or Enterprise.",
+    "dnsRequiresAddon": "DNS management requires the $3/mo DNS add-on",
+    "cloudflareTokenRequired": "Cloudflare API token is required for custom domains",
+    "onlyOwnerCanDelete": "Only the organisation owner can delete the organisation",
+    "hasNodes": "Cannot delete organisation with active nodes. Unassign all nodes first.",
+    "dnsRequiresEnterprise": "DNS management requires Enterprise tier",
+    "cannotPurchaseTier": "Organisations cannot purchase free or educational plans"
   },
   "server": {
     "notFound": "サーバーが見つかりません",

@@ -183,6 +183,7 @@ export default function BillingPage() {
         return
       }
       const targetAmount = targetCard.price ?? Number(targetPlan?.price ?? 0)
+      const items = [{ description: targetCard.name, quantity: 1, price: targetAmount }]
       const res = await apiFetch(API_ENDPOINTS.orders, {
         method: "POST",
         body: JSON.stringify({
@@ -190,7 +191,7 @@ export default function BillingPage() {
           amount: targetAmount,
           description: targetCard.name,
           activateMode,
-          items: JSON.stringify([{ description: targetCard.name, quantity: 1, price: targetAmount }]),
+          items: JSON.stringify(items),
         }),
       })
       if (res?.order?.id) {
@@ -326,7 +327,7 @@ export default function BillingPage() {
     }
   })
 
-  const visibleLivePlanCards = livePlanCards.filter((planCard: any) => !planCard?.hiddenFromBilling)
+  const visibleLivePlanCards = livePlanCards.filter((planCard: any) => !planCard?.hiddenFromBilling && planCard.type !== 'enterprise')
   const subscriptionCards = livePlanCards.length > 0 ? visibleLivePlanCards : fallbackCards
 
   return (

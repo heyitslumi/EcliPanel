@@ -332,6 +332,7 @@ export default function OrdersTab({ ctx }: { ctx: any }) {
                   <tr className="border-b border-border text-xs text-muted-foreground">
                     <th className="px-4 py-3 text-left font-medium">{t("table.order")}</th>
                     <th className="px-4 py-3 text-left font-medium">{t("table.user")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("table.org")}</th>
                     <th className="px-4 py-3 text-left font-medium">{t("table.amount")}</th>
                     <th className="px-4 py-3 text-left font-medium">{t("table.status")}</th>
                     <th className="px-4 py-3 text-left font-medium">{t("table.dates")}</th>
@@ -378,6 +379,15 @@ export default function OrdersTab({ ctx }: { ctx: any }) {
                           <span className="inline-flex items-center bg-secondary/50 px-2 py-0.5 font-mono text-xs text-muted-foreground">
                             {t("common.userId", { id: privateMode ? "████" : order.userId })}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {order.orgId ? (
+                            <span className="inline-flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 font-mono text-xs text-blue-400">
+                              Org #{order.orgId}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-sm font-semibold text-foreground">
@@ -524,6 +534,7 @@ export default function OrdersTab({ ctx }: { ctx: any }) {
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {t("common.userId", { id: privateMode ? "████" : order.userId })}
+                            {order.orgId && ` · Org #${order.orgId}`}
                             {order.planId && ` · ${t("common.planId", { id: privateMode ? "████" : order.planId })}`}
                           </p>
                           {order.billingType === 'lifetime' && (

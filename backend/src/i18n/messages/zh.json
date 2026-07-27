@@ -188,7 +188,14 @@
     "recordTypeAndContentRequired": "需要记录类型和内容",
     "subdomainRequired": "需要子域名",
     "inviteNotFound_1": "邀请未找到",
-    "featureDnsIsDisabled": "DNS功能已禁用"
+    "featureDnsIsDisabled": "DNS功能已禁用",
+    "freeTierNotAllowed": "Free tier is not available for organisations. Choose Paid or Enterprise.",
+    "dnsRequiresAddon": "DNS management requires the $3/mo DNS add-on",
+    "cloudflareTokenRequired": "Cloudflare API token is required for custom domains",
+    "onlyOwnerCanDelete": "Only the organisation owner can delete the organisation",
+    "hasNodes": "Cannot delete organisation with active nodes. Unassign all nodes first.",
+    "dnsRequiresEnterprise": "DNS management requires Enterprise tier",
+    "cannotPurchaseTier": "Organisations cannot purchase free or educational plans"
   },
   "server": {
     "notFound": "服务器未找到",

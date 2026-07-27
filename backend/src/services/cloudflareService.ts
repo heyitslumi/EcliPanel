@@ -3,9 +3,9 @@ export class CloudflareService {
   private token: string;
   private accountId?: string;
 
-  constructor() {
+  constructor(tokenOverride?: string) {
     this.baseUrl = process.env.CLOUDFLARE_API_BASE || 'https://api.cloudflare.com/client/v4';
-    this.token = process.env.CLOUDFLARE_API_TOKEN || '';
+    this.token = tokenOverride || process.env.CLOUDFLARE_API_TOKEN || '';
     this.accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     if (!this.token) {
       throw new Error('CLOUDFLARE_API_TOKEN is required');
@@ -140,37 +140,31 @@ export class CloudflareService {
   }
 
   async createZone(zone: any) {
-    const baseZone = await this.getBaseZoneId();
+    const rawName = String(zone.name || '').replace(/\.$/, '');
     const base = process.env.CLOUDFLARE_BASE_ZONE?.replace(/\.$/, '');
-    if (baseZone && base) {
-      const rawName = String(zone.name || '').replace(/\.$/, '');
-      const tryCreateSubzone = process.env.CLOUDFLARE_CREATE_SUBZONE === '1';
-      if (tryCreateSubzone && rawName.endsWith('.' + base)) {
-        try {
+    const isSubdomain = base && rawName.endsWith('.' + base);
+
+    if (isSubdomain) {
+      const baseZone = await this.getBaseZoneId();
+      if (baseZone) {
+        const tryCreateSubzone = process.env.CLOUDFLARE_CREATE_SUBZONE === '1';
+        if (tryCreateSubzone) {
           const body: any = { name: rawName, jump_start: true };
           if (this.accountId) body.account = { id: this.accountId };
           return this.request('/zones', { method: 'POST', body: JSON.stringify(body) });
-        } catch (e) {
-          // skippy
         }
+        const name = rawName.endsWith('.' + base) ? rawName : `${rawName}.${base}`;
+        return this.addRecord(baseZone, {
+          name,
+          type: 'TXT',
+          ttl: 3600,
+          content: `"abuse_contact=abuse@ecli.app organisation=${rawName}"`,
+        });
       }
-
-      const name = rawName.endsWith('.' + base) ? rawName : `${rawName}.${base}`;
-      return this.addRecord(baseZone, {
-        name: name,
-        type: 'TXT',
-        ttl: 3600,
-        content: `"abuse_contact=abuse@ecli.app organisation=${rawName}"`,
-      });
     }
 
-    const body: any = {
-      name: zone.name,
-      jump_start: true,
-    };
-    if (this.accountId) {
-      body.account = { id: this.accountId };
-    }
+    const body: any = { name: rawName, jump_start: true };
+    if (this.accountId) body.account = { id: this.accountId };
     return this.request('/zones', { method: 'POST', body: JSON.stringify(body) });
   }
 

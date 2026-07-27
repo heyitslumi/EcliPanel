@@ -4182,6 +4182,11 @@ function SubusersTab({
                       <p className="text-sm font-medium text-foreground truncate">
                         {su.user?.displayName || su.user?.email || su.userEmail || t("subusers.userFallback", { id: su.userId })}
                       </p>
+                      {su.orgRole && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {t("subusers.orgMember", { role: su.orgRole })}
+                        </p>
+                      )}
                       {su.accepted === false && (
                         <p className="text-[11px] text-muted-foreground truncate">
                           {t("subusers.pending")}
@@ -4190,12 +4195,19 @@ function SubusersTab({
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-                    {(su.permissions || []).map((p: string) => (
-                      <Badge key={p} variant="outline" className="text-[10px]">
-                        {p}
+                    {su.orgRole ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-500/30 bg-blue-500/10 text-blue-400 flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        {t("subusers.orgFullAccess")}
                       </Badge>
-                    ))}
-                    {su.locked && (
+                    ) : (
+                      (su.permissions || []).map((p: string) => (
+                        <Badge key={p} variant="outline" className="text-[10px]">
+                          {p}
+                        </Badge>
+                      ))
+                    )}
+                    {su.locked && !su.orgRole && (
                       <Badge
                         variant="outline"
                         className="text-[10px] ml-1 flex items-center gap-1"
@@ -4206,6 +4218,7 @@ function SubusersTab({
                     )}
                   </div>
                 </div>
+                {!su.orgRole && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {(isOwnerOrAdmin || (subuserEntry?.permissions?.includes("subusersd"))) && (
                     <Button
@@ -4250,6 +4263,7 @@ function SubusersTab({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+                )}
               </div>
             )
           })}

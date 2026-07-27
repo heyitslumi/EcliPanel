@@ -53,12 +53,15 @@ const nextConfig = {
     const BE = "https://backend.ecli.app";
     const csp = [
       `default-src 'self' ${BE}`,
-      `script-src 'self' ${BE} 'unsafe-inline' 'unsafe-eval'`,
-      `style-src 'self' ${BE} 'unsafe-inline' https:`,
+      `script-src 'self' ${BE} 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net`,
+      `style-src 'self' ${BE} 'unsafe-inline' https: https://cdn.jsdelivr.net`,
       "img-src * data: blob:",
       `font-src 'self' ${BE} data: https://fonts.gstatic.com`,
       `connect-src *`,
       `frame-src 'self' ${BE}`,
+      `worker-src 'self' blob:`,
+      `child-src 'self' blob:`,
+      `media-src 'self' ${BE} data: blob:`,
       "object-src 'none'",
       "base-uri 'self'",
       `form-action 'self' ${BE}`,

@@ -627,6 +627,31 @@ export default function SettingsTab({ ctx }: { ctx: any }) {
             </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("billing.orgFormationFeeLabel")}</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={panelSettings.org_formation_fee || "1"}
+                onChange={(e) => setPanelSettings((s: any) => ({ ...s, org_formation_fee: e.target.value }))}
+                className="w-full border border-border bg-secondary/50 px-4 py-2.5 text-sm font-mono text-foreground outline-none focus:border-primary/50 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("billing.orgDnsAddonPriceLabel")}</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={panelSettings.org_dns_addon_price || "3"}
+                onChange={(e) => setPanelSettings((s: any) => ({ ...s, org_dns_addon_price: e.target.value }))}
+                className="w-full border border-border bg-secondary/50 px-4 py-2.5 text-sm font-mono text-foreground outline-none focus:border-primary/50 transition-all"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               {t("billing.ageRulesLabel")}

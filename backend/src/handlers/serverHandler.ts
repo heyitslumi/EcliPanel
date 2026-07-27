@@ -75,6 +75,61 @@ import type {
   BoostInfo,
 } from '../types/server';
 
+export function normalizeServer(raw: Record<string, unknown> | null | undefined, overrideStatus?: string, persistedCfg?: ServerConfig): Record<string, unknown> | null | undefined {
+  if (!raw) return raw;
+  const r = raw as Record<string, unknown>;
+  const cfg = (r.configuration as Record<string, unknown>) || {};
+  const meta = (cfg.meta as Record<string, unknown>) || {};
+  const build = (cfg.build as Record<string, unknown>) || {};
+  const isSuspended = Boolean(
+    r.is_suspended ?? r.suspended ?? cfg.suspended ?? persistedCfg?.suspended ?? false
+  );
+  const isDmca = Boolean(r.is_dmca ?? r.dmca ?? cfg.dmca ?? persistedCfg?.dmca ?? false);
+  const baseStatus = (overrideStatus ?? r.state ?? r.status ?? 'unknown') as string;
+
+  const installingOverride = persistedCfg?.installing ?? false;
+  const wingsReportsAlive = baseStatus === 'running' || baseStatus === 'starting' || baseStatus === 'online';
+
+  const status = isDmca ? 'dmca'
+    : isSuspended ? 'suspended'
+    : installingOverride && !wingsReportsAlive ? 'installing'
+    : baseStatus;
+  return {
+    uuid: cfg.uuid || r.uuid,
+    name: meta.name || r.name || cfg.uuid || r.uuid,
+    description: meta.description as string | undefined,
+    provider: 'wings',
+    status,
+    installing: persistedCfg?.installing ?? false,
+    hibernated: status === 'hibernated',
+    is_suspended: isSuspended || isDmca,
+    is_dmca: isDmca,
+    dmcaAt: cfg.dmcaAt ?? persistedCfg?.dmcaAt ?? null,
+    dmcaDeletionAt: cfg.dmcaDeletionAt ?? persistedCfg?.dmcaDeletionAt ?? null,
+    dmcaReason: cfg.dmcaReason ?? persistedCfg?.dmcaReason ?? null,
+    dmcaBy: cfg.dmcaBy ?? persistedCfg?.dmcaBy ?? null,
+    suspendedAt: cfg.suspendedAt ?? persistedCfg?.suspendedAt ?? null,
+    suspendedReason: cfg.suspendedReason ?? persistedCfg?.suspendedReason ?? null,
+    suspendedBy: cfg.suspendedBy ?? persistedCfg?.suspendedBy ?? null,
+    resources: r.utilization || r.resources || null,
+    build: {
+      memory_limit: (build.memory_limit as number) ?? persistedCfg?.memory ?? 0,
+      disk_space: (build.disk_space as number) ?? persistedCfg?.disk ?? 0,
+      cpu_limit: (build.cpu_limit as number) ?? persistedCfg?.cpu ?? 0,
+      swap: (build.swap as number) ?? persistedCfg?.swap ?? 0,
+      io_weight: (build.io_weight as number) ?? persistedCfg?.ioWeight ?? 500,
+      oom_disabled: (build.oom_disabled as boolean) ?? false,
+    },
+    container: {
+      image: ((cfg.container as Record<string, unknown>)?.image as string) || (((cfg.container as Record<string, unknown>)?.images as string[])?.[0]) || null,
+      startup: (cfg.invocation as string) || (r.invocation as string) || null,
+    },
+    invocation: (cfg.invocation as string) || (r.invocation as string) || null,
+    environment: (cfg.environment as Record<string, string>) || (r.environment as Record<string, string>) || {},
+    configuration: cfg,
+  };
+}
+
 export async function serverRoutes(app: ServerApp, prefix = '') {
   const nodeSvc = nodeService;
   const logRepo = () => AppDataSource.getRepository(UserLog);
@@ -91,7 +146,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
   const eloDevlogRepo = () => AppDataSource.getRepository(EloDevlog);
   const eloVoteRepo = () => AppDataSource.getRepository(EloVote);
   const SERVER_LIST_SELECT = [
-    'ServerConfig.uuid', 'ServerConfig.nodeId', 'ServerConfig.userId',
+    'ServerConfig.uuid', 'ServerConfig.nodeId', 'ServerConfig.userId', 'ServerConfig.orgId',
     'ServerConfig.name', 'ServerConfig.description', 'ServerConfig.suspended',
     'ServerConfig.suspendedBy', 'ServerConfig.suspendedReason', 'ServerConfig.suspendedAt',
     'ServerConfig.dmca', 'ServerConfig.ignoreAntiAbuse', 'ServerConfig.hibernated',
@@ -778,13 +833,22 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                 where: { userId: user.id },
               });
               const subuserUuids = subuserEntries.map(s => s.serverUuid);
+              const orgMemberships = await orgMemberRepo().find({ where: { userId: user.id } });
+              const orgIds = orgMemberships.map((m: OrganisationMember) => Number(m.organisationId)).filter(Boolean);
               const where: Record<string, unknown>[] = [{ userId: user.id }];
               if (subuserUuids.length) where.push({ uuid: In(subuserUuids) });
+              if (orgIds.length) where.push({ orgId: In(orgIds) });
               const qb = cfgRepo.createQueryBuilder('ServerConfig').select(SERVER_LIST_SELECT);
-              if (where.length === 1) qb.where('ServerConfig.userId = :uid', { uid: user.id });
-              else qb.where('ServerConfig.userId = :uid OR ServerConfig.uuid IN (:...uuids)', { uid: user.id, uuids: subuserUuids.length ? subuserUuids : [''] });
-              const found = await qb.getMany();
-              return found;
+              if (where.length === 1) {
+                qb.where('ServerConfig.userId = :uid', { uid: user.id });
+              } else {
+                const conditions: string[] = ['ServerConfig.userId = :uid'];
+                const params: Record<string, unknown> = { uid: user.id };
+                if (subuserUuids.length) { conditions.push('ServerConfig.uuid IN (:...uuids)'); params.uuids = subuserUuids; }
+                if (orgIds.length) { conditions.push('ServerConfig.orgId IN (:...orgIds)'); params.orgIds = orgIds; }
+                qb.where(conditions.join(' OR '), params);
+              }
+              return await qb.getMany();
             })()) as any[];
 
         const cfgMap = new Map(configs.map((c: ServerConfig) => [c.uuid, c]));
@@ -826,6 +890,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                 nodeId: node.id,
                 nodeName: node.name,
                 userId: cfg?.userId,
+                orgId: cfg?.orgId,
               });
             }
           }
@@ -844,6 +909,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                 container: { image: c.dockerImage },
                 nodeId: c.nodeId,
                 userId: c.userId,
+                orgId: c.orgId,
+                orgId: c.orgId,
               });
             }
           }
@@ -897,6 +964,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                   nodeId: c.nodeId,
                   nodeName: node.name,
                   userId: c.userId,
+                orgId: c.orgId,
                 });
               }
               continue;
@@ -927,6 +995,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                       nodeId: node.id,
                       nodeName: node.name,
                       userId: c.userId,
+                orgId: c.orgId,
                     });
                     return;
                   } catch {
@@ -947,6 +1016,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                       nodeId: node.id,
                       nodeName: node.name,
                       userId: c.userId,
+                orgId: c.orgId,
                     });
                     return;
                   } catch {
@@ -964,6 +1034,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                     container: { image: c.dockerImage },
                     nodeId: c.nodeId,
                     userId: c.userId,
+                orgId: c.orgId,
                   });
                 });
                 await Promise.allSettled(promises);
@@ -1060,6 +1131,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
               container: { image: c.dockerImage },
               nodeId: c.nodeId,
               userId: c.userId,
+                orgId: c.orgId,
               nodeName: nodeMap.get(c.nodeId)?.name || null,
               provider: 'wings',
             }));
@@ -1123,6 +1195,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                       nodeId: c.nodeId,
                       nodeName: nodeMap2.get(nodeId)?.name || null,
                       userId: c.userId,
+                orgId: c.orgId,
                     });
                   }
                   continue;
@@ -1148,6 +1221,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                           container: { image: c.dockerImage },
                           nodeId: c.nodeId,
                           userId: c.userId,
+                orgId: c.orgId,
                         });
                       }
                       return;
@@ -1166,6 +1240,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                           nodeId: node.id,
                           nodeName: node.name,
                           userId: c.userId,
+                orgId: c.orgId,
                         });
                         return;
                       } catch {
@@ -1186,6 +1261,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                           nodeId: node.id,
                           nodeName: node.name,
                           userId: c.userId,
+                orgId: c.orgId,
                         });
                         return;
                       } catch {
@@ -1203,6 +1279,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
                         container: { image: c.dockerImage },
                         nodeId: c.nodeId,
                         userId: c.userId,
+                orgId: c.orgId,
                       });
                     });
                     await Promise.allSettled(promises);
@@ -1293,66 +1370,6 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       detail: { summary: 'Write file content', tags: ['Servers'] },
     }
   );
-
-  function normalizeServer(raw: Record<string, unknown> | null | undefined, overrideStatus?: string, persistedCfg?: ServerConfig): Record<string, unknown> | null | undefined {
-    if (!raw) return raw;
-    const r = raw as Record<string, unknown>;
-    const cfg = (r.configuration as Record<string, unknown>) || {};
-    const meta = (cfg.meta as Record<string, unknown>) || {};
-    const build = (cfg.build as Record<string, unknown>) || {};
-    const ctr = (cfg.container as Record<string, unknown>) || (cfg.docker as Record<string, unknown>) || {};
-    const isSuspended = Boolean(
-      r.is_suspended ?? r.suspended ?? cfg.suspended ?? persistedCfg?.suspended ?? false
-    );
-    const isDmca = Boolean(r.is_dmca ?? r.dmca ?? cfg.dmca ?? persistedCfg?.dmca ?? false);
-    const baseStatus = (overrideStatus ?? r.state ?? r.status ?? 'unknown') as string;
-
-    const installingOverride = persistedCfg?.installing ?? false;
-    const wingsReportsAlive =
-      baseStatus === 'running' || baseStatus === 'starting' || baseStatus === 'online';
-
-    const status = isDmca
-      ? 'dmca'
-      : isSuspended
-        ? 'suspended'
-        : installingOverride && !wingsReportsAlive
-          ? 'installing'
-          : baseStatus;
-    return {
-      uuid: cfg.uuid || r.uuid,
-      name: meta.name || r.name || cfg.uuid || r.uuid,
-      description: meta.description as string | undefined,
-      provider: 'wings',
-      status,
-      installing: persistedCfg?.installing ?? false,
-      hibernated: status === 'hibernated',
-      is_suspended: isSuspended || isDmca,
-      is_dmca: isDmca,
-      dmcaAt: cfg.dmcaAt ?? persistedCfg?.dmcaAt ?? null,
-      dmcaDeletionAt: cfg.dmcaDeletionAt ?? persistedCfg?.dmcaDeletionAt ?? null,
-      dmcaReason: cfg.dmcaReason ?? persistedCfg?.dmcaReason ?? null,
-      dmcaBy: cfg.dmcaBy ?? persistedCfg?.dmcaBy ?? null,
-      suspendedAt: cfg.suspendedAt ?? persistedCfg?.suspendedAt ?? null,
-      suspendedReason: cfg.suspendedReason ?? persistedCfg?.suspendedReason ?? null,
-      suspendedBy: cfg.suspendedBy ?? persistedCfg?.suspendedBy ?? null,
-      resources: r.utilization || r.resources || null,
-      build: {
-        memory_limit: (build.memory_limit as number) ?? persistedCfg?.memory ?? 0,
-        disk_space: (build.disk_space as number) ?? persistedCfg?.disk ?? 0,
-        cpu_limit: (build.cpu_limit as number) ?? persistedCfg?.cpu ?? 0,
-        swap: (build.swap as number) ?? persistedCfg?.swap ?? 0,
-        io_weight: (build.io_weight as number) ?? persistedCfg?.ioWeight ?? 500,
-        oom_disabled: (build.oom_disabled as boolean) ?? false,
-      },
-      container: {
-        image: (ctr.image as string) || ((ctr.images as string[])?.[0]) || null,
-        startup: (cfg.invocation as string) || (r.invocation as string) || null,
-      },
-      invocation: (cfg.invocation as string) || (r.invocation as string) || null,
-      environment: (cfg.environment as Record<string, string>) || (r.environment as Record<string, string>) || {},
-      configuration: cfg,
-    };
-  }
 
   function applyStartupStatusOverride(server: Record<string, unknown>, cfg?: ServerConfig): Record<string, unknown> {
     if (!server || server.status !== 'starting') return server;
@@ -1738,6 +1755,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         name,
         nodeId,
         userId,
+        orgId,
         memory: reqMemory,
         disk: reqDisk,
         cpu: reqCpu,
@@ -1746,6 +1764,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         name?: string;
         nodeId?: number;
         userId?: number;
+        orgId?: number;
         memory?: number;
         disk?: number;
         cpu?: number;
@@ -1762,7 +1781,28 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       let limits: { memory?: number; disk?: number; cpu?: number; serverLimit?: number } = {};
 
       if (!isAdmin) {
-        if (effectivePortalType === 'enterprise' && user.nodeId) {
+        const resolvedOrgId = orgId && Number.isFinite(Number(orgId)) ? Number(orgId) : undefined;
+        if (resolvedOrgId) {
+          try {
+            const orgRepo2 = AppDataSource.getRepository(require('../models/organisation.entity').Organisation);
+            const org = await orgRepo2.findOneBy({ id: resolvedOrgId });
+            if (org?.planId) {
+              const planRepo2 = AppDataSource.getRepository(require('../models/plan.entity').Plan);
+              const plan = await planRepo2.findOneBy({ id: org.planId });
+              if (plan) {
+                limits = {
+                  memory: plan.memory ?? undefined,
+                  disk: plan.disk ?? undefined,
+                  cpu: plan.cpu ?? undefined,
+                  serverLimit: plan.serverLimit ?? undefined,
+                };
+              }
+            }
+          } catch (_e) { /* beh */ }
+          if (!limits.memory && !limits.disk && !limits.cpu) {
+            limits = user.limits || {};
+          }
+        } else if (effectivePortalType === 'enterprise' && user.nodeId) {
           const enterpriseNode = await nodeRepo().findOneBy({ id: user.nodeId });
           if (enterpriseNode) {
             limits = {
@@ -1782,6 +1822,15 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       let memory = reqMemory != null ? Number(reqMemory) : (limits.memory ?? 1024);
       let disk = reqDisk != null ? Number(reqDisk) : (limits.disk ?? 10240);
       let cpu = reqCpu != null ? Number(reqCpu) : (limits.cpu ?? 100);
+
+      const resolvedOrgId = orgId && Number.isFinite(Number(orgId)) ? Number(orgId) : undefined;
+      if (resolvedOrgId && !isAdmin) {
+        const membership = await orgMemberRepo().findOne({ where: { userId: user.id, organisationId: resolvedOrgId } });
+        if (!membership || (membership.orgRole !== 'admin' && membership.orgRole !== 'owner')) {
+          ctx.set.status = 403;
+          return { error: 'Only organisation admins can create servers for this organisation' };
+        }
+      }
 
       if (!isAdmin) {
         if (memory < 1) {
@@ -1925,7 +1974,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       }
 
       const existingRegularServers = !isAdmin
-        ? await cfgRepo().find({ where: { userId: ownerId } })
+        ? await cfgRepo().find({ where: (orgId && Number.isFinite(Number(orgId))) ? { orgId: Number(orgId) } as any : { userId: ownerId } })
         : [];
 
       if (!isAdmin) {
@@ -2173,6 +2222,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         uuid: serverUuid,
         nodeId: node.id,
         userId: ownerId,
+        orgId: resolvedOrgId,
         name,
         dockerImage: egg.dockerImage,
         startup: resolvedStartup,
@@ -2433,7 +2483,12 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
           userId: user?.id,
           accepted: true,
         });
-        if (!owned && !subuser) {
+        let isOrgAdmin = false;
+        if (cfg.orgId) {
+          const m = await orgMemberRepo().findOne({ where: { userId: user?.id, organisationId: cfg.orgId } });
+          isOrgAdmin = !!(m && (m.orgRole === 'admin' || m.orgRole === 'owner'));
+        }
+        if (!owned && !subuser && !isOrgAdmin) {
           ctx.set.status = 403;
           return { error: ctx.t('common.insufficientPermissions') };
         }

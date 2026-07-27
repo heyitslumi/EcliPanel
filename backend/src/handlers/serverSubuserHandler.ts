@@ -103,7 +103,36 @@ export async function serverSubuserRoutes(app: AppLike, prefix = '') {
           where: { serverUuid: id },
           order: { createdAt: 'ASC' },
         });
-        return attachSubuserUserInfo(subusers as unknown as Array<Record<string, unknown>>);
+        const result = await attachSubuserUserInfo(subusers as unknown as Array<Record<string, unknown>>);
+        try {
+          const cfgRepo = AppDataSource.getRepository(require('../models/serverConfig.entity').ServerConfig);
+          const cfg = await cfgRepo.findOneBy({ uuid: id });
+          if (cfg?.orgId) {
+            const memberRepo = AppDataSource.getRepository(require('../models/organisationMember.entity').OrganisationMember);
+            const members = await memberRepo.find({ where: { organisationId: cfg.orgId }, relations: { user: true } });
+            const existingUserIds = new Set((result as any[]).map((s: any) => s.userId).filter(Boolean));
+            for (const m of members) {
+              if (m.user && !existingUserIds.has(m.user.id)) {
+                result.push({
+                  id: -m.id,
+                  userId: m.user.id,
+                  serverUuid: id,
+                  accepted: true,
+                  permissions: ['*'],
+                  orgRole: m.orgRole,
+                  user: {
+                    id: m.user.id,
+                    email: m.user.email,
+                    firstName: m.user.firstName,
+                    lastName: m.user.lastName,
+                    avatarUrl: m.user.avatarUrl,
+                  },
+                });
+              }
+            }
+          }
+        } catch (_e) { /* what the fuck am i even doing istg help meeee */ }
+        return result;
       }
       const user = ctx.user as User | null;
       if (!user) {

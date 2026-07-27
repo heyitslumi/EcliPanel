@@ -33,7 +33,7 @@ import { sanitizeError } from '../utils/sanitizeError';
 import { createT, getMessages, defaultLocale } from '../i18n';
 import { In, IsNull, Like, MoreThanOrEqual, Not } from 'typeorm';
 import { Order } from '../models/order.entity';
-import { renderInvoicePdf } from './orderHandler';
+import { renderInvoicePdf, activateOrderPlan } from './orderHandler';
 import { Coupon } from '../models/coupon.entity';
 import { CouponUse } from '../models/couponUse.entity';
 import { Plan } from '../models/plan.entity';
@@ -8187,6 +8187,8 @@ export async function adminRoutes(app: any, prefix = '') {
         gamblingEnabled: gamblingConfig.gamblingEnabled,
         gamblingResourceLuckyChance: gamblingConfig.gamblingResourceLuckyChance,
         gamblingPowerDenyChance: gamblingConfig.gamblingPowerDenyChance,
+        org_formation_fee: map['org_formation_fee'] || '1',
+        org_dns_addon_price: map['org_dns_addon_price'] || '3',
         featureToggles,
       };
     },
@@ -8391,6 +8393,8 @@ export async function adminRoutes(app: any, prefix = '') {
         'gamblingEnabled',
         'gamblingResourceLuckyChance',
         'gamblingPowerDenyChance',
+        'org_formation_fee',
+        'org_dns_addon_price',
       ];
       for (const key of allowed) {
         if (body[key] !== undefined) {
@@ -8823,9 +8827,11 @@ export async function adminRoutes(app: any, prefix = '') {
       });
 
       if (isFreeOrder) {
-        const prevActive = await orderRepo.find({
+        // Only cancel previous personal orders if the new order is also personal (not org-scoped)
+        if (!(order as any).orgId) {
+        const prevActive = (await orderRepo.find({
           where: { userId: Number(userId), status: 'active' },
-        });
+        })).filter(o => !o.orgId);
         if (prevActive.length > 0) {
           for (const prev of prevActive) {
             prev.status = 'cancelled';
@@ -8851,6 +8857,8 @@ export async function adminRoutes(app: any, prefix = '') {
             }
           }
         }
+        } // end if (!order.orgId)
+        }
 
         await orderRepo.save(order);
 
@@ -8859,50 +8867,14 @@ export async function adminRoutes(app: any, prefix = '') {
             const planRepo3 = AppDataSource.getRepository(Plan);
             const plan = await planRepo3.findOneBy({ id: effectivePlanId });
             if (plan) {
-              const limits: Record<string, number> = {};
-              if (plan.type === 'enterprise' && (user as any).nodeId) {
-                const nodeRepo2 = AppDataSource.getRepository(Node);
-                const node = await nodeRepo2.findOneBy({ id: (user as any).nodeId });
-                if (node) {
-                  if (node.memory != null) limits.memory = Number(node.memory);
-                  if (node.disk != null) limits.disk = Number(node.disk);
-                  if (node.cpu != null) limits.cpu = Number(node.cpu);
-                  if (node.serverLimit != null) limits.serverLimit = Number(node.serverLimit);
-                }
-              }
-              if (Object.keys(limits).length === 0) {
-                if (plan.memory != null) limits.memory = plan.memory;
-                if (plan.disk != null) limits.disk = plan.disk;
-                if (plan.cpu != null) limits.cpu = plan.cpu;
-                if (plan.serverLimit != null) limits.serverLimit = plan.serverLimit;
-              }
-
-              const existingLimits = (user.limits as Record<string, unknown>) || {};
-              for (const key of Object.keys(limits)) {
-                existingLimits[key] = limits[key];
-              }
-              if (plan.databases != null) existingLimits.databases = plan.databases;
-              if (plan.backups != null) existingLimits.backups = plan.backups;
-              if (plan.emailSendDailyLimit != null) existingLimits.emailSendDailyLimit = plan.emailSendDailyLimit;
-              if (plan.emailSendQueueLimit != null) existingLimits.emailSendQueueLimit = plan.emailSendQueueLimit;
-              if (plan.portCount != null) {
-                existingLimits.portCount = plan.portCount;
-                existingLimits.portsPerServer = plan.portCount;
-              }
-              if (plan.tunnelPortCount != null) existingLimits.tunnelPortCount = plan.tunnelPortCount;
-              user.limits = existingLimits;
-
-              user.portalType = plan.type;
-              await userRepo.save(user);
+              await activateOrderPlan(order, plan);
             }
-          } catch {}
+          } catch (_e) {}
+          return { success: true, order, autoActivated: true };
         }
 
-        return { success: true, order, autoActivated: true };
-      }
-
-      await orderRepo.save(order);
-      return { success: true, order };
+        await orderRepo.save(order);
+        return { success: true, order };
     },
     {
       beforeHandle: [authenticate, authorize('admin:access')],
@@ -8945,11 +8917,14 @@ export async function adminRoutes(app: any, prefix = '') {
       const { status, notes, expiresAt, description, amount, planId, items, userId } =
         ctx.body as any;
       if (status !== undefined) order.status = status;
-      if (notes !== undefined) order.notes = notes;
+      if (notes !== undefined) {
+        const orgMarker = String(order.notes || '').match(/org_order:\d+;?/)?.[0] || '';
+        order.notes = orgMarker ? `${orgMarker.endsWith(';') ? orgMarker : orgMarker + ';'}${notes}` : notes;
+      }
       if (description !== undefined) order.description = description;
       if (expiresAt !== undefined) order.expiresAt = new Date(expiresAt);
       if (amount !== undefined) order.amount = Number(amount || 0);
-      if (planId !== undefined) order.planId = planId != null ? Number(planId) : (undefined as any);
+      if (planId !== undefined) order.planId = planId != null ? Number(planId) : (null as any);
       if (items !== undefined) order.items = items;
       if (userId !== undefined) {
         const userRepo = AppDataSource.getRepository(User);
@@ -8961,6 +8936,18 @@ export async function adminRoutes(app: any, prefix = '') {
         order.userId = Number(userId);
       }
       await orderRepo.save(order);
+      const finalStatus = (status || order.status || '').toLowerCase();
+      const isActivated = finalStatus === 'active' || finalStatus === 'paid' || finalStatus === 'completed';
+      if (order.planId && isActivated) {
+        try {
+          const planRepo3 = AppDataSource.getRepository(Plan);
+          const plan = await planRepo3.findOneBy({ id: order.planId });
+          if (plan) {
+            await activateOrderPlan(order, plan);
+          }
+        } catch (_e) {}
+      }
+
       return { success: true, order };
     },
     {
@@ -9425,9 +9412,9 @@ export async function adminRoutes(app: any, prefix = '') {
         }
       }
 
-      const prevActive = await orderRepo.find({
+      const prevActive = (await orderRepo.find({
         where: { userId, status: 'active' },
-      });
+      })).filter(o => !o.orgId);
       if (prevActive.length > 0) {
         for (const prev of prevActive) {
           prev.status = 'cancelled';

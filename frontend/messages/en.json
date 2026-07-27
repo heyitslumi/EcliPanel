@@ -325,6 +325,7 @@
     "accountSettings": "Account settings",
     "logout": "Logout",
     "loggingOut": "Logging out...",
+    "noOrg": "No organisation",
     "userFallback": "User",
     "dashboardFallback": "Dashboard",
     "expandSidebar": "Expand sidebar",
@@ -2103,6 +2104,7 @@
     "table": {
       "order": "Order",
       "user": "User",
+      "org": "Org",
       "amount": "Amount",
       "status": "Status",
       "dates": "Dates",
@@ -2833,6 +2835,8 @@
       "currencyExamples": "Examples: USD, EUR, GBP, JPY",
       "quickExamples": "Quick Examples",
       "taxRulesLabel": "Tax Rules (country/group:percent)",
+      "orgFormationFeeLabel": "Organisation Formation Fee ($)",
+      "orgDnsAddonPriceLabel": "DNS Add-on Price ($/mo)",
       "ageRulesLabel": "Minimum Age Rules",
       "ageRulesHint": "Use country codes, country names, EU, UK, or default. One rule per line."
     },
@@ -4211,6 +4215,7 @@
       "favorites": "Favorites",
       "code": "Code",
       "yourServers": "Your Servers",
+      "orgServers": "Organisation Servers",
       "sharedWithYou": "Shared With You"
     },
     "warnings": {
@@ -4254,7 +4259,8 @@
     "newServerModal": {
       "header": {
         "title": "New Server",
-        "subtitle": "Configure and deploy"
+        "subtitle": "Configure and deploy",
+        "forOrg": "For {org}"
       },
       "alerts": {
         "verifyEmail": "Verify your email before creating a server.",
@@ -5248,7 +5254,9 @@
       "editSubuser": "Edit subuser",
       "editPermissions": "Edit Permissions",
       "savePermissions": "Save",
-      "failedUpdatePerms": "Failed to update permissions: {reason}"
+      "failedUpdatePerms": "Failed to update permissions: {reason}",
+      "orgMember": "Organisation {role}",
+      "orgFullAccess": "Full access as organisation member"
     },
     "settings": {
       "confirmReinstall": "Reinstall this server? All files will be wiped.",
@@ -5762,10 +5770,16 @@
   "organisationsPage": {
     "header": {
       "title": "Organisations",
-      "description": "Manage your organisations"
+      "description": "Team workspaces for sharing servers and nodes"
     },
+    "description": "Organisations let you collaborate with team members on game servers, infrastructure nodes, and DNS. Each org gets its own resources and billing.",
     "actions": {
-      "newOrganisation": "New Organisation"
+      "newOrganisation": "New Organisation",
+      "viaBilling": "$1 via Billing"
+    },
+    "empty": {
+      "title": "No organisations yet",
+      "description": "Create an organisation to start collaborating with your team on servers and infrastructure."
     },
     "states": {
       "loading": "Loading...",
@@ -5773,17 +5787,26 @@
     },
     "labels": {
       "role": "Role: {value}",
-      "tier": "Tier: {value}"
+      "tier": "Tier: {value}",
+      "members": "{count} members"
     }
   },
   "organisationsCreatePage": {
     "header": {
       "title": "New Organisation",
-      "description": "Create a new organisation"
+      "description": "Create a team workspace"
+    },
+    "whatIs": {
+      "title": "What is an organisation?",
+      "description": "An organisation is a team workspace where members can collaborate on game servers, infrastructure nodes, and DNS together. Each org gets its own resources and billing."
     },
     "fields": {
-      "namePlaceholder": "Organisation Name",
-      "handlePlaceholder": "Handle (e.g. acme.ecli.app)"
+      "nameLabel": "Organisation name",
+      "namePlaceholder": "My Team",
+      "handleLabel": "Handle (domain)",
+      "handlePlaceholder": "myteam.ecli.app",
+      "handleHint": "Must be a domain name, e.g. myteam.ecli.app or myteam.com",
+      "tierLabel": "Subscription tier"
     },
     "tiers": {
       "free": "Free",
@@ -5792,7 +5815,8 @@
     },
     "actions": {
       "creating": "Creating...",
-      "create": "Create"
+      "create": "Create organisation",
+      "cancel": "Cancel"
     },
     "errors": {
       "failedCreate": "Failed to create organisation"
@@ -5809,20 +5833,48 @@
       "orgLogoAlt": "org logo",
       "cpu": "CPU",
       "ram": "RAM",
-      "disk": "Disk"
+      "disk": "Disk",
+      "tier": "Tier",
+      "subscription": "Subscription",
+      "dnsAddonActive": "DNS Add-on active"
     },
     "tiers": {
       "free": "Free",
       "pro": "Pro",
-      "enterprise": "Enterprise"
+      "enterprise": "Enterprise",
+      "none": "No plan",
+      "freeDesc": "Basic features, 1 node, community support",
+      "proDesc": "Unlimited nodes, priority support, custom DNS",
+      "enterpriseDesc": "Dedicated nodes, SLA, white-label, API access",
+      "noneDesc": "No active plan — purchase one in Billing"
     },
     "tabs": {
       "members": "Members",
+      "billing": "Billing",
       "orders": "Orders",
       "servers": "Servers",
       "nodes": "Nodes",
       "dns": "DNS",
-      "activity": "Activity"
+      "activity": "Activity",
+      "settings": "Settings"
+    },
+    "settings": {
+      "avatar": "Organisation logo",
+      "avatarHint": "PNG, JPG or WebP. Will be resized to 256x256.",
+      "name": "Organisation name",
+      "namePrompt": "New organisation name:",
+      "handle": "Handle (domain)",
+      "handleLocked": "Contact admin to change",
+      "handlePrompt": "New handle (domain):",
+      "subscription": "Subscription tier",
+      "transferOwnership": "Transfer ownership",
+      "transferOwnershipHint": "Transfer organisation ownership to another member. This cannot be undone.",
+      "transferUserIdPrompt": "Enter the User ID of the member to transfer ownership to:",
+      "transfer": "Transfer",
+      "userNotMember": "This user is not a member of the organisation.",
+      "ownershipTransferred": "Ownership transferred successfully.",
+      "deleteOrg": "Delete organisation",
+      "deleteOrgHint": "Permanently delete this organisation and all its servers. This cannot be undone."
     },
     "roles": {
       "member": "Member",
@@ -5860,13 +5912,17 @@
         "description": "Description",
         "amount": "Amount",
         "status": "Status",
-        "date": "Date"
-      }
+        "date": "Date",
+        "actions": ""
+      },
+      "invoice": "Invoice",
+      "invoiceFailed": "Failed to download invoice"
     },
     "servers": {
       "title": "Organisation Servers",
       "loading": "Loading servers…",
-      "none": "No servers found for this organisation."
+      "none": "No servers found for this organisation.",
+      "newServer": "New Server"
     },
     "nodes": {
       "title": "Organisation Nodes",
@@ -5881,6 +5937,11 @@
     },
     "dns": {
       "title": "Organisation DNS",
+      "domainPlaceholder": "domain (e.g. myteam.com or app.ecli.app)",
+      "nameserverHint": "Custom domain: provide your Cloudflare API token below.",
+      "customDomainHelp": "This domain must be on your Cloudflare account. Create an API token with Zone:DNS:Edit permission and paste it below.",
+      "cfTokenPlaceholder": "Cloudflare API token",
+      "cfZoneIdPlaceholder": "Zone ID (optional, auto-detected from domain)",
       "subdomainPlaceholder": "subdomain e.g. app.example.com",
       "loadingSubdomains": "Loading subdomains…",
       "noSubdomains": "No subdomains found. Add one above or create a root zone in the infrastructure DNS page.",
@@ -5897,7 +5958,14 @@
       "content": "content",
       "autoTtl": "Auto TTL",
       "addRecordTitle": "Add DNS record (root = @)",
-      "nameExample": "name (e.g. @, www, api)"
+      "nameExample": "name (e.g. @, www, api)",
+      "upsellTitle": "DNS Management Add-on",
+      "upsellDescription": "DNS management is $3/month for your plan. Add it to enable custom domains and DNS records for this organisation.",
+      "upsellAction": "Enable DNS — $3/month",
+      "upsellProcessing": "Processing…",
+      "upsellSuccess": "DNS add-on activated! You can now manage DNS records.",
+      "upsellFailed": "Failed to activate DNS add-on{reason}",
+      "checking": "Checking DNS access…"
     },
     "activity": {
       "title": "Organisation Activity",
@@ -5972,6 +6040,7 @@
       "uploading": "Uploading…",
       "uploadLogo": "Upload Logo",
       "leaveOrg": "Leave org",
+      "deleteOrg": "Delete organisation",
       "refresh": "Refresh",
       "resend": "Resend",
       "revoke": "Revoke",
@@ -5982,10 +6051,14 @@
       "create": "Create",
       "save": "Save",
       "cancel": "Cancel",
-      "addRecord": "Add record"
+      "addRecord": "Add record",
+      "manageSubscription": "Manage subscription",
+      "addDnsAddon": "Add DNS — $3/mo"
     },
     "confirm": {
       "leaveOrg": "Leave organisation? This will remove your access and related subuser links.",
+      "deleteOrg": "Delete this organisation? This action cannot be undone. All members, DNS zones, and invoices will be cleared.",
+      "deleteOrgServers": "ALL organisation servers will be permanently deleted. This cannot be undone. Delete \"{name}\"?",
       "deleteRecord": "Delete this record?",
       "revokeInvite": "Revoke this invite?",
       "removeSubdomain": "Remove subdomain {name} from organisation?"
@@ -6008,6 +6081,71 @@
       "failedDeleteSubdomain": "Failed to delete subdomain: {reason}",
       "failedChangeRole": "Failed to change role"
     }
+  },
+  "orgBilling": {
+    "title": "Organisation Billing",
+    "loading": "Loading billing information…",
+    "pendingTitle": "Organisation pending activation",
+    "pendingDesc": "Purchase a plan below to activate your organisation. A one-time $1 formation fee is included in your first payment.",
+    "inclFee": "+$1 fee",
+    "formationFee": "Organisation formation fee (one-time)",
+    "payFormationFee": "Pay $1 Formation Fee to Activate",
+    "confirmFormationFee": "Pay the $1 formation fee to activate this organisation? Your org will be active once an admin marks the payment.",
+    "formationFeePaid": "Formation fee order created! An admin will activate your organisation shortly.",
+    "formationFeeFailed": "Failed to create formation fee order",
+    "contactSales": "Contact Sales",
+    "unauthorized": "Only organisation admins and owners can manage billing.",
+    "currentPlan": "Current Plan",
+    "currentPlanDesc": "Your organisation's active subscription tier.",
+    "plan": "Plan",
+    "enterpriseDesc": "Dedicated nodes, SLA, white-label, DNS included, API access.",
+    "paidDesc": "Unlimited nodes, priority support, custom DNS available as add-on.",
+    "freeDesc": "Basic features, 1 node, community support.",
+    "enterpriseBadge": "Enterprise",
+    "upgradePlan": "Upgrade plan",
+    "availablePlans": "Available Plans",
+    "availablePlansDesc": "Switch your organisation's plan.",
+    "availablePlansPendingDesc": "Choose a plan to activate your organisation. A one-time $1 formation fee is included.",
+    "current": "Current",
+    "switchTo": "Switch",
+    "currentPlan_label": "Current plan",
+    "confirmSwitch": "Switch organisation to {plan} plan?",
+    "planSwitched": "Plan switched! Changes may take a moment.",
+    "switchFailed": "Failed to switch plan",
+    "addons": "Add-ons",
+    "addonsDesc": "Additional services for your organisation.",
+    "dnsAddon": "DNS Management",
+    "dnsAddonDesc": "Custom domains and DNS record management via Cloudflare. $3/month.",
+    "buyDnsButton": "Buy — $3/mo",
+    "dnsActive": "Active",
+    "included": "Included",
+    "confirmDnsAddon": "Purchase DNS Management add-on for $3/month?",
+    "dnsPurchased": "DNS add-on purchased! Visit the DNS tab to configure domains.",
+    "dnsPurchaseFailed": "Failed to purchase DNS add-on",
+    "invoices": "Invoice History",
+    "invoicesDesc": "Past orders and payments for this organisation.",
+    "noInvoices": "No invoices yet.",
+    "columns": {
+      "description": "Description",
+      "amount": "Amount",
+      "status": "Status",
+      "date": "Date"
+    },
+    "invoiceFailed": "Failed to download invoice",
+    "specs": {
+      "memory": "Memory: {val}MB",
+      "disk": "Disk: {val}MB",
+      "cpu": "CPU: {val}%",
+      "servers": "Servers: {val}",
+      "databases": "Databases: {val}",
+      "backups": "Backups: {val}"
+    },
+    "confirmSwitchDesc": "Switch from {current} to {target}?",
+    "noPlan": "No plan",
+    "pendingHint": "Select a plan below to pay the formation fee and activate your organisation.",
+    "retryActivation": "Retry Activation",
+    "activationFailed": "Activation failed",
+    "syncFailed": "Sync failed"
   },
   "aiChatPage": {
     "initialMessage": "Hey there! 👋 I'm your Eclipse AI assistant. I can help you manage servers, debug issues, and optimize your infrastructure. What would you like to work on today?",
@@ -6218,7 +6356,17 @@
       "switched": "Switched to",
       "queued": "Queued for renewal",
       "activateNow": "Activate now (replace current plan)",
-      "activateOnRenewal": "Queue for next renewal"
+      "activateOnRenewal": "Queue for next renewal",
+      "billingFor": "Bill to",
+      "personalAccount": "Personal account",
+      "newOrganisation": "New Organisation",
+      "orgNamePlaceholder": "Organisation name",
+      "orgHandlePlaceholder": "Handle (e.g. myteam.ecli.app)",
+      "orgHandleHint": "Must be a domain name. DNS management requires Enterprise tier.",
+      "orgFormationFee": "Organisation formation fee",
+      "orgNameRequired": "Organisation name and handle are required",
+      "handleTaken": "This handle is already taken by another organisation",
+      "orgCreateFailed": "Failed to create organisation"
     },
     "invoices": {
       "title": "Invoice History",
