@@ -3929,6 +3929,33 @@
         "incomplete": "Fill in all required fields to enable your AI provider",
         "active": "Active"
       }
+    },
+    "feedback": {
+      "saved": "Feedback saved!",
+      "thankYou": "Thank you — your input helps us make EcliPanel better.",
+      "updateButton": "Update my feedback",
+      "yourFeedback": "Your feedback",
+      "enjoyingPrompt": "Are you enjoying EcliPanel?",
+      "updatePrompt": "Update your rating and thoughts below.",
+      "newPrompt": "We'd love to hear your thoughts. Rate your experience below.",
+      "placeholder": "Tell us more (optional, up to 250 words)...",
+      "saving": "Saving...",
+      "updateAction": "Update feedback",
+      "submitAction": "Submit feedback",
+      "selectRating": "Please select a rating",
+      "saveError": "Failed to save feedback",
+      "veryPoor": "Very Poor",
+      "poor": "Poor",
+      "okay": "Okay",
+      "good": "Good",
+      "excellent": "Excellent",
+      "helpsImprove": "Your feedback helps us improve the panel."
+    },
+    "verification": {
+      "dateOfBirth": "Date of Birth",
+      "dateOfBirthHint": "Enter your birth date to verify eligibility before managing servers.",
+      "dateOfBirthLocked": "Your date of birth is locked after identity verification and can only be changed by support.",
+      "ageVerificationNotice": "Please enter your date of birth below to complete age verification and continue using server management."
     }
   },
   "studentBenefits": {
@@ -6742,7 +6769,7 @@
   },
   "blogPage": {
     "title": "Blog",
-    "description": "Write, publish, and share your story",
+    "description": "Description",
     "noDescription": "No description yet",
     "view": "View",
     "published": "published",
@@ -6782,10 +6809,9 @@
     "theme": "Theme",
     "blogInfo": "Blog Info",
     "blogName": "Blog Name",
-    "description": "Description",
     "visibility": "Visibility",
     "public": "Public",
-    "members": "Members only",
+    "members": "Members",
     "unlisted": "Unlisted",
     "themePresets": "Theme Presets",
     "themePresetsDescription": "Pick a preset and tweak it",
@@ -6801,7 +6827,6 @@
     "sampleDescription": "This is how your blog description will look.",
     "samplePost": "Sample post title",
     "samplePostDate": "Posted just now",
-    "members": "Members",
     "membersDescription": "Manage who can write on your blog",
     "addMember": "Add Member",
     "confirmRemoveMember": "Remove this member?",

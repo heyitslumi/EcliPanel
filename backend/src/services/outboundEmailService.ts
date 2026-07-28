@@ -4,7 +4,7 @@ import { Plan } from '../models/plan.entity';
 import { User } from '../models/user.entity';
 import { sendMail } from './mailService';
 import { resolveLocale } from '../i18n/resolve';
-import { getMailboxAccountForUser, rotateMailboxPasswordForAccount } from './mailcowService';
+import { getMailboxAccountForUser } from './mailcowService';
 import { MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 
 function startOfDay(date: Date) {
@@ -103,11 +103,6 @@ export async function createOutboundEmailRecord(params: {
   return repo.save(record as any);
 }
 
-function isSmtpAuthError(err: any) {
-  const msg = String(err?.message || '').toLowerCase();
-  return /auth|authentication|invalid login|535|530|534|username|password/.test(msg);
-}
-
 function buildSmtpOptions(account: any) {
   if (!account || !account.smtpHost || !account.smtpPort) return null;
   const user = account.email || undefined;
@@ -126,14 +121,16 @@ export async function sendOutboundEmailImmediately(
   account?: any,
   user?: User
 ) {
-  let fromOption: any = record.fromAddress;
+  const fromAddress = record.fromAddress;
+
+  let fromOption: any = fromAddress;
   if (user) {
     const display = (user.displayName || '').toString().trim();
     const first = (user.firstName || '').toString().trim();
     const last = (user.lastName || '').toString().trim();
     const full = `${first} ${last}`.trim();
     const name = display || full || undefined;
-    if (name) fromOption = { name, address: record.fromAddress };
+    if (name) fromOption = { name, address: fromAddress };
   }
 
   const sendOptions: any = {
@@ -143,35 +140,12 @@ export async function sendOutboundEmailImmediately(
     subject: record.subject || 'No subject',
     from: fromOption,
     text: record.body,
+    replyTo: record.fromAddress,
   };
   if (record.html) sendOptions.html = record.html;
 
-  if (account && account.email) {
-    const envelopeTo = [record.toAddress].concat(
-      (record.cc || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean),
-      (record.bcc || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-    );
-    sendOptions.envelope = { from: account.email, to: envelopeTo };
-    console.info(`[outboundEmail] Using envelope.from=${account.email} for authenticated mailbox`);
-  }
-
-  const smtp = account ? buildSmtpOptions(account) : undefined;
-  if (smtp) {
-    console.info(
-      `[outboundEmail] SMTP config host=${smtp.host} port=${smtp.port} secure=${smtp.secure} passSet=${!!smtp.pass}`
-    );
-  } else {
-    console.info('[outboundEmail] Using global SMTP transporter');
-  }
-  if (smtp && !smtp.pass) {
-    throw new Error('Mailbox SMTP password is not available');
-  }
+  const smtp = undefined;
+  console.info('[outboundEmail] Using global SMTP transporter');
 
   try {
     const fromDesc =
@@ -191,33 +165,6 @@ export async function sendOutboundEmailImmediately(
       `[outboundEmail] Send failed user=${user?.id ?? 'n/a'} to=${record.toAddress} error=${String(err?.message || err)}`
     );
     console.error(err?.stack || err);
-    if (account && smtp && isSmtpAuthError(err)) {
-      const rotated = await rotateMailboxPasswordForAccount(account).catch(() => null);
-      if (rotated?.success && rotated.password) {
-        account.password = rotated.password;
-        const retrySmtp = buildSmtpOptions(account);
-        try {
-          console.info(
-            `[outboundEmail] Retrying after password rotation user=${user?.id ?? 'n/a'} to=${record.toAddress}`
-          );
-          const retryResult = await sendMail({
-            ...sendOptions,
-            smtp: retrySmtp,
-            locale: resolveLocale({ user }),
-          });
-          console.info(
-            `[outboundEmail] Retry success user=${user?.id ?? 'n/a'} to=${record.toAddress} messageId=${retryResult?.messageId || ''}`
-          );
-          return retryResult;
-        } catch (rerr) {
-          console.error(
-            `[outboundEmail] Retry failed user=${user?.id ?? 'n/a'} to=${record.toAddress} error=${String(rerr?.message || rerr)}`
-          );
-          console.error(rerr?.stack || rerr);
-          throw rerr;
-        }
-      }
-    }
     throw err;
   }
 }

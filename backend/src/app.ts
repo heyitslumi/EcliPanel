@@ -382,7 +382,7 @@ app.decorate('log', console)
         'img-src': ["'self'", "data:", "https:"],
         'font-src': ["'self'", "data:"],
         'connect-src': ["'self'", "https://cdn.jsdelivr.net"],
-        'frame-src': ["'self'"],
+        'frame-src': ["'self'", "https://mail.ecli.app"],
         'object-src': ["'none'"],
         'base-uri': ["'self'"],
         'form-action': ["'self'"],
@@ -823,7 +823,7 @@ export async function initApp() {
     console.error('Failed to schedule mailbox sync job:', e);
   }
   try {
-    scheduleOutboundEmailRunner();
+    // scheduleOutboundEmailRunner();
   } catch (e) {
     console.error('Failed to schedule outbound email runner:', e);
   }

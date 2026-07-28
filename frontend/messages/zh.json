@@ -3901,6 +3901,32 @@
         "incomplete": "填写所有必填字段以启用您的 AI 提供商",
         "active": "活跃"
       }
+    },
+    "feedback": {
+      "saved": "反馈已保存！",
+      "thankYou": "谢谢 — 您的意见帮助我们改进 EcliPanel。",
+      "updateButton": "更新我的反馈",
+      "yourFeedback": "您的反馈",
+      "enjoyingPrompt": "您喜欢 EcliPanel 吗？",
+      "updatePrompt": "在下方更新您的评分和想法。",
+      "newPrompt": "我们很想听听您的想法。请在下方评价您的体验。",
+      "placeholder": "告诉我们更多（可选，最多250字）...",
+      "saving": "保存中...",
+      "updateAction": "更新反馈",
+      "submitAction": "提交反馈",
+      "selectRating": "请选择评分",
+      "saveError": "保存反馈失败",
+      "veryPoor": "非常差",
+      "poor": "差",
+      "okay": "一般",
+      "good": "好",
+      "excellent": "非常好"
+    },
+    "verification": {
+      "dateOfBirth": "出生日期",
+      "dateOfBirthHint": "输入您的出生日期以验证资格，然后才能管理服务器。",
+      "dateOfBirthLocked": "身份验证后，您的出生日期已锁定，只能由支持人员更改。",
+      "ageVerificationNotice": "请在下方输入您的出生日期以完成年龄验证并继续使用服务器管理。"
     }
   },
   "studentBenefits": {

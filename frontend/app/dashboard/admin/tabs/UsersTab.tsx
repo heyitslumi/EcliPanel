@@ -213,17 +213,22 @@ export default function UsersTab({ ctx }: { ctx: any }) {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          { label: t("verification.email"), verified: user.emailVerified },
-                          { label: t("verification.student"), verified: user.studentVerified },
-                          { label: t("verification.id"), verified: user.idVerified },
+                          { label: t("verification.email"), verified: user.emailVerified, key: 'email' as const },
+                          { label: t("verification.student"), verified: user.studentVerified, key: 'student' as const },
+                          { label: t("verification.id"), verified: user.idVerified, key: 'id' as const, toggleable: true },
                         ].map((v) => (
-                          <span
+                          <button
                             key={v.label}
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${v.verified ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary/50 text-muted-foreground"}`}
+                            onClick={v.toggleable ? async () => {
+                              await apiFetch(`/api/admin/users/${user.id}`, { method: 'PUT', body: JSON.stringify({ idVerified: !user.idVerified }) })
+                              fetchUsers()
+                            } : undefined}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${v.verified ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"} ${v.toggleable ? 'cursor-pointer' : ''}`}
+                            title={v.toggleable ? 'Click to toggle' : undefined}
                           >
                             {v.verified ? <Check className="h-2.5 w-2.5" /> : <X className="h-2.5 w-2.5" />}
                             {v.label}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     </td>
@@ -376,14 +381,22 @@ export default function UsersTab({ ctx }: { ctx: any }) {
 
               <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-secondary/20">
                 {[
-                  { label: t("verification.email"), verified: user.emailVerified },
-                  { label: t("verification.student"), verified: user.studentVerified },
-                  { label: t("verification.id"), verified: user.idVerified },
+                  { label: t("verification.email"), verified: user.emailVerified, key: 'email' as const },
+                  { label: t("verification.student"), verified: user.studentVerified, key: 'student' as const },
+                  { label: t("verification.id"), verified: user.idVerified, key: 'id' as const, toggleable: true },
                 ].map((v) => (
-                  <span key={v.label} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${v.verified ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary/80 text-muted-foreground"}`}>
+                  <button
+                    key={v.label}
+                    onClick={v.toggleable ? async () => {
+                      await apiFetch(`/api/admin/users/${user.id}`, { method: 'PUT', body: JSON.stringify({ idVerified: !user.idVerified }) })
+                      fetchUsers()
+                    } : undefined}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${v.verified ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-secondary/80 text-muted-foreground hover:bg-secondary"} ${v.toggleable ? 'cursor-pointer' : ''}`}
+                    title={v.toggleable ? 'Click to toggle' : undefined}
+                  >
                     {v.verified ? <Check className="h-2.5 w-2.5" /> : <X className="h-2.5 w-2.5" />}
                     {v.label}
-                  </span>
+                  </button>
                 ))}
                 {user.supportBanned && (
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-destructive/10 text-destructive">

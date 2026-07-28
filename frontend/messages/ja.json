@@ -3633,6 +3633,33 @@
         "incomplete": "AIプロバイダーを有効にするにはすべての必須フィールドに入力してください",
         "active": "アクティブ"
       }
+    },
+    "feedback": {
+      "saved": "フィードバックを保存しました！",
+      "thankYou": "ありがとうございます — お寄せいただいたご意見はEcliPanelの改善に役立ちます。",
+      "updateButton": "フィードバックを更新",
+      "yourFeedback": "あなたのフィードバック",
+      "enjoyingPrompt": "EcliPanelをお楽しみいただけていますか？",
+      "updatePrompt": "下記で評価と思いを更新してください。",
+      "newPrompt": "ぜひご意見をお聞かせください。以下で体験を評価してください。",
+      "placeholder": "詳細をお聞かせください（任意、250語まで）...",
+      "saving": "保存中...",
+      "updateAction": "フィードバックを更新",
+      "submitAction": "フィードバックを送信",
+      "selectRating": "評価を選択してください",
+      "saveError": "フィードバックの保存に失敗しました",
+      "veryPoor": "とても悪い",
+      "poor": "悪い",
+      "okay": "普通",
+      "good": "良い",
+      "excellent": "非常に良い",
+      "helpsImprove": "お客様のフィードバックはパネルの改善に役立ちます。"
+    },
+    "verification": {
+      "dateOfBirth": "生年月日",
+      "dateOfBirthHint": "サーバーを管理する前に、生年月日を入力して資格を確認してください。",
+      "dateOfBirthLocked": "本人確認後、生年月日はロックされ、サポートのみが変更できます。",
+      "ageVerificationNotice": "年齢確認を完了し、サーバー管理を続行するには、以下に生年月日を入力してください。"
     }
   },
   "studentBenefits": {

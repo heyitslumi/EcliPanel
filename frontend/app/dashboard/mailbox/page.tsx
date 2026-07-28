@@ -1227,7 +1227,7 @@ export default function MailboxPage() {
   const [showMetadata, setShowMetadata] = useState(false)
   const [metadataSection, setMetadataSection] = useState<"headers" | "security" | "raw">("headers")
 
-  const [activeSection, setActiveSection] = useState<"inbox" | "sent">("inbox")
+  const activeSection = "inbox" as const
   const [sentMessages, setSentMessages] = useState<any[]>([])
   const [sentLoading, setSentLoading] = useState(false)
   const [favoriteOnly, setFavoriteOnly] = useState(false)
@@ -1596,33 +1596,10 @@ export default function MailboxPage() {
       <div className="px-3 pt-3 pb-2 space-y-2.5 border-b border-border/60">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="inline-flex rounded-full border border-border bg-card p-1">
-              <button
-                type="button"
-                onClick={() => { setActiveSection("inbox"); setComposeOpen(false); setSelectedItemId(null); setMobileView("list") }}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                  activeSection === "inbox"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
-                )}
-              >
-                {t("tabs.inbox")}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setActiveSection("sent"); setComposeOpen(false); setSelectedItemId(null); setMobileView("list") }}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                  activeSection === "sent"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
-                )}
-              >
-                {t("tabs.sent")}
-              </button>
-            </div>
-            {activeSection === "inbox" && unreadCount > 0 && (
+            <span className="rounded-full px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground">
+              {t("tabs.inbox")}
+            </span>
+            {unreadCount > 0 && (
               <span className="rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 leading-none min-w-[18px] text-center">
                 {unreadCount}
               </span>
@@ -1630,19 +1607,6 @@ export default function MailboxPage() {
           </div>
 
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              className="h-9 px-3 text-xs"
-              onClick={() => {
-                setComposeOpen(true)
-                setActiveSection("inbox")
-                setSelectedItemId(null)
-                setMobileView("detail")
-              }}
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t("actions.compose")}</span>
-            </Button>
             <button
               onClick={() => setShowFilters(s => !s)}
               className={cn(

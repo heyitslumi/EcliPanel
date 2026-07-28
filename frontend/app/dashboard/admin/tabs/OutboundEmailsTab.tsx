@@ -93,13 +93,16 @@ export default function OutboundEmailsTab() {
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-t last:border-b hover:bg-secondary/50 transition-colors">
+              <tr key={item.id} className={item.status === 'failed'
+                ? "border-t last:border-b bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent hover:from-red-500/25 transition-colors"
+                : "border-t last:border-b hover:bg-secondary/50 transition-colors"
+              }>
                 <td className="px-3 py-2 align-top text-xs text-muted-foreground">{item.id}</td>
                 <td className="px-3 py-2 align-top">{item.user?.displayName || item.user?.email || `#${item.userId}`}</td>
                 <td className="px-3 py-2 align-top">{item.fromAddress}</td>
                 <td className="px-3 py-2 align-top">{item.toAddress}</td>
                 <td className="px-3 py-2 align-top truncate max-w-xs">{item.subject}</td>
-                <td className="px-3 py-2 align-top">{item.status}</td>
+                <td className={`px-3 py-2 align-top font-medium ${item.status === 'failed' ? 'text-red-500' : item.status === 'sent' ? 'text-green-500' : 'text-muted-foreground'}`}>{item.status}</td>
                 <td className="px-3 py-2 align-top">{item.sentAt ? new Date(item.sentAt).toLocaleString() : ""}</td>
                 <td className="px-3 py-2 align-top">
                   <Button size="sm" onClick={() => setView(item)}>{t("adminOutboundEmails.viewButton")}</Button>
