@@ -1615,6 +1615,17 @@
       "orderFallback": "排序",
       "forUser": "用户 #{id}"
     },
+    "adminCategories": {
+      "overview": "概览",
+      "users": "用户",
+      "servers": "服务器",
+      "infrastructure": "基础设施",
+      "billing": "计费",
+      "security": "安全",
+      "communication": "通信",
+      "integrations": "集成",
+      "advanced": "高级"
+    },
     "tabs": {
       "overview": "概览",
       "users": "用户",

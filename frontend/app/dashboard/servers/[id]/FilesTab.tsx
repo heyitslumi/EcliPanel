@@ -36,6 +36,7 @@ interface FileItem {
   size?: number
   modified?: string
   modified_at?: string
+  virtual?: boolean
 }
 
 interface SftpInfo {
@@ -709,6 +710,11 @@ function FileRow({
         )}>
           {fname}
         </span>
+        {isDir && file.virtual && (
+          <span className="text-[10px] px-1.5 py-0.5 bg-secondary/50 text-muted-foreground rounded flex-shrink-0 font-medium">
+            virtual
+          </span>
+        )}
         {isDir && (
           <ChevronRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0 opacity-0 group-hover/name:opacity-100 transition-opacity" />
         )}
@@ -1062,6 +1068,7 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  const uploadAbortRef = useRef(false)
 
   const breadcrumbs = useMemo(() => path.split("/").filter(Boolean), [path])
   const isSftpMode = isKvm && viewMode === "sftp"
@@ -1184,101 +1191,66 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
 
   const CHUNK_SIZE = 10 * 1024 * 1024
 
-  // Upload via XHR as fallback when fetch sends Expect: 100-continue (which Wings rejects with 417)
-  const xhrUpload = (url: string, form: FormData): Promise<{ continuation_token?: string }> =>
-    new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open("POST", url)
-      // XHR does not send Expect: 100-continue automatically
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try { resolve(JSON.parse(xhr.responseText)) }
-          catch { resolve({}) }
-        } else {
-          reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`))
-        }
-      }
-      xhr.onerror = () => reject(new Error("Network error"))
-      xhr.send(form)
-    })
+  const TUS_FP_PREFIX = 'tus:'
 
-  const uploadChunkToWings = async (
-    wingsUrl: string,
-    token: string,
-    chunk: Blob,
-    filePath: string,
-    continuationToken?: string
-  ): Promise<string | null> => {
-    const form = new FormData()
-    form.append("files", chunk, filePath.split("/").pop() || "file")
-    const params = new URLSearchParams()
-    if (continuationToken) {
-      params.set("continuation_token", continuationToken)
-      params.set("wants_continue", "0")
-    } else {
-      params.set("token", token)
-      params.set("directory", filePath.substring(0, filePath.lastIndexOf("/")) || "/")
-      params.set("wants_continue", "0")
-    }
-    const endpoint = `${wingsUrl}?${params.toString()}`
-    let res = await fetch(endpoint, { method: "POST", body: form })
-    if (res.status === 417) {
-      // Retry with XHR to avoid Expect: 100-continue
-      const data = await xhrUpload(endpoint, form)
-      return data?.continuation_token || null
-    }
-    if (!res.ok) throw new Error(`Upload failed: ${res.status} ${await res.text()}`)
-    const data = await res.json()
-    return data?.continuation_token || null
-  }
-
-  const uploadFileDirect = async (f: File, filePath: string) => {
+  const uploadFileTus = async (f: File, filePath: string) => {
     const uploadInfo = await apiFetch(API_ENDPOINTS.serverFileUploadToken.replace(":id", serverId))
     if (!uploadInfo?.token || !uploadInfo?.url) throw new Error("Failed to get upload token")
-    const totalChunks = Math.ceil(f.size / CHUNK_SIZE)
-    let contToken: string | undefined
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * CHUNK_SIZE
-      const end = Math.min(start + CHUNK_SIZE, f.size)
-      const chunk = f.slice(start, end)
-      const wantsContinue = i < totalChunks - 1
-      const form = new FormData()
-      form.append("files", chunk, f.name)
-      const params = new URLSearchParams()
-      if (contToken) {
-        params.set("continuation_token", contToken)
-        if (wantsContinue) params.set("wants_continue", "0")
-      } else {
-        params.set("token", uploadInfo.token)
-        params.set("directory", filePath.substring(0, filePath.lastIndexOf("/")) || "/")
-        if (wantsContinue) params.set("wants_continue", "0")
-      }
-      const endpoint = `${uploadInfo.url}?${params.toString()}`
-      let res = await fetch(endpoint, { method: "POST", body: form })
-      if (res.status === 417) {
-        // Retry with XHR to avoid Expect: 100-continue
-        const data = await xhrUpload(endpoint, form)
-        contToken = (data?.continuation_token) || undefined
+
+    const dir = filePath.substring(0, filePath.lastIndexOf("/")) || "/"
+    const filename = filePath.split("/").pop() || f.name
+    const baseUrl = uploadInfo.url.replace(/\/$/, '')
+    const fp = `${serverId}::${filePath}`
+
+    const headUrl = `${baseUrl}?${new URLSearchParams({ token: uploadInfo.token, directory: dir, file: filename })}`
+    const headRes = await fetch(headUrl, { method: 'HEAD' })
+    let offset = 0
+    if (headRes.ok) {
+      const off = headRes.headers.get('Upload-Offset')
+      if (off) offset = parseInt(off, 10) || 0
+    }
+
+    if (offset === 0) localStorage.setItem(`${TUS_FP_PREFIX}${fp}`, '1')
+
+    const total = f.size
+    while (offset < total) {
+      if (uploadAbortRef.current) { localStorage.removeItem(`${TUS_FP_PREFIX}${fp}`); throw new Error("Upload cancelled") }
+      const end = Math.min(offset + CHUNK_SIZE, total)
+      const last = end >= total
+      const patchUrl = `${baseUrl}?${new URLSearchParams({ token: uploadInfo.token, directory: dir, file: filename })}`
+      const res = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/offset+octet-stream',
+          'Upload-Offset': String(offset),
+          'Upload-Length': String(total),
+          ...(last ? { 'Upload-Complete': '?1' } : {}),
+        },
+        body: f.slice(offset, end),
+      })
+      if (res.status === 409) {
+        offset = parseInt(res.headers.get('Upload-Offset') || String(offset), 10)
         continue
       }
-      if (!res.ok) throw new Error(`Upload failed at chunk ${i + 1}: ${res.status} ${await res.text()}`)
-      if (wantsContinue) {
-        const data = await res.json()
-        contToken = data?.continuation_token || undefined
-      }
+      if (!res.ok) throw new Error(`Upload failed: ${res.status} ${await res.text().catch(() => '')}`)
+      offset = parseInt(res.headers.get('Upload-Offset') || String(end), 10)
     }
+
+    localStorage.removeItem(`${TUS_FP_PREFIX}${fp}`)
   }
 
   const handleFileUpload = useCallback(async (fileList: FileList) => {
     if (!fileList.length) return
     if (isSftpMode && !sftpAuthorized) { toast("error", t("errors.sftpAuthRequired")); return }
     setUploading(true)
+    uploadAbortRef.current = false
     try {
       for (let i = 0; i < fileList.length; i++) {
+        if (uploadAbortRef.current) break
         const f = fileList[i]
         const filePath = path.endsWith("/") ? `${path}${f.name}` : `${path}/${f.name}`
         if (!isSftpMode) {
-          await uploadFileDirect(f, filePath)
+          await uploadFileTus(f, filePath)
         } else {
           const buf = await f.arrayBuffer()
           const url = API_ENDPOINTS.serverSftpFileUpload.replace(":id", serverId) +
@@ -1337,6 +1309,10 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
       el.removeEventListener("drop", onDrop)
     }
   }, [path, handleFileUpload])
+
+  useEffect(() => {
+    return () => { uploadAbortRef.current = true }
+  }, [])
 
   // ── Connect SFTP ────────────────────────────────────────────────────────────
   const connectSftp = async () => {

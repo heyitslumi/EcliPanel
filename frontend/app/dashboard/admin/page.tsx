@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { useTranslations } from "next-intl"
@@ -985,42 +985,42 @@ export default function AdminPanel() {
   }
 
   const adminTabs = [
-    { value: 'overview', label: t('tabs.overview') || 'Overview', permissions: ['admin:access'] },
-    { value: 'users', label: t('tabs.users'), permissions: ['users:read'] },
-    { value: 'metrics', label: t('tabs.metrics'), permissions: ['admin:metrics'] },
-    { value: 'export-jobs', label: t('tabs.exportJobs'), permissions: ['admin:export-jobs'] },
-    { value: 'organisations', label: t('tabs.organisations'), permissions: ['org:read'] },
-    { value: 'servers', label: t('tabs.servers'), permissions: ['servers:read'] },
-    { value: 'tickets', label: t('tabs.tickets'), feature: 'ticketing', permissions: ['tickets:read', 'tickets:ban', 'tickets:delete', 'admin:ticket:staff'] },
-    { value: 'applications', label: t('tabs.applications'), feature: 'applications', permissions: ['applications:manage'] },
-    { value: 'verifications', label: t('tabs.kyc'), permissions: ['idverification:read'] },
-    { value: 'studentVerifications', label: t('tabs.studentVerifications'), permissions: ['admin:student:verify'] },
-    { value: 'deletions', label: t('tabs.deletions'), permissions: ['deletions:write'] },
-    { value: 'nodes', label: t('tabs.nodes'), permissions: ['nodes:read'] },
-    { value: 'tunnels', label: t('tabs.tunnels'), feature: 'tunnels', permissions: ['tunnels:read', 'admin:tunnels:read'] },
-    { value: 'eggs', label: t('tabs.eggs'), permissions: ['eggs:read'] },
-    { value: 'backup-configs', label: 'Backup Configs', permissions: ['admin:read'] },
-    { value: 'transfers', label: 'Transfers', permissions: ['admin:read'] },
-    { value: 'ai', label: t('tabs.aiModels'), feature: 'ai', permissions: ['ai:read'] },
-    { value: 'announcements', label: t('tabs.announcements'), permissions: ['admin:announcements'] },
-    { value: 'outbound-emails', label: t('tabs.outboundEmails'), permissions: ['admin:outbound-emails'] },
-    { value: 'fraud', label: t('tabs.fraud'), permissions: ['admin:fraud'] },
-    { value: 'roles', label: t('tabs.roles'), permissions: ['roles:read'] },
-    { value: 'logs', label: t('tabs.logs'), permissions: ['logs:read'] },
-    { value: 'audit', label: t('tabs.audit') || 'Audit', permissions: ['logs:read'] },
-    { value: 'soc', label: 'SOC', permissions: ['soc:read'] },
-    { value: 'oauth', label: t('tabs.oauth'), feature: 'oauth', permissions: ['oauth:manage', 'admin:oauth'] },
-    { value: 'databases', label: t('tabs.databases'), permissions: ['databases:read'] },
-    { value: 'plans', label: t('tabs.plans'), permissions: ['admin:plans:view', 'admin:plans:manage', 'admin:plans:delete', 'admin:plans:reapply', 'admin:plans:forcereapply'] },
-    { value: 'orders', label: t('tabs.orders'), permissions: ['orders:view', 'orders:issue', 'orders:update', 'orders:delete'] },
-    { value: 'payments', label: t('tabs.payments'), permissions: ['admin:payment:manage'] },
-    { value: 'coupons', label: t('tabs.coupons') || 'Coupons', permissions: ['admin:access'] },
-    { value: 'shorturls', label: t('tabs.shortUrls'), permissions: ['admin.shorturl.add', 'admin.shorturl.remove', 'admin.shorturl.edit.own', 'admin.shorturl.edit.any'] },
-    { value: 'settings', label: t('tabs.settings'), permissions: ['admin:settings', 'admin:geoblock:view'] },
-    { value: 'rollouts', label: t('tabs.rollouts'), permissions: ['admin:access'] },
-    { value: 'feedback', label: t('tabs.feedback'), permissions: ['admin:access'] },
-    { value: 'elo', label: 'ELO', feature: 'elo', permissions: ['admin:access'] },
-    { value: 'chat', label: t('tabs.chat') || 'Chat', feature: 'chat', permissions: ['chat:manage'] },
+    { value: 'overview', label: t('tabs.overview') || 'Overview', category: 'overview', permissions: ['admin:access'] },
+    { value: 'users', label: t('tabs.users'), category: 'users', permissions: ['users:read'] },
+    { value: 'roles', label: t('tabs.roles'), category: 'users', permissions: ['roles:read'] },
+    { value: 'verifications', label: t('tabs.kyc'), category: 'users', permissions: ['idverification:read'] },
+    { value: 'studentVerifications', label: t('tabs.studentVerifications'), category: 'users', permissions: ['admin:student:verify'] },
+    { value: 'deletions', label: t('tabs.deletions'), category: 'users', permissions: ['deletions:write'] },
+    { value: 'servers', label: t('tabs.servers'), category: 'servers', permissions: ['servers:read'] },
+    { value: 'transfers', label: 'Transfers', category: 'servers', permissions: ['admin:read'] },
+    { value: 'nodes', label: t('tabs.nodes'), category: 'infrastructure', permissions: ['nodes:read'] },
+    { value: 'eggs', label: t('tabs.eggs'), category: 'infrastructure', permissions: ['eggs:read'] },
+    { value: 'databases', label: t('tabs.databases'), category: 'infrastructure', permissions: ['databases:read'] },
+    { value: 'tunnels', label: t('tabs.tunnels'), category: 'infrastructure', feature: 'tunnels', permissions: ['tunnels:read', 'admin:tunnels:read'] },
+    { value: 'backup-configs', label: 'Backup Configs', category: 'infrastructure', permissions: ['admin:read'] },
+    { value: 'organisations', label: t('tabs.organisations'), category: 'billing', permissions: ['org:read'] },
+    { value: 'plans', label: t('tabs.plans'), category: 'billing', permissions: ['admin:plans:view', 'admin:plans:manage', 'admin:plans:delete', 'admin:plans:reapply', 'admin:plans:forcereapply'] },
+    { value: 'orders', label: t('tabs.orders'), category: 'billing', permissions: ['orders:view', 'orders:issue', 'orders:update', 'orders:delete'] },
+    { value: 'coupons', label: t('tabs.coupons') || 'Coupons', category: 'billing', permissions: ['admin:access'] },
+    { value: 'payments', label: t('tabs.payments'), category: 'billing', permissions: ['admin:payment:manage'] },
+    { value: 'soc', label: 'SOC', category: 'security', permissions: ['soc:read'] },
+    { value: 'fraud', label: t('tabs.fraud'), category: 'security', permissions: ['admin:fraud'] },
+    { value: 'audit', label: t('tabs.audit') || 'Audit', category: 'security', permissions: ['logs:read'] },
+    { value: 'logs', label: t('tabs.logs'), category: 'security', permissions: ['logs:read'] },
+    { value: 'announcements', label: t('tabs.announcements'), category: 'communication', permissions: ['admin:announcements'] },
+    { value: 'tickets', label: t('tabs.tickets'), category: 'communication', feature: 'ticketing', permissions: ['tickets:read', 'tickets:ban', 'tickets:delete', 'admin:ticket:staff'] },
+    { value: 'chat', label: t('tabs.chat') || 'Chat', category: 'communication', feature: 'chat', permissions: ['chat:manage'] },
+    { value: 'feedback', label: t('tabs.feedback'), category: 'communication', permissions: ['admin:access'] },
+    { value: 'oauth', label: t('tabs.oauth'), category: 'integrations', feature: 'oauth', permissions: ['oauth:manage', 'admin:oauth'] },
+    { value: 'rollouts', label: t('tabs.rollouts'), category: 'integrations', permissions: ['admin:access'] },
+    { value: 'ai', label: t('tabs.aiModels'), category: 'integrations', feature: 'ai', permissions: ['ai:read'] },
+    { value: 'metrics', label: t('tabs.metrics'), category: 'advanced', permissions: ['admin:metrics'] },
+    { value: 'export-jobs', label: t('tabs.exportJobs'), category: 'advanced', permissions: ['admin:export-jobs'] },
+    { value: 'outbound-emails', label: t('tabs.outboundEmails'), category: 'advanced', permissions: ['admin:outbound-emails'] },
+    { value: 'shorturls', label: t('tabs.shortUrls'), category: 'advanced', permissions: ['admin.shorturl.add', 'admin.shorturl.remove', 'admin.shorturl.edit.own', 'admin.shorturl.edit.any'] },
+    { value: 'settings', label: t('tabs.settings'), category: 'advanced', permissions: ['admin:settings', 'admin:geoblock:view'] },
+    { value: 'applications', label: t('tabs.applications'), category: 'advanced', feature: 'applications', permissions: ['applications:manage'] },
+    { value: 'elo', label: 'ELO', category: 'advanced', feature: 'elo', permissions: ['admin:access'] },
   ]
 
   const canAccessAdmin = !!user && (adminAccess || adminTabs.some((tab) => hasAnyPermission(tab.permissions)))
@@ -2151,11 +2151,17 @@ export default function AdminPanel() {
 
   const searchParams = useSearchParams()
 
+  const visibleTabs = useMemo(
+    () => new Set(adminTabs.filter((t) => (!t.feature || panelSettings.featureToggles[t.feature]) && hasAnyPermission(t.permissions)).map((t) => t.value)),
+    [panelSettings.featureToggles]
+  )
+
   useEffect(() => {
     const tabFromQuery = searchParams.get("tab")
     if (!tabFromQuery || tabFromQuery === activeTab) return
+    if (!visibleTabs.has(tabFromQuery)) { setActiveTab("overview"); return }
     setActiveTab(tabFromQuery)
-  }, [searchParams, activeTab])
+  }, [searchParams, activeTab, visibleTabs])
 
   useEffect(() => {
     loadTab(activeTab)
@@ -4386,9 +4392,7 @@ remote: ${panelUrl}`
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0 max-w-full">
-            <TabsList
-              className="flex w-full min-w-0 max-w-full flex-wrap gap-2 overflow-x-auto px-2 border border-border bg-secondary/50"
-            >
+            <TabsList className="hidden">
               {adminTabs
                 .filter((t) => (!t.feature || panelSettings.featureToggles[t.feature]) && hasAnyPermission(t.permissions))
                 .map((t) => (

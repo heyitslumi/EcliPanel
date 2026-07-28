@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, lazy, Suspense, useCallback } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { DEFAULT_EDITOR_SETTINGS, type EditorSettings } from "@/lib/editor-settings"
@@ -38,6 +38,12 @@ import {
 
 const MonacoEditor = lazy(() => import("@monaco-editor/react").then((m) => ({ default: m.default })))
 const MonacoDiffEditor = lazy(() => import("@monaco-editor/react").then((m) => ({ default: m.DiffEditor })))
+
+const MONACO_LOCALES: Record<string, string> = {
+  de: 'de', es: 'es', fr: 'fr', it: 'it', ja: 'ja', ko: 'ko',
+  ru: 'ru', 'zh-cn': 'zh-cn', 'zh-tw': 'zh-tw', pl: 'pl',
+  'pt-br': 'pt-br', tr: 'tr', cs: 'cs',
+}
 
 // ---------------------------------------------------------------------------
 // Inject VSCode-style diff decoration CSS once
@@ -824,7 +830,16 @@ export function MonacoFileEditor({ value, onChange, language, editorSettings, fi
   })
 
   // Inject diff CSS on mount
+  const locale = useLocale()
+
   useEffect(() => { injectDiffStyles() }, [])
+
+  useEffect(() => {
+    const monacoLocale = MONACO_LOCALES[locale] || 'en'
+    import('@monaco-editor/react').then(({ loader }) => {
+      loader.config({ 'vs/nls': { availableLanguages: { '*': monacoLocale } } })
+    }).catch(() => {})
+  }, [locale])
 
   useEffect(() => { setLineCount(value.split("\n").length) }, [value])
 

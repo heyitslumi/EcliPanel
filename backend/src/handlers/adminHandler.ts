@@ -4,6 +4,7 @@ import { Passkey } from '../models/passkey.entity';
 import { Ticket } from '../models/ticket.entity';
 import { IDVerification } from '../models/idVerification.entity';
 import { StudentVerification } from '../models/studentVerification.entity';
+import { SecurityFinding } from '../models/securityFinding.entity';
 import { DeletionRequest } from '../models/deletionRequest.entity';
 import { OutboundEmail } from '../models/outboundEmail.entity';
 import { Node } from '../models/node.entity';
@@ -1491,6 +1492,39 @@ export async function adminRoutes(app: any, prefix = '') {
       },
       detail: { summary: 'Get aggregated admin statistics (admin only)', tags: ['Admin'] },
     }
+  );
+
+  // Lightweight badge counts for admin sidebar
+  app.get(
+    prefix + '/admin/counts',
+    async ctx => {
+      const adminErr = requireAdminPageAccess(ctx);
+      if (adminErr !== true) return adminErr;
+
+      const userRepo = AppDataSource.getRepository(User);
+      const ticketRepo = AppDataSource.getRepository(Ticket);
+      const verRepo = AppDataSource.getRepository(IDVerification);
+      const studentRepo = AppDataSource.getRepository(StudentVerification);
+      const orderRepo = AppDataSource.getRepository(Order);
+      const findingRepo = AppDataSource.getRepository(SecurityFinding);
+
+      const [
+        kycPending, studentPending, ticketsOpen, fraudUsers, ordersPending, socAlerts,
+      ] = await Promise.all([
+        verRepo.count({ where: { status: 'pending' } }),
+        studentRepo.count({ where: { status: 'pending' } }),
+        ticketRepo.count({ where: { status: 'open' } }),
+        userRepo.count({ where: { fraudFlag: true } }),
+        orderRepo.count({ where: { status: 'pending' } }),
+        findingRepo.count({ where: { status: 'open' } }),
+      ]);
+
+      return { kycPending, studentPending, ticketsOpen, fraudUsers, ordersPending, socAlerts };
+    },
+    {
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }) },
+      detail: { summary: 'Get admin badge counts for sidebar', tags: ['Admin'] },
+    },
   );
 
   app.get(

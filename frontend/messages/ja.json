@@ -1347,6 +1347,17 @@
       "orderFallback": "順序",
       "forUser": "ユーザー #{id} 向け"
     },
+    "adminCategories": {
+      "overview": "概要",
+      "users": "ユーザー",
+      "servers": "サーバー",
+      "infrastructure": "インフラ",
+      "billing": "請求",
+      "security": "セキュリティ",
+      "communication": "通信",
+      "integrations": "統合",
+      "advanced": "高度"
+    },
     "tabs": {
       "overview": "概要",
       "users": "ユーザー",

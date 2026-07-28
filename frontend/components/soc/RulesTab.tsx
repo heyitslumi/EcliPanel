@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
   Shield, ShieldAlert, AlertTriangle, AlertCircle, Bug, RefreshCw,
   ScanLine, Search, ChevronDown, Check, CheckCircle, X, Lightbulb,
-  FileSearch, EyeOff, Siren, Server,
+  FileSearch, EyeOff, Siren, Server, ArrowUpCircle,
 } from "lucide-react"
 import {
   severityConfig, SeverityBadge, SectionHeader, Field, StatCard,
@@ -504,26 +504,37 @@ export default function RulesTab() {
         <div className="rounded border border-border bg-card p-3 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Server className="h-3.5 w-3.5 text-muted-foreground" />Node Config Sync</p>
-            <span className="text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1.5 py-0.5 rounded">v{currentVersion}</span>
+            <span className="text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1.5 py-0.5 rounded">cfg:{currentVersion}</span>
           </div>
           <div className="flex flex-col gap-1.5">
             {nodeStatus.map((n: any) => (
               <div key={n.id} className="flex items-center justify-between gap-2 p-2 rounded bg-secondary/30">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${n.active ? (n.synced ? 'bg-green-500' : 'bg-yellow-500') : 'bg-red-500'}`} />
-                  <span className="text-xs font-medium text-foreground">{n.name}</span>
-                  {n.active ? (n.synced ? <span className="text-[10px] text-green-500 font-medium">synced</span>
-                    : <span className="text-[10px] text-yellow-500">stale (node: {n.nodeConfigVersion || 'none'})</span>)
-                    : <span className="text-[10px] text-red-500">offline {Math.round(n.lastSeenMs / 1000)}s ago</span>}
+                  <span className="text-xs font-medium text-foreground truncate">{n.name}</span>
+                  {n.wingsVersion && (
+                    <span className="text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1 py-0.5 rounded shrink-0">{n.wingsVersion.slice(0, 12)}</span>
+                  )}
+                  {n.active ? (n.synced ? <span className="text-[10px] text-green-500 font-medium shrink-0">synced</span>
+                    : <span className="text-[10px] text-yellow-500 shrink-0">stale</span>)
+                    : <span className="text-[10px] text-red-500 shrink-0">offline {Math.round(n.lastSeenMs / 1000)}s ago</span>}
                 </div>
-                {n.active && !n.synced && (
-                  <button onClick={async () => { await apiFetch('/api/wings/command', { method: 'POST', body: JSON.stringify({ nodeId: n.id, action: 'reapply_config' }) }); setTimeout(fetchNodeStatus, 5000) }}
-                    className="text-[10px] px-2 py-1 rounded border border-orange-500/40 text-orange-500 hover:bg-orange-500/10 transition-colors font-medium">Reapply</button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {n.active && !n.synced && (
+                    <button onClick={async () => { await apiFetch('/api/wings/command', { method: 'POST', body: JSON.stringify({ nodeId: n.id, action: 'reapply_config' }) }); setTimeout(fetchNodeStatus, 5000) }}
+                      className="text-[10px] px-2 py-1 rounded border border-orange-500/40 text-orange-500 hover:bg-orange-500/10 transition-colors font-medium">
+                      <RefreshCw className="h-3 w-3 inline mr-1" />Sync</button>
+                  )}
+                  {n.active && (
+                    <button onClick={async () => { await apiFetch('/api/wings/command', { method: 'POST', body: JSON.stringify({ nodeId: n.id, action: 'restart', payload: '--force-upgrade' }) }); setTimeout(fetchNodeStatus, 10000) }}
+                      className="text-[10px] px-2 py-1 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors font-medium">
+                      <ArrowUpCircle className="h-3 w-3 inline mr-1" />Upgrade</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground">Nodes fetch config every 2 min. Press Reapply to force immediate refresh.</p>
+          <p className="text-[10px] text-muted-foreground">Nodes fetch config every 2 min. Press Sync to force config refresh, Upgrade to update Wings binary.</p>
         </div>
       )}
 

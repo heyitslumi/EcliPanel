@@ -1412,6 +1412,17 @@
       "orderFallback": "Заказ",
       "forUser": "для пользователя #{id}"
     },
+    "adminCategories": {
+      "overview": "Обзор",
+      "users": "Пользователи",
+      "servers": "Серверы",
+      "infrastructure": "Инфраструктура",
+      "billing": "Биллинг",
+      "security": "Безопасность",
+      "communication": "Связь",
+      "integrations": "Интеграции",
+      "advanced": "Расширенные"
+    },
     "tabs": {
       "overview": "Обзор",
       "users": "Пользователи",

@@ -1616,6 +1616,17 @@
       "orderFallback": "Order",
       "forUser": "for user #{id}"
     },
+    "adminCategories": {
+      "overview": "Overview",
+      "users": "Users & Identity",
+      "servers": "Servers",
+      "infrastructure": "Infrastructure",
+      "billing": "Billing",
+      "security": "Security",
+      "communication": "Communication",
+      "integrations": "Integrations",
+      "advanced": "Advanced"
+    },
     "tabs": {
       "overview": "Overview",
       "users": "Users",

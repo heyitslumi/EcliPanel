@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { useState, useEffect, useCallback, useMemo, forwardRef } from "react"
 import {
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils"
 import {
   NAVIGATION,
+  ADMIN_NAVIGATION,
   BRAND,
   API_ENDPOINTS,
   NAV_SECTION_I18N_KEYS,
@@ -115,6 +116,7 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pendingSubuserInvites, setPendingSubuserInvites] = useState<number>(0)
   const [pendingOrganisationInvites, setPendingOrganisationInvites] = useState<number>(0)
+  const [adminCounts, setAdminCounts] = useState<Record<string, number>>({})
   const tSidebar = useTranslations("panelSidebar")
   const tNav = useTranslations("panelNav")
 
@@ -262,6 +264,13 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
       })
       .catch(() => {})
 
+    const fetchAdminCounts = () => {
+      apiFetch(API_ENDPOINTS.adminCounts)
+        .then((data: any) => { if (mounted) setAdminCounts(data || {}) })
+        .catch(() => {})
+    }
+    if (isAdmin) { fetchAdminCounts() }
+
     const intervalId = setInterval(() => {
       apiFetch(API_ENDPOINTS.serverSubuserInvites)
         .then((data) => {
@@ -276,6 +285,8 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
           setPendingOrganisationInvites(Array.isArray(data) ? data.length : 0)
         })
         .catch(() => {})
+
+      if (isAdmin) fetchAdminCounts()
     }, 60000)
 
     return () => {
@@ -363,10 +374,20 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
     return userTier < reqTier
   }, [user])
 
+  const searchParams = useSearchParams()
+  const inAdminPortal = pathname?.startsWith("/dashboard/admin")
+
   const isActive = useCallback((item: NavItem): boolean => {
     if (item.href === "/dashboard") return pathname === "/dashboard"
+    // Admin items: match on ?tab=<value>
+    if (item.href.startsWith("/dashboard/admin?tab=")) {
+      const tabParam = new URLSearchParams(item.href.split("?")[1]).get("tab")
+      return pathname === "/dashboard/admin" && searchParams.get("tab") === tabParam
+    }
+    // Admin root
+    if (item.href === "/dashboard/admin") return pathname === "/dashboard/admin" && !searchParams.get("tab")
     return pathname.startsWith(item.href)
-  }, [pathname])
+  }, [pathname, searchParams])
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return
@@ -411,19 +432,30 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
   }, [mobileOpen])
 
   const filteredNavigation = useMemo(() => {
-    return NAVIGATION.map((section) => ({
+    const adminBadgeKeys: Record<string, keyof typeof adminCounts> = {
+      '/dashboard/admin?tab=verifications': 'kycPending',
+      '/dashboard/admin?tab=studentVerifications': 'studentPending',
+      '/dashboard/admin?tab=soc': 'socAlerts',
+      '/dashboard/admin?tab=tickets': 'ticketsOpen',
+      '/dashboard/admin?tab=fraud': 'fraudUsers',
+      '/dashboard/admin?tab=orders': 'ordersPending',
+    }
+    const source = inAdminPortal ? ADMIN_NAVIGATION : NAVIGATION
+    return source.map((section) => ({
       ...section,
       title: translateNavSection(section.title),
-      items: section.items.filter(isItemVisible).map((item) => ({
+      items: section.items.filter(inAdminPortal ? () => true : isItemVisible).map((item) => ({
         ...item,
         label: translateNavLabel(item.label),
         badge:
           item.href === "/dashboard/mailbox" && pendingSubuserInvites + pendingOrganisationInvites > 0
             ? String(pendingSubuserInvites + pendingOrganisationInvites)
+            : inAdminPortal && adminBadgeKeys[item.href] && adminCounts[adminBadgeKeys[item.href]] > 0
+            ? String(adminCounts[adminBadgeKeys[item.href]])
             : translateBadge(item.badge),
       }))
     })).filter((section) => section.items.length > 0)
-  }, [isItemVisible, translateNavSection, translateNavLabel, translateBadge])
+  }, [inAdminPortal, isItemVisible, translateNavSection, translateNavLabel, translateBadge, adminCounts])
 
   const renderNavItem = (
     item: NavItem, 

@@ -89,8 +89,10 @@ impl PanelSync {
                                         self.fetch_config_once().await;
                                     }
                                     "restart" => {
-                                        tracing::warn!("received restart command — shutting down");
-                                        std::process::exit(0);
+                                        tracing::warn!("received restart command — restarting via systemctl");
+                                        let _ = std::process::Command::new("systemctl")
+                                            .args(["restart", "wings"])
+                                            .spawn();
                                     }
                                     other => {
                                         tracing::warn!("unknown command from panel: {}", other);
@@ -248,10 +250,11 @@ impl PanelSync {
         let path = config.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or("/api/wings/download");
         let download_url = format!("{}{}", self.panel_url, path);
         let upgrade_url = format!("{}/api/system/upgrade", self.panel_url);
+        let checksum = config.get("sha256").and_then(|v| v.as_str()).unwrap_or("");
         let payload = serde_json::json!({
             "url": download_url,
             "headers": { "Authorization": self.auth_header() },
-            "sha256": "",
+            "sha256": checksum,
             "restart_command": "systemctl",
             "restart_command_args": ["restart", "wings"],
         });

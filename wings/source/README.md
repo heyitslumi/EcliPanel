@@ -206,6 +206,14 @@ docker:
     # whether to disable binding to a specific ip
     disable_interface_binding: false
 
+    interfaces:
+      v4:
+        # whether to enable ipv4 support for the docker network
+        enabled: true
+      v6:
+        # whether to enable ipv6 support for the docker network
+        enabled: true
+
   registry_image_fetch_cache:
     # whether to enable caching of docker registry image fetches (pulls)
     enabled: true
@@ -295,4 +303,4 @@ ignore_panel_wings_upgrades: false
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=calagopus/wings&type=date&legend=top-left)](https://www.star-history.com/#calagopus/wings&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=calagopus/wings&type=date&legend=top-left&sealed_token=lMIWho_FaF6kuCD1bc-0S7g-9RPSPnAuqbmwsbjp5WqMXx270aw9HltQvD4evPiQQDJi9-3nzWyed_clsBhAOScIMGHrdpgIvX_McPlKggfDcQoN05PEQ1UgVks14nmAHdjxwUtPniJDaDDB_IM8OSdkv3X9JWVTN9jADPEyc-8dPqjws9NNFJBbZSus)](https://www.star-history.com/?repos=calagopus%2Fwings&type=date&legend=top-left)

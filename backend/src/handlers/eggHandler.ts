@@ -571,4 +571,94 @@ export async function eggRoutes(app: any, prefix = '') {
       detail: { summary: 'Import an egg from JSON or URL', tags: ['Eggs'] },
     }
   );
+
+  app.get(
+    prefix + '/admin/eggs/:id/export',
+    async ctx => {
+      if (!requireAdminCtx(ctx)) return;
+      const egg = await repo().findOneBy({ id: Number(ctx.params.id) });
+      if (!egg) {
+        ctx.set.status = 404;
+        return { error: ctx.t('server.eggNotFound') };
+      }
+
+      const dockerImages: Record<string, string> = egg.dockerImages && typeof egg.dockerImages === 'object'
+        ? egg.dockerImages as Record<string, string>
+        : { default: egg.dockerImage };
+
+      const variables = (egg.envVars || []).map((v: any) => ({
+        name: v.name ?? v.env_variable ?? '',
+        description: v.description ?? '',
+        env_variable: v.env_variable ?? v.name ?? '',
+        default_value: v.default_value ?? v.defaultValue ?? '',
+        user_viewable: v.user_viewable ?? v.userViewable ?? true,
+        user_editable: v.user_editable ?? v.userEditable ?? true,
+        rules: v.rules ?? '',
+        field_type: v.field_type ?? v.fieldType ?? 'text',
+      }));
+
+      const pc = egg.processConfig || {};
+      const startupCfg = pc.startup || {};
+      const logsCfg = pc.configs !== undefined ? { custom: pc.configs } : {};
+      const stopCfg = pc.stop || {};
+
+      const config: Record<string, any> = {};
+      if (egg.configFiles && typeof egg.configFiles === 'object' && Object.keys(egg.configFiles as object).length > 0) {
+        config.files = egg.configFiles;
+      }
+      config.startup = {
+        done: Array.isArray(startupCfg.done) ? startupCfg.done : [],
+        userInteraction: Array.isArray(startupCfg.user_interaction) ? startupCfg.user_interaction : [],
+      };
+      if (Object.keys(logsCfg).length > 0) config.logs = logsCfg;
+      config.stop = stopCfg.type === 'kill' ? 'SIGKILL' : stopCfg.type === 'stop' ? 'SIGTERM' : (stopCfg.value || 'stop');
+
+      const scripts: Record<string, any> = {};
+      if (egg.installScript && typeof egg.installScript === 'object') {
+        const inst = egg.installScript as any;
+        scripts.installation = {
+          script: inst.script ?? '',
+          container: inst.container ?? 'ghcr.io/pterodactyl/installers:debian',
+          entrypoint: inst.entrypoint ?? 'bash',
+        };
+      }
+
+      const meta: Record<string, any> = { version: 'PTDL_v2' };
+      if (egg.updateUrl) meta.update_url = egg.updateUrl;
+      if (egg.rootless) meta.rootless = true;
+      if (egg.requiresKvm) meta.requires_kvm = true;
+
+      const exportData: Record<string, any> = {
+        meta,
+        name: egg.name,
+        author: egg.author || '',
+        description: egg.description || '',
+        docker_images: dockerImages,
+        startup: egg.startup,
+        config,
+        variables,
+      };
+
+      if (Object.keys(scripts).length > 0) exportData.scripts = scripts;
+      if (egg.features && egg.features.length > 0) exportData.features = egg.features;
+      if (egg.fileDenylist && egg.fileDenylist.length > 0) exportData.file_denylist = egg.fileDenylist;
+
+      ctx.set.headers['Content-Type'] = 'application/json';
+      ctx.set.headers['Content-Disposition'] = `attachment; filename="${egg.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json"`;
+      return exportData;
+    },
+    {
+      beforeHandle: authenticate,
+      schema: {
+        params: t.Object({ id: t.String() }),
+        response: {
+          200: t.Any(),
+          401: t.Object({ error: t.String() }),
+          403: t.Object({ error: t.String() }),
+          404: t.Object({ error: t.String() }),
+        },
+      },
+      detail: { summary: 'Export an egg as PTDL_v2 JSON', tags: ['Eggs'] },
+    }
+  );
 }

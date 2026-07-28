@@ -84,7 +84,9 @@ impl KopiaBackup {
     }
 
     fn get_kopia_state_path(config: &crate::config::Config) -> PathBuf {
-        Path::new(config.load().system.backup_directory.trim_end_matches('/')).join(".kopia")
+        config
+            .resolve_as_path(|cfg| &cfg.system.backup_directory)
+            .join(".kopia")
     }
 
     fn get_config_file_path(
@@ -1025,6 +1027,7 @@ impl VirtualKopiaBackup {
                     directory: true,
                     file: false,
                     symlink: false,
+                    r#virtual: true,
                     mime: MimeCacheValue::directory().mime,
                     modified: entry.mtime,
                     created: epoch,
@@ -1050,6 +1053,7 @@ impl VirtualKopiaBackup {
                     directory: false,
                     file: entry.file_type.is_file(),
                     symlink: entry.file_type.is_symlink(),
+                    r#virtual: true,
                     mime: detected_mime.mime,
                     modified: entry.mtime,
                     created: epoch,

@@ -1,4 +1,4 @@
-use super::{CollabError, CollabParticipant, CollabSaved, CollabSyncMeta};
+use super::{CollabConflict, CollabError, CollabParticipant, CollabSaved, CollabSyncMeta};
 use crate::server::{
     activity::{Activity, ActivityEvent},
     filesystem::virtualfs::VirtualWritableFilesystem,
@@ -21,6 +21,22 @@ use yrs::{
 };
 
 const BASE64: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+const RECONCILE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct ConflictState {
+    hash: Option<blake3::Hash>,
+    deleted: bool,
+}
+
+impl From<ConflictState> for CollabConflict {
+    fn from(state: ConflictState) -> Self {
+        Self {
+            hash: state.hash.map(|hash| hash.to_hex().to_string()),
+            deleted: state.deleted,
+        }
+    }
+}
 
 struct Participant {
     user_uuid: uuid::Uuid,
@@ -67,8 +83,11 @@ impl CollabDoc {
 
 pub struct CollabSession {
     path: CompactString,
+    abs_path: PathBuf,
+    filesystem: Arc<dyn VirtualWritableFilesystem>,
     doc: std::sync::Mutex<CollabDoc>,
     dirty: AtomicBool,
+    conflict: std::sync::Mutex<Option<ConflictState>>,
     participants: Mutex<HashMap<uuid::Uuid, Participant>>,
     save_lock: Mutex<()>,
 }
@@ -87,6 +106,42 @@ impl CollabSession {
         for handler in handlers {
             handler.send_message(message.clone()).await;
         }
+    }
+
+    async fn broadcast_conflict(&self, state: Option<ConflictState>) {
+        self.broadcast(
+            None,
+            WebsocketMessage::builder(WebsocketEvent::FileCollabConflict)
+                .arg(self.path.clone())
+                .structured_arg(state.map(CollabConflict::from))
+                .build(),
+        )
+        .await;
+    }
+
+    async fn broadcast_resync(&self) {
+        self.broadcast(
+            None,
+            WebsocketMessage::builder(WebsocketEvent::FileCollabError)
+                .arg(self.path.clone())
+                .arg("resync")
+                .build(),
+        )
+        .await;
+    }
+
+    fn set_conflict(&self, state: Option<ConflictState>) -> bool {
+        let mut conflict = self.conflict.lock().expect("collab conflict lock poisoned");
+        if *conflict != state {
+            *conflict = state;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn current_conflict(&self) -> Option<ConflictState> {
+        *self.conflict.lock().expect("collab conflict lock poisoned")
     }
 
     async fn participants_message(&self) -> WebsocketMessage {
@@ -169,7 +224,6 @@ impl CollabManager {
     }
 
     async fn read_content(
-        &self,
         filesystem: &Arc<dyn VirtualWritableFilesystem>,
         path: &Path,
         size_cap: u64,
@@ -249,16 +303,21 @@ impl CollabManager {
         let session = {
             let mut sessions = self.sessions.lock().await;
 
-            match sessions.get(&key) {
+            let session = match sessions.get(&key) {
                 Some(session) => {
                     let session = Arc::clone(session);
 
-                    if !session.dirty.load(Ordering::Relaxed) {
-                        let content = self.read_content(&filesystem, &path, size_cap).await?;
-                        let mut doc = session.doc.lock().expect("collab doc lock poisoned");
-                        if doc.disk_hash != blake3::hash(content.as_bytes()) {
-                            *doc = CollabDoc::new(&content);
+                    if session.participants.lock().await.is_empty()
+                        && !session.dirty.load(Ordering::Relaxed)
+                    {
+                        let content = Self::read_content(&filesystem, &path, size_cap).await?;
+                        {
+                            let mut doc = session.doc.lock().expect("collab doc lock poisoned");
+                            if doc.disk_hash != blake3::hash(content.as_bytes()) {
+                                *doc = CollabDoc::new(&content);
+                            }
                         }
+                        session.set_conflict(None);
                     }
 
                     session
@@ -270,16 +329,20 @@ impl CollabManager {
                         ));
                     }
 
-                    let content = self.read_content(&filesystem, &path, size_cap).await?;
+                    let content = Self::read_content(&filesystem, &path, size_cap).await?;
                     let session = Arc::new(CollabSession {
                         path: key.clone(),
+                        abs_path: path.clone(),
+                        filesystem: Arc::clone(&filesystem),
                         doc: std::sync::Mutex::new(CollabDoc::new(&content)),
                         dirty: AtomicBool::new(false),
+                        conflict: std::sync::Mutex::new(None),
                         participants: Mutex::new(HashMap::new()),
                         save_lock: Mutex::new(()),
                     });
 
                     sessions.insert(key.clone(), Arc::clone(&session));
+                    self.spawn_reconciler(&session);
                     tracing::debug!(
                         server = %self.server,
                         path = %key,
@@ -288,18 +351,20 @@ impl CollabManager {
 
                     session
                 }
-            }
-        };
+            };
 
-        session.participants.lock().await.insert(
-            handler.connection_id,
-            Participant {
-                user_uuid,
-                user_name,
-                user_avatar,
-                handler: Arc::clone(handler),
-            },
-        );
+            session.participants.lock().await.insert(
+                handler.connection_id,
+                Participant {
+                    user_uuid,
+                    user_name,
+                    user_avatar,
+                    handler: Arc::clone(handler),
+                },
+            );
+
+            session
+        };
         self.connections
             .lock()
             .await
@@ -314,13 +379,14 @@ impl CollabManager {
                 session.dirty.load(Ordering::Relaxed),
             )
         };
+        let conflict = session.current_conflict().map(CollabConflict::from);
 
         handler
             .send_message(
                 WebsocketMessage::builder(WebsocketEvent::FileCollabSync)
                     .arg(key)
                     .arg(BASE64.encode(state))
-                    .structured_arg(CollabSyncMeta { dirty })
+                    .structured_arg(CollabSyncMeta { dirty, conflict })
                     .build(),
             )
             .await;
@@ -329,6 +395,125 @@ impl CollabManager {
         session.broadcast(None, participants).await;
 
         Ok(())
+    }
+
+    fn spawn_reconciler(&self, session: &Arc<CollabSession>) {
+        let weak = Arc::downgrade(session);
+        let config = Arc::clone(&self.config);
+        let server = self.server;
+
+        tokio::spawn(async move {
+            let mut last_mtime: Option<std::time::SystemTime> = None;
+            let mut reported_unreadable = false;
+
+            loop {
+                tokio::time::sleep(RECONCILE_INTERVAL).await;
+
+                let Some(session) = weak.upgrade() else { break };
+                let Ok(_save_guard) = session.save_lock.try_lock() else {
+                    continue;
+                };
+
+                if session.dirty.load(Ordering::Relaxed) {
+                    let converged = {
+                        let doc = session.doc.lock().expect("collab doc lock poisoned");
+                        blake3::hash(doc.content().as_bytes()) == doc.disk_hash
+                    };
+                    if converged {
+                        session.dirty.store(false, Ordering::Relaxed);
+                    }
+                }
+
+                let size_cap = config.load().system.file_collaboration.file_size_cap;
+
+                let content = match session.filesystem.async_metadata(&session.abs_path).await {
+                    Ok(metadata) if metadata.file_type.is_file() && metadata.size <= size_cap => {
+                        if metadata.modified.is_some() && metadata.modified == last_mtime {
+                            continue;
+                        }
+
+                        match Self::read_content(&session.filesystem, &session.abs_path, size_cap)
+                            .await
+                        {
+                            Ok(content) => {
+                                last_mtime = metadata.modified;
+                                Ok(content)
+                            }
+                            Err(_) => Err(false),
+                        }
+                    }
+                    Ok(metadata) if metadata.file_type.is_file() => Err(false),
+                    _ => Err(true),
+                };
+
+                match content {
+                    Ok(content) => {
+                        reported_unreadable = false;
+
+                        let disk_hash = blake3::hash(content.as_bytes());
+                        let matches = {
+                            let doc = session.doc.lock().expect("collab doc lock poisoned");
+                            doc.disk_hash == disk_hash
+                        };
+
+                        if matches {
+                            if session.set_conflict(None) {
+                                session.broadcast_conflict(None).await;
+                            }
+                        } else if session.dirty.load(Ordering::Relaxed) {
+                            let state = ConflictState {
+                                hash: Some(disk_hash),
+                                deleted: false,
+                            };
+                            if session.set_conflict(Some(state)) {
+                                tracing::debug!(
+                                    server = %server,
+                                    path = %session.path,
+                                    "collab: file changed on disk while session has unsaved changes"
+                                );
+                                session.broadcast_conflict(Some(state)).await;
+                            }
+                        } else {
+                            let reloaded = {
+                                let mut doc = session.doc.lock().expect("collab doc lock poisoned");
+                                if !session.dirty.load(Ordering::Relaxed)
+                                    && doc.disk_hash != disk_hash
+                                {
+                                    *doc = CollabDoc::new(&content);
+                                    true
+                                } else {
+                                    false
+                                }
+                            };
+
+                            if reloaded {
+                                session.set_conflict(None);
+                                tracing::debug!(
+                                    server = %server,
+                                    path = %session.path,
+                                    "collab: reloaded clean session from external file change"
+                                );
+                                session.broadcast_resync().await;
+                            }
+                        }
+                    }
+                    Err(deleted) => {
+                        if session.dirty.load(Ordering::Relaxed) {
+                            let state = ConflictState {
+                                hash: None,
+                                deleted,
+                            };
+                            if session.set_conflict(Some(state)) {
+                                session.broadcast_conflict(Some(state)).await;
+                            }
+                        } else if !reported_unreadable {
+                            reported_unreadable = true;
+                            session.broadcast_resync().await;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     async fn subscribed_session(
@@ -447,15 +632,7 @@ impl CollabManager {
         };
 
         if needs_resync {
-            session
-                .broadcast(
-                    None,
-                    WebsocketMessage::builder(WebsocketEvent::FileCollabError)
-                        .arg(key)
-                        .arg("resync")
-                        .build(),
-                )
-                .await;
+            session.broadcast_resync().await;
 
             return Ok(());
         }
@@ -497,6 +674,7 @@ impl CollabManager {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn save(
         &self,
         server: &crate::server::Server,
@@ -504,6 +682,8 @@ impl CollabManager {
         user_uuid: uuid::Uuid,
         user_ip: Option<std::net::IpAddr>,
         raw_path: &str,
+        force: bool,
+        expected_hash: Option<&str>,
     ) -> Result<(), CollabError> {
         let (key, session) = self
             .subscribed_session(server, connection_id, raw_path)
@@ -515,22 +695,66 @@ impl CollabManager {
 
         let _save_guard = session.save_lock.lock().await;
 
-        let content = {
+        let (content, doc_disk_hash) = {
             let doc = session.doc.lock().expect("collab doc lock poisoned");
-            doc.content()
+            (doc.content(), doc.disk_hash)
         };
 
         let config = self.config.load();
         let history = &config.system.file_history;
         let history_enabled = history.enabled;
         let history_size_cap = history.file_size_cap;
+        let size_cap = config.system.file_collaboration.file_size_cap;
         drop(config);
 
-        let old_content_size = match filesystem.async_metadata(&path).await {
-            Ok(metadata) if metadata.file_type.is_file() => metadata.size as i64,
+        let (file_exists, old_content_size) = match filesystem.async_metadata(&path).await {
+            Ok(metadata) if metadata.file_type.is_file() => (true, metadata.size as i64),
             Ok(_) => return Err(CollabError::User("file is not a file")),
-            Err(_) => 0,
+            Err(_) => (false, 0),
         };
+
+        let read_cap = history_size_cap.max(size_cap);
+        let old_bytes: Option<Vec<u8>> =
+            if file_exists && old_content_size > 0 && old_content_size as u64 <= read_cap {
+                match filesystem.async_read_file(&path, None).await {
+                    Ok(mut handle) if handle.size <= read_cap => {
+                        let mut buf = Vec::with_capacity(handle.size as usize);
+                        match handle.reader.read_to_end(&mut buf).await {
+                            Ok(_) if buf.len() as u64 <= read_cap => Some(buf),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+
+        let current_hash: Option<blake3::Hash> = if !file_exists {
+            None
+        } else if old_content_size == 0 {
+            Some(blake3::hash(b""))
+        } else {
+            old_bytes.as_deref().map(blake3::hash)
+        };
+
+        if !current_hash.is_some_and(|hash| hash == doc_disk_hash) {
+            let force_applies = force
+                && expected_hash.is_none_or(|expected| {
+                    current_hash.is_some_and(|hash| hash.to_hex().as_str() == expected)
+                });
+
+            if !force_applies {
+                let state = ConflictState {
+                    hash: current_hash,
+                    deleted: !file_exists,
+                };
+                session.set_conflict(Some(state));
+                session.broadcast_conflict(Some(state)).await;
+
+                return Ok(());
+            }
+        }
 
         if !server
             .filesystem
@@ -544,16 +768,10 @@ impl CollabManager {
             && old_content_size > 0
             && old_content_size as u64 <= history_size_cap
         {
-            match filesystem.async_read_file(&path, None).await {
-                Ok(mut handle) if handle.size <= history_size_cap => {
-                    let mut buf = Vec::with_capacity(handle.size as usize);
-                    match handle.reader.read_to_end(&mut buf).await {
-                        Ok(_) if buf.len() as u64 <= history_size_cap => Some(buf),
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
+            old_bytes
+                .as_ref()
+                .filter(|buf| buf.len() as u64 <= history_size_cap)
+                .cloned()
         } else {
             None
         };
@@ -600,6 +818,7 @@ impl CollabManager {
                 .dirty
                 .store(doc.content() != content, Ordering::Relaxed);
         }
+        session.set_conflict(None);
 
         server.activity.log_activity(Activity {
             event: ActivityEvent::FileWrite,
@@ -625,6 +844,38 @@ impl CollabManager {
                     .build(),
             )
             .await;
+
+        Ok(())
+    }
+
+    pub async fn reload(
+        &self,
+        server: &crate::server::Server,
+        connection_id: uuid::Uuid,
+        raw_path: &str,
+    ) -> Result<(), CollabError> {
+        let (key, session) = self
+            .subscribed_session(server, connection_id, raw_path)
+            .await?;
+        let size_cap = self.config.load().system.file_collaboration.file_size_cap;
+
+        let _save_guard = session.save_lock.lock().await;
+
+        let content = Self::read_content(&session.filesystem, &session.abs_path, size_cap).await?;
+        {
+            let mut doc = session.doc.lock().expect("collab doc lock poisoned");
+            *doc = CollabDoc::new(&content);
+        }
+        session.dirty.store(false, Ordering::Relaxed);
+        session.set_conflict(None);
+
+        tracing::debug!(
+            server = %self.server,
+            path = %key,
+            "collab: session reloaded from disk"
+        );
+
+        session.broadcast_resync().await;
 
         Ok(())
     }
@@ -710,10 +961,10 @@ impl CollabManager {
                     && session.participants.lock().await.is_empty()
                 {
                     if session.dirty.load(Ordering::Relaxed) {
-                        tracing::debug!(
+                        tracing::warn!(
                             server = %server,
                             path = %key,
-                            "discarding unsaved collaborative editing session"
+                            "discarding collaborative editing session with unsaved changes"
                         );
                     }
                     sessions.remove(&key);

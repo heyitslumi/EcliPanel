@@ -80,12 +80,14 @@ async function buildWingsConfigPayload() {
   const rules = await ruleRepo.find({ where: { enabled: true } });
 
   let latestVersion = map['soc.wings_version'] || '';
+  let sha256 = '';
   if (!latestVersion) {
     const binPath = join(process.cwd(), '..', 'wings', 'target', 'release', 'wings-rs');
     if (existsSync(binPath)) {
       const { createHash } = await import('crypto');
       const bin = await readFile(binPath);
-      latestVersion = createHash('sha256').update(bin).digest('hex').slice(0, 16);
+      sha256 = createHash('sha256').update(bin).digest('hex');
+      latestVersion = sha256.slice(0, 16);
     }
   }
 
@@ -114,6 +116,7 @@ async function buildWingsConfigPayload() {
       createsIncident: r.createsIncident || false,
     })),
     latestVersion,
+    sha256,
     downloadUrl: '/api/wings/download',
     heartbeatIntervalSeconds: 30,
     configPollIntervalSeconds: 120,

@@ -36,6 +36,30 @@ import {
   CalendarDays,
   MessageCircle,
   BookOpen,
+  Users,
+  Lock,
+  Check,
+  GraduationCap,
+  XCircle,
+  ArrowRightLeft,
+  HardDrive,
+  Package,
+  Database,
+  Share2,
+  Archive,
+  Receipt,
+  Banknote,
+  AlertTriangle,
+  FileSearch,
+  ScrollText,
+  Megaphone,
+  ThumbsUp,
+  Key,
+  BarChart3,
+  Brain,
+  TrendingUp,
+  Download,
+  Link2,
   type LucideIcon,
 } from "lucide-react"
 
@@ -477,6 +501,7 @@ export const API_ENDPOINTS = {
 
   // Admin
   adminStats: "/api/admin/stats",
+  adminCounts: "/api/admin/counts",
   adminMetrics: "/api/admin/metrics",
   adminMetricsClear: "/api/admin/metrics/clear",
   adminUsers: "/api/admin/users",
@@ -877,6 +902,90 @@ export const NAVIGATION: NavSection[] = [
         icon: Shield,
         badge: "Staff",
       },
+    ],
+  },
+]
+
+export const ADMIN_NAVIGATION: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { label: "Overview", href: "/dashboard/admin?tab=overview", icon: Shield },
+    ],
+  },
+  {
+    title: "Users & Identity",
+    items: [
+      { label: "Users", href: "/dashboard/admin?tab=users", icon: Users },
+      { label: "Roles", href: "/dashboard/admin?tab=roles", icon: Lock },
+      { label: "KYC", href: "/dashboard/admin?tab=verifications", icon: Check },
+      { label: "Students", href: "/dashboard/admin?tab=studentVerifications", icon: GraduationCap },
+      { label: "Deletions", href: "/dashboard/admin?tab=deletions", icon: XCircle },
+    ],
+  },
+  {
+    title: "Servers",
+    items: [
+      { label: "Servers", href: "/dashboard/admin?tab=servers", icon: Server },
+      { label: "Transfers", href: "/dashboard/admin?tab=transfers", icon: ArrowRightLeft },
+    ],
+  },
+  {
+    title: "Infrastructure",
+    items: [
+      { label: "Nodes", href: "/dashboard/admin?tab=nodes", icon: HardDrive },
+      { label: "Eggs", href: "/dashboard/admin?tab=eggs", icon: Package },
+      { label: "Databases", href: "/dashboard/admin?tab=databases", icon: Database },
+      { label: "Tunnels", href: "/dashboard/admin?tab=tunnels", icon: Share2 },
+      { label: "Backup Configs", href: "/dashboard/admin?tab=backup-configs", icon: Archive },
+    ],
+  },
+  {
+    title: "Billing",
+    items: [
+      { label: "Organisations", href: "/dashboard/admin?tab=organisations", icon: Building2 },
+      { label: "Plans", href: "/dashboard/admin?tab=plans", icon: CreditCard },
+      { label: "Orders", href: "/dashboard/admin?tab=orders", icon: Receipt },
+      { label: "Coupons", href: "/dashboard/admin?tab=coupons", icon: Ticket },
+      { label: "Payments", href: "/dashboard/admin?tab=payments", icon: Banknote },
+    ],
+  },
+  {
+    title: "Security",
+    items: [
+      { label: "SOC", href: "/dashboard/admin?tab=soc", icon: Shield },
+      { label: "Fraud", href: "/dashboard/admin?tab=fraud", icon: AlertTriangle },
+      { label: "Audit", href: "/dashboard/admin?tab=audit", icon: FileSearch },
+      { label: "Logs", href: "/dashboard/admin?tab=logs", icon: ScrollText },
+    ],
+  },
+  {
+    title: "Communication",
+    items: [
+      { label: "Announcements", href: "/dashboard/admin?tab=announcements", icon: Megaphone },
+      { label: "Tickets", href: "/dashboard/admin?tab=tickets", icon: MessageSquare },
+      { label: "Chat", href: "/dashboard/admin?tab=chat", icon: MessageCircle },
+      { label: "Feedback", href: "/dashboard/admin?tab=feedback", icon: ThumbsUp },
+    ],
+  },
+  {
+    title: "Integrations",
+    items: [
+      { label: "OAuth", href: "/dashboard/admin?tab=oauth", icon: Key },
+      { label: "Rollouts", href: "/dashboard/admin?tab=rollouts", icon: BarChart3 },
+      { label: "AI Models", href: "/dashboard/admin?tab=ai", icon: Brain },
+    ],
+  },
+  {
+    title: "Advanced",
+    items: [
+      { label: "Metrics", href: "/dashboard/admin?tab=metrics", icon: TrendingUp },
+      { label: "Export Jobs", href: "/dashboard/admin?tab=export-jobs", icon: Download },
+      { label: "Outbound Email", href: "/dashboard/admin?tab=outbound-emails", icon: Mail },
+      { label: "Short URLs", href: "/dashboard/admin?tab=shorturls", icon: Link2 },
+      { label: "Settings", href: "/dashboard/admin?tab=settings", icon: Settings },
+      { label: "Applications", href: "/dashboard/admin?tab=applications", icon: FileText },
+      { label: "ELO", href: "/dashboard/admin?tab=elo", icon: Zap },
     ],
   },
 ]

@@ -4,6 +4,10 @@ use tokio::sync::RwLock;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 
+pub mod api;
+mod download;
+mod upload;
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct DetectionRule {
     pub id: i64,
@@ -11,10 +15,6 @@ pub struct DetectionRule {
     pub severity: String,
     pub conditions: serde_json::Value,
 }
-
-pub mod api;
-mod download;
-mod upload;
 
 #[derive(Debug, ToSchema, Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]

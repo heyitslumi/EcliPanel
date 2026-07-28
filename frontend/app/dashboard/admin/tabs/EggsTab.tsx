@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Box, Copy, Edit, Eye, EyeOff, Loader2, Package, Plus, RefreshCw, Trash2, Upload } from "lucide-react"
+import { Box, Copy, Download, Edit, Eye, EyeOff, Loader2, Package, Plus, RefreshCw, Trash2, Upload } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 export default function EggsTab({ ctx }: { ctx: any }) {
@@ -28,6 +28,7 @@ export default function EggsTab({ ctx }: { ctx: any }) {
     forceSyncEgg,
     syncingEggIds,
     deleteEgg,
+    exportEgg,
     importEggOpen,
     importEggPreview,
     importEggMode,
@@ -242,6 +243,13 @@ export default function EggsTab({ ctx }: { ctx: any }) {
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
+                            onClick={() => exportEgg(egg)}
+                            title={t("actions.exportEgg")}
+                            className="p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                          <button
                             onClick={() => forceSyncEgg(egg)}
                             disabled={syncingEggIds.includes(egg.id)}
                             title={t("actions.syncToWings")}
@@ -319,6 +327,13 @@ export default function EggsTab({ ctx }: { ctx: any }) {
                   >
                     <Edit className="h-3.5 w-3.5" />
                     <span>{t("actions.edit")}</span>
+                  </button>
+                  <button
+                    onClick={() => exportEgg(egg)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>{t("actions.export")}</span>
                   </button>
                   <button
                     onClick={() => forceSyncEgg(egg)}

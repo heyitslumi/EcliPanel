@@ -1347,6 +1347,17 @@
       "orderFallback": "क्रम",
       "forUser": "उपयोगकर्ता #{id} के लिए"
     },
+    "adminCategories": {
+      "overview": "अवलोकन",
+      "users": "उपयोगकर्ता",
+      "servers": "सर्वर",
+      "infrastructure": "इंफ्रास्ट्रक्चर",
+      "billing": "बिलिंग",
+      "security": "सुरक्षा",
+      "communication": "संचार",
+      "integrations": "एकीकरण",
+      "advanced": "उन्नत"
+    },
     "tabs": {
       "overview": "अवलोकन",
       "users": "उपयोगकर्ता",

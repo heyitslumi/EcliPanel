@@ -117,6 +117,7 @@ impl crate::commands::CliCommand<MigrateDiskLimiterArgs> for MigrateDiskLimiterC
                     bollard::Docker::connect_with_local_defaults()
                         .expect("docker connection for migration"),
                 );
+
                 let app_state = Arc::new(crate::routes::AppState {
                     start_time: std::time::Instant::now(),
                     container_type: crate::routes::AppContainerType::None,

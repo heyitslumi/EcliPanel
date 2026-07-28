@@ -18,12 +18,13 @@ mod power;
 mod reinstall;
 mod schedules;
 mod script;
-mod security;
 mod sync;
 mod transfer;
 mod utilization;
 mod version;
 mod ws;
+
+mod security;
 
 pub type GetServer = axum::extract::Extension<crate::server::Server>;
 

@@ -11,9 +11,6 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 
 pub mod activity;
-pub mod antiabuse;
-pub mod panel_sync;
-pub mod soc;
 pub mod backup;
 pub mod collab;
 pub mod configuration;
@@ -30,6 +27,10 @@ pub mod state;
 pub mod transfer;
 pub mod tunnel;
 pub mod websocket;
+
+pub mod antiabuse;
+pub mod panel_sync;
+pub mod soc;
 
 pub struct InnerServer {
     pub uuid: uuid::Uuid,
