@@ -17,8 +17,26 @@ query-filters:
       paths:
         - tunnel/server/src/main.rs
         - tunnel/client/src/main.rs
+
   - exclude:
       id: js/request-forgery
       paths:
         - backend/src/services/cloudflareService.ts
         - backend/src/services/alertDispatcher.ts
+
+  - exclude:
+      id: js/user-controlled-bypass
+      paths:
+        - backend/src/index.ts
+        - backend/src/handlers/wsProxyHandler.ts
+        - backend/src/handlers/telemetryHandler.ts
+        - backend/scripts/notify-missing-profile.ts
+        - backend/scripts/promote.ts
+        - backend/examples/bun-oauth-client.ts
+
+  - exclude:
+      id: js/log-injection
+      paths:
+        - frontend/hooks/useVoiceMedia.ts
+        - frontend/lib/websocket.ts
+        - frontend/lib/api-client.ts

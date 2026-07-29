@@ -414,6 +414,7 @@ function SandboxedEmailFrame({ html, blockRemoteImages }: { html: string; blockR
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === "iframe-height" && typeof e.data.height === "number") {
         setHeight(Math.min(Math.max(e.data.height + 32, 120), 8000))
       }

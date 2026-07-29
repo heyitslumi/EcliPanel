@@ -23,6 +23,7 @@ function drawTableRow(
 
 self.addEventListener('message', async (ev: any) => {
   const { id, payload } = ev.data || {};
+  if (id == null) return;
   try {
     const { order, user, logoPath, companyName, issuedFrom } = payload || {};
 

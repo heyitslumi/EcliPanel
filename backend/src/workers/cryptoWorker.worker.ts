@@ -2,6 +2,7 @@ import { encryptBuffer } from '../utils/crypto';
 
 self.addEventListener('message', async (ev: any) => {
   const { id, buffer } = ev.data || {};
+  if (id == null) return;
   try {
     const input = Buffer.from(buffer instanceof ArrayBuffer ? buffer : buffer.buffer || buffer);
     const encrypted = encryptBuffer(input);
