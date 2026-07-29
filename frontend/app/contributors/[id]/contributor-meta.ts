@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "@/lib/panel-config";
+import { safeUrl } from "@/lib/url-utils";
 
 type ContributorMeta = {
   login: string;
@@ -42,7 +43,7 @@ export async function getContributorsSnapshotMeta(): Promise<ContributorsSnapsho
   if (!backendBase) return null;
 
   try {
-    const response = await fetch(`${backendBase}${API_ENDPOINTS.contributorsPublic}`, {
+    const response = await fetch(safeUrl(backendBase, API_ENDPOINTS.contributorsPublic), {
       cache: "no-store",
       next: { revalidate: 0 },
     });

@@ -1,4 +1,5 @@
 import { randomBytes } from '../utils/bunCrypto';
+import { safePathSegment, safeUrl } from '../utils/url';
 import { AppDataSource } from '../config/typeorm';
 import { MailboxAccount } from '../models/mailboxAccount.entity';
 import { User } from '../models/user.entity';
@@ -64,7 +65,8 @@ async function mailcowFetch(path: string, data?: any, method: 'POST' | 'GET' = '
     'X-API-Key': MAILCOW_API_KEY,
   };
 
-  const url = `${MAILCOW_API_URL}/api/v1/${path}`;
+  const safePath = safePathSegment(path);
+  const url = safeUrl(MAILCOW_API_URL, "/api/v1/", safePath);
   let lastError: any;
 
   for (let attempt = 1; attempt <= MAILCOW_RETRIES; attempt++) {

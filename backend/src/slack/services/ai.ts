@@ -1,3 +1,5 @@
+import { safeUrl } from "../../utils/url";
+
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
@@ -39,14 +41,15 @@ async function makeRequest(body: Record<string, any>, stream: boolean, aiConfig?
   const payload = { ...body, stream };
   const { signal } = createAbortSignal(AI_REQUEST_TIMEOUT_MS);
   if (aiConfig?.endpoint && aiConfig?.apiKey) {
-    return fetch(`${aiConfig.endpoint}/v1/chat/completions`, {
+    const endpoint = new URL(aiConfig.endpoint).origin;
+    return fetch(`${endpoint}/v1/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${aiConfig.apiKey}` },
       body: JSON.stringify(payload),
       signal,
     });
   }
-  return fetch(`${process.env.ECLI_API_URL || "http://localhost:3432/api"}/ai/byoai/chat/completions`, {
+  return fetch(safeUrl(process.env.ECLI_API_URL || "http://localhost:3432/api", "/ai/byoai/chat/completions"), {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Api-Key": process.env.ECLI_ADMIN_KEY || "" },
     body: JSON.stringify(payload),

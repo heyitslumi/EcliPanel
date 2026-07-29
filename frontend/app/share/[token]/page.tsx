@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import ShareFileClient from "./ShareFileClient"
+import { safePathSegment } from "@/lib/url-utils"
 
 interface ShareInfo {
   id: string
@@ -21,7 +22,8 @@ function getBackendUrl(): string {
 
 async function fetchShareInfo(token: string): Promise<ShareInfo | null> {
   try {
-    const res = await fetch(`${getBackendUrl()}/public/share/${token}`, {
+    const safeToken = safePathSegment(token);
+    const res = await fetch(`${getBackendUrl()}/public/share/${safeToken}`, {
       next: { revalidate: 0 },
     })
     if (!res.ok) return null

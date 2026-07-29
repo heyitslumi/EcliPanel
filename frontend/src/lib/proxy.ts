@@ -1,3 +1,5 @@
+import { safePathSegment, safeUrl } from "../../lib/url-utils";
+
 const BACKEND_URL = ((typeof process !== "undefined" && (process.env as any)?.BACKEND_URL) || "").replace(/\/+$/, "");
 
 export async function proxyRequest(request: Request, targetPath: string): Promise<Response> {
@@ -9,7 +11,9 @@ export async function proxyRequest(request: Request, targetPath: string): Promis
   }
 
   const url = new URL(request.url);
-  const targetUrl = `${BACKEND_URL}${targetPath}${url.search}`;
+  const safePath = safePathSegment(targetPath);
+  const safeSearch = url.search.replace(/[\x00-\x1f\x7f]/g, "");
+  const targetUrl = safeUrl(BACKEND_URL, safePath, safeSearch);
 
   try {
     const headers = new Headers();

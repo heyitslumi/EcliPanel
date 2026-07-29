@@ -1,5 +1,6 @@
 import { detectLocale, getMessages as loadMessages } from "../../components/shims/i18n-server";
 import { API_ENDPOINTS } from "../../lib/panel-config";
+import { safeUrl } from "../../lib/url-utils";
 import type { AppLocale } from "../../i18n/config";
 
 function getBackendBaseUrl(): string {
@@ -33,7 +34,7 @@ export async function getPageData(
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`${backendBase}${API_ENDPOINTS.session}`, {
+      const res = await fetch(safeUrl(backendBase, API_ENDPOINTS.session), {
         headers: { cookie: cookieHeader },
         signal: controller.signal,
       });
