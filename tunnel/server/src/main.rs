@@ -1189,24 +1189,13 @@ async fn handle_incoming_connection<R>(
 // Auto-update
 // ---------------------------------------------------------------------------
 
-async fn apply_update(backend: &str) -> Result<()> {
-    let download_url = format!("{}/api/tunnel/server/download", backend.trim_end_matches('/'));
-    info!(%download_url, "downloading updated binary");
-
-    let client = Client::builder()
-        .timeout(Duration::from_secs(300))
-        .build()?;
-
-    let resp = client.get(&download_url).send().await?;
-    if !resp.status().is_success() {
-        return Err(anyhow::anyhow!("download failed: HTTP {}", resp.status()));
-    }
-
-    let bytes = resp.bytes().await?;
-    info!(size = bytes.len(), "binary downloaded");
-
+fn install_binary(bytes: &[u8]) -> Result<()> {
     let current_exe = std::env::current_exe()?;
-    let backup_path = current_exe.with_extension("bak");
+    // Paths derived from current_exe (OS-provided, not user-controlled)
+    anyhow::ensure!(current_exe.is_absolute(), "current_exe must be absolute");
+    let exe_dir = current_exe.parent().ok_or_else(|| anyhow::anyhow!("current_exe has no parent"))?;
+    let backup_path = exe_dir.join(current_exe.file_name().ok_or_else(|| anyhow::anyhow!("no file name"))?).with_extension("bak");
+    let tmp_path = exe_dir.join(current_exe.file_name().unwrap()).with_extension("tmp");
 
     // Backup current binary
     if let Err(err) = fs::copy(&current_exe, &backup_path) {
@@ -1214,8 +1203,7 @@ async fn apply_update(backend: &str) -> Result<()> {
     }
 
     // Write new binary
-    let tmp_path = current_exe.with_extension("tmp");
-    fs::write(&tmp_path, &bytes)?;
+    fs::write(&tmp_path, bytes)?;
 
     // Make executable
     #[cfg(unix)]
@@ -1231,6 +1219,26 @@ async fn apply_update(backend: &str) -> Result<()> {
     info!(path = ?current_exe, "binary updated");
 
     Ok(())
+}
+
+async fn apply_update(backend: &str) -> Result<()> {
+    let _valid: reqwest::Url = backend.parse()?;
+    let download_url = format!("{}/api/tunnel/server/download", backend.trim_end_matches('/'));
+    info!(%download_url, "downloading updated binary");
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(300))
+        .build()?;
+
+    let resp = client.get(&download_url).send().await?;
+    if !resp.status().is_success() {
+        return Err(anyhow::anyhow!("download failed: HTTP {}", resp.status()));
+    }
+
+    let bytes = resp.bytes().await?;
+    info!(size = bytes.len(), "binary downloaded");
+
+    install_binary(&bytes)
 }
 
 fn restart_service() {

@@ -730,7 +730,7 @@ export function PanelSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; on
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   {BRAND.version ? (
-                    /[0-9a-f]{7,40}/i.test(String(BRAND.version)) && BRAND.repoUrl ? (
+                    /[0-9a-f]{7,40}/i.test(String(BRAND.version)) && BRAND.repoUrl && /^https:\/\//i.test(BRAND.repoUrl) ? (
                       <a
                         href={`${BRAND.repoUrl.replace(/\/$/, "")}/commit/${String(
                           BRAND.version

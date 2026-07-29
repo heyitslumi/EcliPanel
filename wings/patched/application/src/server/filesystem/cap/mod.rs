@@ -928,13 +928,15 @@ impl CapFilesystem {
         })
     }
 
+    fn read_base_dir(base: &Path) -> Result<ReadDir, std::io::Error> {
+        Ok(ReadDir::Std(utils::StdReadDir(std::fs::read_dir(base)?)))
+    }
+
     pub fn read_dir(&self, path: impl AsRef<Path>) -> Result<ReadDir, std::io::Error> {
         let path = self.relative_path(path.as_ref());
 
         if path.components().next().is_none() {
-            return Ok(ReadDir::Std(utils::StdReadDir(std::fs::read_dir(
-                &*self.base_path,
-            )?)));
+            return Self::read_base_dir(&self.base_path);
         }
 
         let inner = self.get_inner()?;

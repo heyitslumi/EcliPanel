@@ -928,16 +928,19 @@ impl CapFilesystem {
         })
     }
 
+    fn read_base_dir(base: &Path) -> Result<ReadDir, std::io::Error> {
+        Ok(ReadDir::Std(utils::StdReadDir(std::fs::read_dir(base)?)))
+    }
+
     pub fn read_dir(&self, path: impl AsRef<Path>) -> Result<ReadDir, std::io::Error> {
         let path = self.relative_path(path.as_ref());
 
-        Ok(if path.components().next().is_none() {
-            ReadDir::Std(utils::StdReadDir(std::fs::read_dir(&*self.base_path)?))
-        } else {
-            let inner = self.get_inner()?;
+        if path.components().next().is_none() {
+            return Self::read_base_dir(&self.base_path);
+        }
 
-            ReadDir::Cap(utils::CapReadDir(inner.read_dir(path)?))
-        })
+        let inner = self.get_inner()?;
+        Ok(ReadDir::Cap(utils::CapReadDir(inner.read_dir(path)?)))
     }
 
     pub async fn async_walk_dir(

@@ -1,12 +1,12 @@
-import { safeUrl } from '../utils/url';
-
 export class CloudflareService {
   private baseUrl: string;
+  private expectedHost: string;
   private token: string;
   private accountId?: string;
 
   constructor(tokenOverride?: string) {
     this.baseUrl = process.env.CLOUDFLARE_API_BASE || 'https://api.cloudflare.com/client/v4';
+    this.expectedHost = new URL(this.baseUrl).hostname;
     this.token = tokenOverride || process.env.CLOUDFLARE_API_TOKEN || '';
     this.accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     if (!this.token) {
@@ -15,12 +15,14 @@ export class CloudflareService {
   }
 
   private async request(path: string, options: any = {}, timeoutMs = 8_000) {
-    const url = safeUrl(this.baseUrl, path);
+    const url = new URL(path, this.baseUrl);
+    if (url.hostname !== this.expectedHost) throw new Error("SSRF: host mismatch");
+    const safeUrl = url.toString();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let res: any;
     try {
-      res = await fetch(url, {
+      res = await fetch(safeUrl, {
         headers: {
           Authorization: `Bearer ${this.token}`,
           'Content-Type': 'application/json',

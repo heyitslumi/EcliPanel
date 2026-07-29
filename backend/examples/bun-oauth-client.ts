@@ -60,7 +60,7 @@ const server = Bun.serve({
     console.log('✅ Received authorization code');
 
     try {
-      const tokenResp = await fetch(`${PANEL_URL}/api/oauth/token`, {
+      const tokenResp = await fetch(new URL("/api/oauth/token", PANEL_URL).toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -81,7 +81,7 @@ const server = Bun.serve({
 
       console.log('✅ Token exchange success');
 
-      const userinfoResp = await fetch(`${PANEL_URL}/api/oauth/userinfo`, {
+      const userinfoResp = await fetch(new URL("/api/oauth/userinfo", PANEL_URL).toString(), {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,

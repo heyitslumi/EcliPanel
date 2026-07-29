@@ -979,7 +979,31 @@ async fn handle_client_udp(open: ConnectionOpenMessage, write: Arc<Mutex<WsSink>
 // Auto-update
 // ---------------------------------------------------------------------------
 
+fn install_client_binary(bytes: &[u8]) -> anyhow::Result<()> {
+  let current_exe = std::env::current_exe()?;
+  anyhow::ensure!(current_exe.is_absolute(), "current_exe must be absolute");
+  let exe_dir = current_exe.parent().ok_or_else(|| anyhow::anyhow!("current_exe has no parent"))?;
+  let file_name = current_exe.file_name().ok_or_else(|| anyhow::anyhow!("no file name"))?;
+  let tmp_path = exe_dir.join(file_name).with_extension("tmp");
+
+  fs::write(&tmp_path, bytes)?;
+
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&tmp_path)?.permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&tmp_path, perms)?;
+  }
+
+  fs::rename(&tmp_path, &current_exe)?;
+  info!(path = ?current_exe, "binary updated");
+
+  Ok(())
+}
+
 async fn apply_client_update(backend: &str) -> anyhow::Result<()> {
+  let _valid: reqwest::Url = backend.parse()?;
   let download_url = format!("{}/api/tunnel/client/download", backend.trim_end_matches('/'));
   info!(%download_url, "downloading updated binary");
 
@@ -995,22 +1019,7 @@ async fn apply_client_update(backend: &str) -> anyhow::Result<()> {
   let bytes = resp.bytes().await?;
   info!(size = bytes.len(), "binary downloaded");
 
-  let current_exe = std::env::current_exe()?;
-  let tmp_path = current_exe.with_extension("tmp");
-  fs::write(&tmp_path, &bytes)?;
-
-  #[cfg(unix)]
-  {
-    use std::os::unix::fs::PermissionsExt;
-    let mut perms = fs::metadata(&tmp_path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&tmp_path, perms)?;
-  }
-
-  fs::rename(&tmp_path, &current_exe)?;
-  info!(path = ?current_exe, "binary updated");
-
-  Ok(())
+  install_client_binary(&bytes)
 }
 
 fn restart_client_service() {

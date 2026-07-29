@@ -633,11 +633,12 @@ export async function fetchMailForAllMailboxes(): Promise<void> {
   const TIMEOUT_MS = Number(process.env.IMAP_FETCH_ACCOUNT_TIMEOUT_MS ?? 60_000);
 
   const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {
+    const capped = Math.min(ms, 300_000);
     let t: NodeJS.Timeout;
     return Promise.race([
       p,
       new Promise<T>((_, rej) => {
-        t = setTimeout(() => rej(new Error('IMAP fetch timeout')), ms);
+        t = setTimeout(() => rej(new Error('IMAP fetch timeout')), capped);
       }),
     ]).finally(() => clearTimeout(t));
   };

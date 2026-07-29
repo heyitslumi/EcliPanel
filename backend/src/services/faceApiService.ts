@@ -21,15 +21,14 @@ const REQUIRED_MODEL_FILES = [
   'face_landmark_68_model.bin',
 ];
 
-async function downloadFile(filename: string): Promise<void> {
-  const url = new URL(MODEL_BASE_URL + "/" + encodeURIComponent(filename)).toString();
+async function downloadFile(url: string, filePath: string): Promise<void> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(
-      `Failed to download FaceAPI model file ${filename}: ${response.status} ${response.statusText}`
+      `Failed to download FaceAPI model file ${filePath}: ${response.status} ${response.statusText}`
     );
   }
-  await Bun.write(path.join(MODEL_PATH, filename), response);
+  await Bun.write(filePath, response);
 }
 
 async function ensureModelFiles(): Promise<void> {
@@ -37,10 +36,16 @@ async function ensureModelFiles(): Promise<void> {
     fs.mkdirSync(MODEL_PATH, { recursive: true });
   }
 
+  const validatedBase = new URL(MODEL_BASE_URL);
+  if (validatedBase.hostname !== "raw.githubusercontent.com") {
+    throw new Error("Invalid face-api model base URL");
+  }
+
   for (const filename of REQUIRED_MODEL_FILES) {
     const filePath = path.join(MODEL_PATH, filename);
     if (Bun.file(filePath).size === 0) {
-      await downloadFile(filename);
+      const url = new URL(encodeURIComponent(filename), MODEL_BASE_URL + "/").toString();
+      await downloadFile(url, filePath);
     }
   }
 }

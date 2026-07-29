@@ -6,8 +6,8 @@ import { User } from '../models/user.entity';
 
 const MAILCOW_API_URL = String(process.env.MAILCOW_API_URL || '').replace(/\/+$/, '');
 const MAILCOW_API_KEY = String(process.env.MAILCOW_API_KEY || '');
-const MAILCOW_TIMEOUT_MS = Number(process.env.MAILCOW_TIMEOUT_MS || 30000);
-const MAILCOW_RETRIES = Math.max(1, Number(process.env.MAILCOW_RETRIES || 2));
+const MAILCOW_TIMEOUT_MS = Math.min(120_000, Math.max(1000, Number(process.env.MAILCOW_TIMEOUT_MS || 30000)));
+const MAILCOW_RETRIES = Math.min(5, Math.max(1, Number(process.env.MAILCOW_RETRIES || 2)));
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
