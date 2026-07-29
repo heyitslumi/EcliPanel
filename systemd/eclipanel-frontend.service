@@ -1,16 +1,18 @@
 [Unit]
-Description=EcliPanel Frontend
+Description=EcliPanel Frontend (Development)
 After=network.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/srv/samba/shared/EcliPanel/v3/frontend
-ExecStart=/usr/bin/npm run dev
+ExecStart=/usr/bin/bun run dev
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=development
 Environment=BACKEND_URL=http://localhost:3001
+Environment=PUBLIC_API_BASE=http://localhost:3001
+Environment=HOST=0.0.0.0
 StandardOutput=journal
 StandardError=journal
 

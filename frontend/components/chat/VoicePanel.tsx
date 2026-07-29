@@ -7,7 +7,7 @@ import {
   VolumeX, Volume2, Link2, Settings2, X, Maximize2,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useVoiceMedia, VoicePeer } from "@/hooks/useVoiceMedia"
+import { useVoiceMedia, type VoicePeer } from "@/hooks/useVoiceMedia"
 
 interface VoicePanelProps {
   roomSlug: string

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { motion, type Variants } from "framer-motion";
-import { ContributorsSnapshot } from "../ContributorsClient";
+import type { ContributorsSnapshot } from "../ContributorsClient";
 import { Menu } from "@/app/landing/_components/_custom/Menu";
 import { ActivityChart } from "./ActivityChart";
 

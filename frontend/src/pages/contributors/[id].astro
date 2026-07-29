@@ -1,0 +1,18 @@
+---
+import PageShell from "../../components/PageShell";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPageData } from "../../lib/page-data";
+const { locale, messages, initialUser, pathname } = await getPageData(Astro.cookies, Astro.request.headers, Astro.url.pathname);
+const { id } = Astro.params;
+const siteUrl = (process.env.SITE_URL || "https://ecli.app");
+const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_BASE || "") || "").replace(/\/+$/, "");
+let title = `Contributor — EclipseSystems`, description = "", ogImage = `${siteUrl}/assets/contributors/og-default.png`;
+try {
+  const res = await fetch(`${backendUrl}/api/public/contributors/${id}`);
+  if (res.ok) { const c = await res.json(); title = `${c.name || id} — Contributors — EclipseSystems`; description = c.bio || c.role || ""; ogImage = c.avatarUrl || c.socialImage || ogImage; }
+} catch {}
+---
+
+<BaseLayout title={title} description={description} ogImage={ogImage} ogType="profile">
+  <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={pathname} />
+</BaseLayout>

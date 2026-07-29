@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-export NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-https://backend.ecli.app}
-export NEXT_PUBLIC_WINGS_BASE=${NEXT_PUBLIC_WINGS_BASE:-}
+export PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-${PUBLIC_API_BASE:-https://backend.ecli.app}}
+export PUBLIC_WINGS_BASE=${NEXT_PUBLIC_WINGS_BASE:-${PUBLIC_WINGS_BASE:-}}
 export BACKEND_URL=${BACKEND_URL:-https://backend.ecli.app}
-export NEXT_PUBLIC_COMMIT_SHA=$(git rev-parse --short HEAD)
+export PUBLIC_COMMIT_SHA=$(git rev-parse --short HEAD)
+
 PORT_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in

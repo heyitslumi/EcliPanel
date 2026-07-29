@@ -1,0 +1,13 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PageShell from "../components/PageShell";
+import { getPageData } from "../lib/page-data";
+
+const { locale, messages, initialUser } = await getPageData(
+  Astro.cookies, Astro.request.headers, Astro.url.pathname
+);
+---
+
+<BaseLayout title="Page Not Found — EclipseSystems">
+  <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={Astro.url.pathname} />
+</BaseLayout>

@@ -1,0 +1,145 @@
+---
+import "../styles/globals.css";
+import { detectLocale } from "../../components/shims/i18n-server";
+import { THEMES } from "../../lib/themes";
+import { API_ENDPOINTS } from "../../lib/panel-config";
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  ogType?: string;
+  twitterCard?: string;
+}
+
+const {
+  title = "",
+  description = "",
+  ogImage = "",
+  ogType = "website",
+  twitterCard = "summary_large_image",
+} = Astro.props as Props;
+
+const locale = detectLocale(Astro.cookies, Astro.request.headers);
+
+function getBackendBaseUrl(): string {
+  const url =
+    (typeof process !== "undefined" && (process.env as any)?.BACKEND_URL) ||
+    (typeof process !== "undefined" && (process.env as any)?.NEXT_PUBLIC_API_BASE) ||
+    (typeof process !== "undefined" && (process.env as any)?.PUBLIC_API_BASE) ||
+    "";
+  return url.replace(/\/+$/, "");
+}
+
+const backendBase = getBackendBaseUrl();
+
+const themesMap: Record<string, Record<string, string>> = {};
+for (const t of THEMES || []) {
+  const vars: Record<string, string> = {
+    "--primary": t.primary,
+    "--background": t.bg,
+    "--card": t.card,
+    "--secondary": t.secondary,
+    "--sidebar": t.sidebar,
+    "--accent": t.accent,
+    "--accent-foreground": t.accentFg,
+    "--glow": t.glow,
+    "--glow-strong": t.primary,
+    "--ring": t.primary,
+    "--sidebar-primary": t.primary,
+    "--border": t.border,
+    "--chart-1": t.primary,
+  };
+  if ((t as any).foreground) vars["--foreground"] = (t as any).foreground;
+  if ((t as any).cardForeground) vars["--card-foreground"] = (t as any).cardForeground;
+  themesMap[t.name] = vars;
+}
+
+let themeName: string | null = null;
+
+const cookieHeader = Astro.request.headers.get("cookie") || "";
+if (cookieHeader && backendBase) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const res = await fetch(`${backendBase}${API_ENDPOINTS.session}`, {
+      headers: { cookie: cookieHeader },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      themeName = data?.user?.settings?.theme?.name || null;
+    }
+  } catch {
+    // not logged in
+  }
+}
+
+const layoutTitle = "Eclipse Systems";
+const pageTitle = title || layoutTitle;
+const pageDescription = description || "";
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a12" />
+
+    <title>{pageTitle}</title>
+    {pageDescription && <meta name="description" content={pageDescription} />}
+
+    <meta property="og:title" content={pageTitle} />
+    {pageDescription && <meta property="og:description" content={pageDescription} />}
+    <meta property="og:type" content={ogType} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <meta name="twitter:card" content={twitterCard} />
+    <meta name="twitter:title" content={pageTitle} />
+    {pageDescription && <meta name="twitter:description" content={pageDescription} />}
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    <meta name="format-detection" content="telephone=no" />
+
+    <link rel="icon" href="/favicons/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicons/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicons/android-chrome-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicons/android-chrome-512x512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-icon-180x180.png" />
+    <link rel="mask-icon" href="/favicons/safari-pinned-tab.svg" color="#9CA3AF" />
+    <link rel="manifest" href="/favicons/manifest.json" />
+
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={layoutTitle} />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Didact+Gothic&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet" />
+
+    {backendBase && <link rel="dns-prefetch" href={backendBase} />}
+    {backendBase && <link rel="preconnect" href={backendBase} />}
+
+    <script is:inline define:vars={{ themes: JSON.stringify(themesMap), name: JSON.stringify(themeName) }}>
+      (() => {
+        try {
+          var themes = JSON.parse(themes);
+          var name = JSON.parse(name);
+          if (!name) return;
+          var vars = themes[name];
+          if (!vars) return;
+          var r = document.documentElement;
+          for (var k in vars) r.style.setProperty(k, vars[k]);
+          r.setAttribute('data-eclipse-theme', name);
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body class="font-sans antialiased min-h-screen flex flex-col min-w-0 bg-background" style="font-family: 'Geist', sans-serif;">
+    <slot />
+  </body>
+</html>

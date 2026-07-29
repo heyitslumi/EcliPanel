@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Globe2, AlertTriangle, MapPin, Database } from "lucide-react";
 import { API_ENDPOINTS } from "@/lib/panel-config";
 import { apiFetch } from "@/lib/api-client";
+import GradualBlurMemo from "@/app/landing/_components/_reacts-bits/GradualBlur";
+import { Menu } from "@/app/landing/_components/_custom/Menu";
 
 type GeoRule = {
   country: string;
@@ -65,8 +67,20 @@ export default function GeoblockPage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="space-y-6">
+    <main className="px-auto w-full px-4 py-10 sm:px-6 lg:px-8 flex justify-center bg-black">
+      <GradualBlurMemo
+        target="page" position="top" height="13rem" strength={2}
+        divCount={5} curve="bezier" exponential opacity={1}
+      />
+      <Menu
+        customMenu={[
+          { label: "Legal Center", href: "/legal" },
+          { label: "Terms of Service", href: "/legal/terms-of-service" },
+          { label: "Privacy Policy", href: "/legal/privacy-policy" },
+        ]}
+        customCTA={{ label: "Home", href: "/" }}
+      />
+      <div className="space-y-8 max-w-6xl mt-20">
         <section className="rounded-[2rem] border border-border bg-card/95 p-8 shadow-xl shadow-black/5">
           <div className="flex items-start justify-between gap-6">
             <div className="space-y-4 max-w-3xl">

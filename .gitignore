@@ -49,7 +49,6 @@ bins/
 # Uploaded/temporary files
 backend/uploads/
 frontend/uploads/
-uploads/
 
 # Prevent committing LM files
 frontend/public/assets/icons/*.mp4

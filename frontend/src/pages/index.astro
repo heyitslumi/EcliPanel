@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PageShell from "../components/PageShell";
+import { detectLocale, getMessages, getTranslations } from "../../components/shims/i18n-server";
+import { API_ENDPOINTS } from "../../lib/panel-config";
+
+const locale = detectLocale(Astro.cookies, Astro.request.headers);
+const messages = await getMessages(locale);
+const t = await getTranslations("landing", locale);
+const pageTitle = `${t("hero.titleLine1")} — EclipseSystems`;
+const pageDescription = t("hero.subtitle");
+
+function bbu() { return ((typeof process !== "undefined" && (process.env as any)?.BACKEND_URL) || "").replace(/\/+$/, ""); }
+const bb = bbu();
+let iu = null;
+const ch = Astro.request.headers.get("cookie") || "";
+if (ch && bb) {
+  try {
+    const c = new AbortController(); const to = setTimeout(() => c.abort(), 1500);
+    const r = await fetch(`${bb}${API_ENDPOINTS.session}`, { headers: { cookie: ch }, signal: c.signal });
+    clearTimeout(to);
+    if (r.ok) { const d = await r.json(); iu = d?.user || null; }
+  } catch {}
+}
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <PageShell client:only="react" locale={locale} messages={messages} initialUser={iu} page="landing" pathname={Astro.url.pathname} />
+</BaseLayout>

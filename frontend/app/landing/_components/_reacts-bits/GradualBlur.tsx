@@ -1,13 +1,15 @@
 "use client";
 
 import React, {
-  CSSProperties,
   useEffect,
   useRef,
   useState,
   useMemo,
-  PropsWithChildren,
 } from "react";
+
+type CSSProperties = React.CSSProperties;
+
+type PropsWithChildren<P = unknown> = P & { children?: React.ReactNode };
 
 type GradualBlurProps = PropsWithChildren<{
   position?: "top" | "bottom" | "left" | "right";

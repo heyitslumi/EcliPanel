@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo, useId } from "react";
 import { useTranslations } from "next-intl";
-import { ContributorCommitHistoryPoint } from "../ContributorsClient";
+import type { ContributorCommitHistoryPoint } from "../ContributorsClient";
 
 export function ActivityChart({
   history,

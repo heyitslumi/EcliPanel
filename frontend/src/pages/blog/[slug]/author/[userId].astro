@@ -1,0 +1,17 @@
+---
+import PageShell from "../../../../components/PageShell";
+import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import { getPageData } from "../../../../lib/page-data";
+const { locale, messages, initialUser, pathname } = await getPageData(Astro.cookies, Astro.request.headers, Astro.url.pathname);
+const { slug, userId } = Astro.params;
+const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_BASE || "") || "").replace(/\/+$/, "");
+let title = `Author — ${slug} Blog — EclipseSystems`, description = "";
+try {
+  const res = await fetch(`${backendUrl}/api/public/blog/${slug}/author/${userId}`);
+  if (res.ok) { const author = await res.json(); title = `${author.name || author.displayName || "Author"} — ${slug} Blog — EclipseSystems`; description = (author.bio || "").replace(/[#*`>\-\[\]()]/g, "").slice(0, 200); }
+} catch {}
+---
+
+<BaseLayout title={title} description={description} ogType="profile">
+  <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={pathname} />
+</BaseLayout>

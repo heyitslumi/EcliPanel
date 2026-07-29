@@ -1,0 +1,24 @@
+---
+import PageShell from "../../components/PageShell";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPageData } from "../../lib/page-data";
+
+const { locale, messages, initialUser, pathname } = await getPageData(
+  Astro.cookies, Astro.request.headers, Astro.url.pathname
+);
+
+const { token } = Astro.params;
+const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_BASE || "") || "").replace(/\/+$/, "");
+let title = "Shared File — EclipseSystems";
+let description = "";
+let ogImage = "";
+let ogType = "website";
+try {
+  const res = await fetch(`${backendUrl}/api/public/share/${token}`);
+  if (res.ok) { const info = await res.json(); title = info.title || title; description = info.description || ""; ogImage = info.thumbnailUrl || info.imageUrl || ""; if (info.type === "video") ogType = "video.other"; }
+} catch {}
+---
+
+<BaseLayout title={title} description={description} ogImage={ogImage} ogType={ogType}>
+  <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={pathname} />
+</BaseLayout>

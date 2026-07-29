@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  LucideIcon,
+  type LucideIcon,
   Server,
   Router,
   Computer,

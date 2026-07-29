@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
-import { FeatureFlag } from "@/lib/panel-config"
+import type { FeatureFlag } from "@/lib/panel-config"
 
 type FeatureGuardProps = {
   feature: FeatureFlag
