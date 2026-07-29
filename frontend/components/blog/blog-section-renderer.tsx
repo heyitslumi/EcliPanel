@@ -439,9 +439,6 @@ export function BlogSectionRenderer({
             return <ScriptSection key={section.id} id={section.id} code={code} />
           }
 
-          case "video": {
-          }
-
           default:
             return null
         }

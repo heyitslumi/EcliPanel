@@ -12,6 +12,9 @@ export default defineConfig({
   adapter: node({ mode: 'standalone' }),
   integrations: [react(), sitemap()],
   site: process.env.SITE_URL || 'https://ecli.app',
+  security: {
+    checkOrigin: false,
+  },
 
   vite: {
     resolve: {
