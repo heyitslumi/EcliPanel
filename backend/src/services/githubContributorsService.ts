@@ -1,4 +1,4 @@
-import { safePathSegment } from '../utils/url';
+import { safePathSegment, safeUrl } from '../utils/url';
 import { AppDataSource } from '../config/typeorm';
 import { User } from '../models/user.entity';
 import {
@@ -231,10 +231,10 @@ async function githubFetch<T>(path: string): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const safeOwner = safePathSegment(repoInfo.owner);
-  const safeName = safePathSegment(repoInfo.name);
+  const safeOwner = encodeURIComponent(repoInfo.owner);
+  const safeName = encodeURIComponent(repoInfo.name);
   const safePath = safePathSegment(path);
-  const url = new URL(`/repos/${safeOwner}/${safeName}${safePath}`, "https://api.github.com").toString();
+  const url = safeUrl("https://api.github.com", "/repos/", safeOwner, "/", safeName, safePath);
 
   const res = await fetch(url,
     {

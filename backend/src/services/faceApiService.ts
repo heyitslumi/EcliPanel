@@ -22,7 +22,7 @@ const REQUIRED_MODEL_FILES = [
 ];
 
 async function downloadFile(filename: string): Promise<void> {
-  const url = `${MODEL_BASE_URL}/${filename}`;
+  const url = new URL(MODEL_BASE_URL + "/" + encodeURIComponent(filename)).toString();
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(

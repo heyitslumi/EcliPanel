@@ -2,6 +2,7 @@ import { sendMail } from './mailService';
 import { AppDataSource } from '../config/typeorm';
 import { redisGet, redisSet } from '../config/redis';
 import { PanelSetting } from '../models/panelSetting.entity';
+import { safeUrl } from '../utils/url';
 
 type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
@@ -126,8 +127,9 @@ async function resolveRecipients(finding: FindingAlert): Promise<Array<{ userId:
   return recipients;
 }
 
-async function sendWebhook(url: string, finding: FindingAlert): Promise<boolean> {
+async function sendWebhook(rawUrl: string, finding: FindingAlert): Promise<boolean> {
   try {
+    const url = new URL(rawUrl).toString();
     const color = finding.severity === 'critical' ? 0xFF0000
       : finding.severity === 'high' ? 0xFF6600
       : finding.severity === 'medium' ? 0xFFCC00

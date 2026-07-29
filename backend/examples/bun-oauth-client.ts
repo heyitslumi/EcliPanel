@@ -1,7 +1,7 @@
 // RUN: PANEL_URL=http://localhost:3000 OAUTH_CLIENT_ID=<id> bun run backend/examples/bun-oauth-client.ts
 import crypto from 'crypto';
 
-const PANEL_URL = process.env.PANEL_URL || 'http://localhost:3000';
+const PANEL_URL = new URL(process.env.PANEL_URL || 'http://localhost:3000').origin;
 const CLIENT_ID = process.env.OAUTH_CLIENT_ID;
 const REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 'http://localhost:3001/callback';
 const PORT = Number(new URL(REDIRECT_URI).port || 3001);

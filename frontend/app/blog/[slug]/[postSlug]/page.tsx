@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { PostPageClient } from "./PostPageClient"
-import { safePathSegment } from "@/lib/url-utils"
+import { safeUrl } from "@/lib/url-utils"
 
 type Props = { params: Promise<{ slug: string; postSlug: string }> }
 
@@ -8,9 +8,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, postSlug } = await params
   try {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE || process.env.BACKEND_URL || ""
-    const safeSlug = safePathSegment(slug);
-    const safePostSlug = safePathSegment(postSlug);
-    const res = await fetch(`${apiBase}/api/public/blog/${safeSlug}/posts/${safePostSlug}`, { next: { revalidate: 60 } })
+    const safeSlug = encodeURIComponent(slug);
+    const safePostSlug = encodeURIComponent(postSlug);
+    const res = await fetch(safeUrl(apiBase, "/api/public/blog/", safeSlug, "/posts/", safePostSlug), { next: { revalidate: 60 } })
     if (!res.ok) return { title: "Post not found" }
     const post = await res.json()
     const strip = (t: string) => (t || "").replace(/~[^~]+~/g, (_: string, i: string) => { const c = i.indexOf(":"); return c > 0 ? i.slice(c + 1) : i }).replace(/::.+$/, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/__(.+?)__/g, "$1").replace(/_(.+?)_/g, "$1").trim()

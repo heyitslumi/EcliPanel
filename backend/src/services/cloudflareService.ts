@@ -1,3 +1,5 @@
+import { safeUrl } from '../utils/url';
+
 export class CloudflareService {
   private baseUrl: string;
   private token: string;
@@ -13,7 +15,7 @@ export class CloudflareService {
   }
 
   private async request(path: string, options: any = {}, timeoutMs = 8_000) {
-    const url = `${this.baseUrl}${path}`;
+    const url = safeUrl(this.baseUrl, path);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let res: any;
