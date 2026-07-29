@@ -69,7 +69,7 @@ export const BRAND = {
   tagline: "Next-Gen Server Management",
   logo: "/assets/icons/logo.png",
   version: process.env.NEXT_PUBLIC_COMMIT_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || "unknown",
-  repoUrl: process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/thenoname-gurl/EcliPanel",
+  repoUrl: (process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/thenoname-gurl/EcliPanel").replace(/\.git$/, ""),
 } as const
 
 // ============================================
