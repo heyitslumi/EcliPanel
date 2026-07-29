@@ -535,7 +535,7 @@ export default function NodesTab({ ctx }: { ctx: any }) {
       open={!!heartbeatDialogNode}
       onOpenChange={(open) => { if (!open) { setHeartbeatDialogNode(null); setHeartbeatDialogData(null) } }}
     >
-      <DialogContent className="max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             {t("heartbeatDialog.title", { name: heartbeatDialogNode?.name || "" })}
@@ -609,7 +609,7 @@ export default function NodesTab({ ctx }: { ctx: any }) {
     </Dialog>
 
     <Dialog open={!!viewConfigNode} onOpenChange={(open) => { if (!open) { setViewConfigNode(null); setViewConfigToken("") } }}>
-      <DialogContent className="max-w-xl bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">{t("configDialog.title", { name: viewConfigNode?.name || "" })}</DialogTitle>
         </DialogHeader>

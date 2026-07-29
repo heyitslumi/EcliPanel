@@ -45,7 +45,7 @@ export default function OrganisationsPage() {
       />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
         <PageLayout>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <p className="text-sm text-muted-foreground">{t("description")}</p>
             {canCreate && (
               <button

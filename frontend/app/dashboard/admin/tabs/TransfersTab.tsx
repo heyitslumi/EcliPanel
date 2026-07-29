@@ -76,6 +76,7 @@ export default function TransfersTab() {
         <TableEmpty message={t("states.empty") || "No active transfers."} />
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30">
               <tr>
@@ -117,6 +118,7 @@ export default function TransfersTab() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

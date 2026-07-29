@@ -391,22 +391,22 @@ export default function ServersTab({ ctx }: { ctx: any }) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-1 px-4 py-2.5 border-t border-border bg-secondary/20">
+                <div className="flex items-center justify-center gap-1 px-4 py-2.5 border-t border-border bg-secondary/20 flex-wrap">
                   <button onClick={() => serverPower(srv.uuid, "start")} title={t("actions.start")} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors">
                     <Play className="h-3.5 w-3.5" />
-                    <span>{t("actions.start")}</span>
+                    <span className="hidden sm:inline">{t("actions.start")}</span>
                   </button>
                   <button onClick={() => serverPower(srv.uuid, "restart")} title={t("actions.restart")} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:bg-warning/10 hover:text-warning transition-colors">
                     <RotateCcw className="h-3.5 w-3.5" />
-                    <span>{t("actions.restart")}</span>
+                    <span className="hidden sm:inline">{t("actions.restart")}</span>
                   </button>
                   <button onClick={() => serverPower(srv.uuid, "stop")} title={t("actions.stop")} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors">
                     <Square className="h-3.5 w-3.5" />
-                    <span>{t("actions.stop")}</span>
+                    <span className="hidden sm:inline">{t("actions.stop")}</span>
                   </button>
                 </div>
 
-                <div className="flex items-center border-t border-border divide-x divide-border">
+                <div className="flex items-center border-t border-border divide-x divide-border flex-wrap">
                   {srv.status === "suspended" ? (
                     <button onClick={() => unsuspendServer(srv.uuid)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                       <CheckCircle className="h-3.5 w-3.5" />

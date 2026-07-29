@@ -149,7 +149,7 @@ function MobileCommandInput({
   value, onChange, onSend, onHistoryToggle, historyOpen, disabled, t
 }: MobileInputProps) {
   return (
-    <div className="flex items-center gap-2 border-t border-border bg-background px-3 py-2.5">
+    <div className="flex items-center gap-2 border-t border-border bg-background px-3 py-2.5 pb-safe">
       <button
         onClick={onHistoryToggle}
         className={cn(
@@ -909,7 +909,7 @@ export function ConsoleTab({ serverId, installing: installingProp }: ConsoleTabP
       </div>
 
       {isInstalling && resources && (
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-secondary/5 text-xs">
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-secondary/5 text-xs flex-wrap">
           {resources.cpu_absolute != null && (
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground">CPU</span>

@@ -949,23 +949,32 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled, preselectedOr
               ) : (
                 <div className="space-y-2">
                   {envVars.map((row, idx) => (
-                    <div key={`env-${idx}`} className="grid grid-cols-12 gap-2">
+                    <div key={`env-${idx}`} className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                       <input
                         value={row.key}
                         onChange={(e) => setEnvVars((prev) => prev.map((item, i) => i === idx ? { ...item, key: e.target.value } : item))}
                         placeholder={t("fields.env.keyPlaceholder")}
-                        className="col-span-5 border border-border/50 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                        className="sm:col-span-5 border border-border/50 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
                       />
-                      <input
-                        value={row.value}
-                        onChange={(e) => setEnvVars((prev) => prev.map((item, i) => i === idx ? { ...item, value: e.target.value } : item))}
-                        placeholder={t("fields.env.valuePlaceholder")}
-                        className="col-span-6 border border-border/50 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-                      />
+                      <div className="sm:col-span-6 flex gap-2">
+                        <input
+                          value={row.value}
+                          onChange={(e) => setEnvVars((prev) => prev.map((item, i) => i === idx ? { ...item, value: e.target.value } : item))}
+                          placeholder={t("fields.env.valuePlaceholder")}
+                          className="flex-1 border border-border/50 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEnvVars((prev) => prev.filter((_, i) => i !== idx))}
+                          className="sm:hidden shrink-0 border border-border/50 px-3 text-xs text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                        >
+                          {t("fields.env.remove")}
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setEnvVars((prev) => prev.filter((_, i) => i !== idx))}
-                        className="col-span-1 border border-border/50 text-xs text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                        className="hidden sm:flex sm:col-span-1 border border-border/50 text-xs text-destructive hover:bg-destructive/10 active:scale-95 transition-all items-center justify-center"
                       >
                         ×
                       </button>
@@ -1170,7 +1179,7 @@ function NewServerModal({ onClose, onCreated, gamblingModeEnabled, preselectedOr
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 border-t border-border/50 bg-card/95 backdrop-blur-sm px-4 sm:px-6 py-3 sm:py-4 safe-area-inset-bottom">
+          <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 border-t border-border/50 bg-card/95 backdrop-blur-sm px-4 sm:px-6 py-3 sm:py-4 pb-safe">
             <button
               type="button"
               onClick={onClose}
@@ -2111,7 +2120,7 @@ export default function ServersPage() {
               <p className="text-xs text-muted-foreground tabular-nums">
                 Page {page} of {totalPaginationPages} ({totalPaginated} servers)
               </p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto flex-shrink-0">
                 <button
                   onClick={() => { const p = page - 1; if (p >= 1) { setPage(p); } }}
                   disabled={page <= 1}

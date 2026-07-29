@@ -75,7 +75,7 @@ export function FileRevisionsDrawer({ serverId, filePath, open, onClose, onResto
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       {/* Drawer */}
-      <div className="relative w-80 sm:w-96 bg-card border-l border-border h-full overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+      <div className="relative w-full sm:w-96 bg-card border-l border-border h-full overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">

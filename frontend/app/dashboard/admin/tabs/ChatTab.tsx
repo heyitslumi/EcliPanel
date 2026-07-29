@@ -142,6 +142,7 @@ export default function ChatTab({ ctx }: { ctx: any }) {
         </div>
       ) : (
         <div className="border border-border/50 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-muted/30 border-b border-border/50">
@@ -192,6 +193,7 @@ export default function ChatTab({ ctx }: { ctx: any }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

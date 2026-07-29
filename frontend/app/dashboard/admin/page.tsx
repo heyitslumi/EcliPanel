@@ -7471,7 +7471,7 @@ remote: ${panelUrl}`
 
       {/* ═══════ User View Dialog ═══════════════════════════════════════════════ */}
       <Dialog open={!!viewUserDialog} onOpenChange={(open) => { if (!open) { setViewUserDialog(null); setViewUserProfile(null) } }}>
-        <DialogContent className="border-border bg-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="border-border bg-card w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground flex items-center gap-2">
               <Eye className="h-4 w-4 text-muted-foreground" />

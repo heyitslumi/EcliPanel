@@ -37,16 +37,28 @@ export async function generateMetadata(): Promise<Metadata> {
     ...meta,
     icons: {
       icon: [
-        {
-          url: "/assets/icons/logo.png",
-          media: "(prefers-color-scheme: light)",
-        },
-        {
-          url: "/assets/icons/logo.png",
-          media: "(prefers-color-scheme: dark)",
-        },
+        { url: "/favicons/favicon.ico", sizes: "48x48" },
+        { url: "/favicons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+        { url: "/favicons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+        { url: "/favicons/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+        { url: "/favicons/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+        { url: "/favicons/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
       ],
-      apple: "/assets/icons/logo.png",
+      apple: [
+        { url: "/favicons/apple-icon-180x180.png", sizes: "180x180", type: "image/png" },
+      ],
+      other: [
+        { rel: "mask-icon", url: "/favicons/safari-pinned-tab.svg", color: "#9CA3AF" },
+        { rel: "manifest", url: "/favicons/manifest.json" },
+      ],
+    },
+    appleWebApp: {
+      capable: true,
+      title: t("title"),
+      statusBarStyle: "black-translucent",
+    },
+    formatDetection: {
+      telephone: false,
     },
   };
 }
@@ -54,6 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   themeColor: "#0a0a12",
   userScalable: true,
+  viewportFit: "cover",
 };
 
 import { AuthProvider, type User } from "@/hooks/useAuth";

@@ -642,9 +642,9 @@ export default function PublicFormPage() {
                       </div>
                       <div className="h-px w-full bg-white/10">
                         <motion.div
-                          className="h-px bg-white/60"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progressPercent}%` }}
+                          className="h-px bg-white/60 origin-left"
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: progressPercent / 100 }}
                           transition={{ duration: 0.5, ease: "easeOut" }}
                         />
                       </div>

@@ -1341,7 +1341,7 @@ const dmcaAlert = isDmcaProtected ? (
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {powerToast && (
-        <div className="fixed inset-x-0 bottom-4 z-[9999] px-3 sm:px-4 pointer-events-none">
+        <div className="fixed inset-x-0 bottom-4 z-[9999] px-3 sm:px-4 pointer-events-none" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           <div
             className={`mx-auto w-full max-w-sm sm:max-w-md border p-3.5 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-4 fade-in duration-300 pointer-events-auto ${
               powerToast.type === "success"
@@ -2368,7 +2368,7 @@ function SchedulesTab({ serverId }: { serverId: string }) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-border bg-card">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle>
               {editing ? t("schedules.edit") : t("schedules.newSchedule")}

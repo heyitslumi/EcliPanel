@@ -511,7 +511,7 @@ export default function EloVotePage() {
       </ScrollArea>
 
       <Dialog open={reportTarget !== null} onOpenChange={(open) => { if (!open) { setReportTarget(null); setReportReason("") } }}>
-        <DialogContent className="border-border bg-card max-w-md">
+        <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground flex items-center gap-2">
               <Flag className="h-4 w-4 text-destructive" />
@@ -545,7 +545,7 @@ export default function EloVotePage() {
       </Dialog>
 
       <Dialog open={showGuide} onOpenChange={(open) => { if (!open) handleDismissGuide() }}>
-        <DialogContent className="border-border bg-card max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="border-border bg-card sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground flex items-center gap-2">
               <Vote className="h-5 w-5 text-primary" />

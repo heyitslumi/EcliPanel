@@ -92,10 +92,10 @@ export function StatusBadge({ status }: { status: "online" | "offline" | "starti
  */
 export function SectionHeader({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold text-foreground truncate">{title}</h2>
+        {description && <p className="text-sm text-muted-foreground truncate">{description}</p>}
       </div>
       {action}
     </div>
@@ -178,7 +178,7 @@ export function SearchInput({
       {value && (
         <button
           onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground p-0.5 active:scale-90 transition-all"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground p-2 active:scale-90 transition-all touch-target"
         >
           <X className="h-3.5 w-3.5" />
         </button>

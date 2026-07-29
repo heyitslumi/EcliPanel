@@ -634,7 +634,7 @@ function AIChatPanel({
       "flex flex-col border-l border-border bg-card/80 backdrop-blur-sm transition-all duration-200",
       // CRITICAL: these ensure the panel never grows taller than its flex parent
       "h-full max-h-full overflow-hidden",
-      open ? "w-80 sm:w-96 min-w-[300px]" : "w-0 border-l-0 min-w-0"
+      open ? "w-full sm:w-80 md:w-96" : "w-0 border-l-0 min-w-0"
     )}>
       {/* Header — fixed height */}
       <div className="flex items-center justify-between border-b border-border px-3 py-2 bg-secondary/20 shrink-0">

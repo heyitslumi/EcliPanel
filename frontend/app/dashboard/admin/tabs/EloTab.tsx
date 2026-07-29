@@ -780,7 +780,7 @@ function ProjectsPanel() {
 
       {/* Reset Dialog */}
       <Dialog open={resetTarget !== null} onOpenChange={(open) => { if (!open) setResetTarget(null) }}>
-        <DialogContent className="border-border bg-card max-w-sm">
+        <DialogContent className="border-border bg-card sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-foreground">Reset ELO Project</DialogTitle>
           </DialogHeader>
@@ -799,7 +799,7 @@ function ProjectsPanel() {
 
       {/* Delete Dialog */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
-        <DialogContent className="border-border bg-card max-w-sm">
+        <DialogContent className="border-border bg-card sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-foreground text-destructive">Delete ELO Project</DialogTitle>
           </DialogHeader>

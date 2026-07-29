@@ -108,6 +108,7 @@ export default function BackupConfigsTab() {
         <TableEmpty message="No backup configurations yet. Create one to define where server backups are stored." />
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30">
               <tr>
@@ -136,6 +137,7 @@ export default function BackupConfigsTab() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

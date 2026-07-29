@@ -1115,12 +1115,12 @@ export default function TicketDetailPage({
                             {msg.sender}
                           </span>
                           {isStaff && (
-                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] sm:text-xs px-1 sm:px-1.5 py-0">
                               {t("common.staff")}
                             </Badge>
                           )}
                           {msg.ai && (
-                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] sm:text-xs px-1 sm:px-1.5 py-0">
                               {t("common.ai")}
                             </Badge>
                           )}

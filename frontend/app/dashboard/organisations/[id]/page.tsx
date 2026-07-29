@@ -279,8 +279,8 @@ export default function OrganisationDetail() {
           </div>
 
           {/* Subscription row */}
-          <div className="border border-border bg-card p-3 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-4">
+          <div className="border border-border bg-card p-3 flex items-center justify-between text-sm flex-wrap gap-2">
+            <div className="flex items-center gap-4 flex-wrap">
               <span className="text-muted-foreground">{t("labels.subscription")}:</span>
               <Badge variant="outline" className="text-xs capitalize">{tierLabel}</Badge>
               {org.portalTier === "none" && (
