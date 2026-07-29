@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import node from '@astrojs/node';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -17,9 +18,11 @@ export default defineConfig({
   },
 
   vite: {
+    plugins: [tailwindcss()],
     resolve: {
       alias: {
         '@': __dirname,
+        'monaco-editor/esm/vs/editor/editor.api.js': path.join(__dirname, 'node_modules/monaco-editor/esm/vs/editor/editor.api.js'),
         'next/link': path.join(__dirname, 'components/shims/Link.tsx'),
         'next/navigation': path.join(__dirname, 'components/shims/navigation.ts'),
         'next-intl': path.join(__dirname, 'components/shims/i18n.tsx'),

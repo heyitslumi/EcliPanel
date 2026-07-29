@@ -16,4 +16,4 @@ if [ ! -f ./dist/server/entry.mjs ]; then
 fi
 
 echo "Starting server..."
-exec node ./dist/server/entry.mjs
+exec bun ./dist/server/entry.mjs
