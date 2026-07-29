@@ -15,6 +15,7 @@ export class CloudflareService {
   }
 
   private async request(path: string, options: any = {}, timeoutMs = 8_000) {
+    // SSRF false positive happens here @ Memo 187291
     const url = new URL(path, this.baseUrl);
     if (url.hostname !== this.expectedHost) throw new Error("SSRF: host mismatch");
     const safeUrl = url.toString();

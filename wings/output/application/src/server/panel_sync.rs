@@ -89,8 +89,10 @@ impl PanelSync {
                                         self.fetch_config_once().await;
                                     }
                                     "restart" => {
-                                        tracing::warn!("received restart command — shutting down");
-                                        std::process::exit(0);
+                                        tracing::warn!("received restart command — restarting via systemctl");
+                                        let _ = std::process::Command::new("systemctl")
+                                            .args(["restart", "wings"])
+                                            .spawn();
                                     }
                                     other => {
                                         tracing::warn!("unknown command from panel: {}", other);
