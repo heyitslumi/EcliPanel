@@ -1,0 +1,24 @@
+name: "EcliPanel CodeQL config"
+disable-default-queries: false
+
+packs:
+  - codeql/javascript-queries
+  - codeql/rust-queries
+
+query-filters:.
+  - exclude:
+      id: rust/path-injection
+      paths:
+        - wings/source/application/src/server/filesystem/cap/mod.rs
+        - wings/patched/application/src/server/filesystem/cap/mod.rs
+        - wings/output/application/src/server/filesystem/cap/mod.rs
+  - exclude:
+      id: rust/path-injection
+      paths:
+        - tunnel/server/src/main.rs
+        - tunnel/client/src/main.rs
+  - exclude:
+      id: js/request-forgery
+      paths:
+        - backend/src/services/cloudflareService.ts
+        - backend/src/services/alertDispatcher.ts

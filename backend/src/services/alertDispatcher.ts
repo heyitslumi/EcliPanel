@@ -126,10 +126,15 @@ async function resolveRecipients(finding: FindingAlert): Promise<Array<{ userId:
   return recipients;
 }
 
+const PRIVATE_IP_RE = /^(?:127\.|10\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.168\.|0\.|169\.254\.|2(?:2[4-9]|3\d)\.(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\.)/;
+const WEBHOOK_HOST_RE = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
+
 async function sendWebhook(rawUrl: string, finding: FindingAlert): Promise<boolean> {
   try {
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== "https:") throw new Error("SSRF: webhooks must use HTTPS");
+    if (PRIVATE_IP_RE.test(parsed.hostname)) throw new Error("SSRF: internal IP not allowed");
+    if (!WEBHOOK_HOST_RE.test(parsed.hostname)) throw new Error("SSRF: invalid hostname");
     const url = parsed.toString();
     const color = finding.severity === 'critical' ? 0xFF0000
       : finding.severity === 'high' ? 0xFF6600
