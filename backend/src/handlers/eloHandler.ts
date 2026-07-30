@@ -1058,7 +1058,7 @@ export async function eloRoutes(app: any, prefix = '') {
         currentEloSlots: eloLimit,
         votesCast,
         votesForNextSlot,
-        totalProjects: projects.length,
+        totalProjects: projects.filter(p => p.serverId && p.moderationStatus !== 'disqualified' && p.githubUrl).length,
       };
     },
     {
@@ -1284,7 +1284,7 @@ export async function eloRoutes(app: any, prefix = '') {
         },
         projects: enriched,
         stats: {
-          totalProjects: projects.length,
+          totalProjects: projects.filter(p => p.moderationStatus !== 'disqualified' && p.githubUrl).length,
           totalVotesCast: votesCast,
           highestElo: projects.length > 0 ? Math.max(...projects.map(p => p.eloScore)) : 1000,
           totalFeedbacks: feedbacks.length,
