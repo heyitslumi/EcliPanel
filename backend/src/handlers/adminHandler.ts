@@ -1522,6 +1522,7 @@ export async function adminRoutes(app: any, prefix = '') {
       return { kycPending, studentPending, ticketsOpen, fraudUsers, ordersPending, socAlerts };
     },
     {
+      beforeHandle: [authenticate],
       response: { 200: t.Any(), 401: t.Object({ error: t.String() }) },
       detail: { summary: 'Get admin badge counts for sidebar', tags: ['Admin'] },
     },

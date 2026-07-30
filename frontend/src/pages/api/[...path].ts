@@ -41,8 +41,10 @@ export const ALL: APIRoute = async ({ request, params }) => {
     const contentType = request.headers.get("content-type");
     if (contentType) headers.set("content-type", contentType);
 
+    const ct = request.headers.get("content-type") || "";
+    const isMultipart = ct.includes("multipart/form-data");
     const body = request.method !== "GET" && request.method !== "HEAD"
-      ? await request.text()
+      ? isMultipart ? await request.arrayBuffer() : await request.text()
       : undefined;
 
     const res = await fetch(targetUrl, {

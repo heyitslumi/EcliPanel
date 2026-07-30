@@ -103,7 +103,7 @@ import {
   GitBranch,
 } from "lucide-react"
 
-const ConsoleTabLazy = lazy(() => import("./ConsoleTab").then((m) => ({ default: m.ConsoleTab })))
+import { ConsoleTab } from "./ConsoleTab"
 const StatsTabLazy = lazy(() => import("./StatsTab").then((m) => ({ default: m.StatsTab })))
 const FilesTabLazy = lazy(() => import("./FilesTab").then((m) => ({ default: m.FilesTab })))
 const FirewallTabLazy = lazy(() => import("./FirewallTab").then((m) => ({ default: m.FirewallTab })))
@@ -821,10 +821,17 @@ export default function ServerDetailPage({ params }: { params: Promise<{ id: str
         apiFetch(API_ENDPOINTS.serverDetail.replace(":id", id)),
         apiFetch(API_ENDPOINTS.eloMy).catch(() => null),
       ])
-      setServer(data)
+      setServer((prev: any) => {
+        // Skip update if data is structurally identical (avoids unmounting children)
+        if (prev && JSON.stringify(prev) === JSON.stringify(data)) return prev
+        return data
+      })
       if (eloData?.projects) {
         const match = eloData.projects.find((p: any) => p.serverId === id)
-        setEloProject(match || null)
+        setEloProject((prev: any) => {
+          if (prev?.id === match?.id) return prev
+          return match || null
+        })
       }
     } catch (e) {
       console.error("Failed to load server", e)
@@ -841,15 +848,21 @@ export default function ServerDetailPage({ params }: { params: Promise<{ id: str
         const meId = user?.id
         const match = data.find(
           (d: any) => d.userId === meId || (meEmail && d.userEmail === meEmail)
-        )
-        setSubuserEntry(match || null)
+        ) || null
+        setSubuserEntry((prev: any) => {
+          if (JSON.stringify(prev) === JSON.stringify(match)) return prev
+          return match
+        })
       } else if (data && typeof data === "object") {
-        setSubuserEntry(data)
+        setSubuserEntry((prev: any) => {
+          if (JSON.stringify(prev) === JSON.stringify(data)) return prev
+          return data
+        })
       } else {
-        setSubuserEntry(null)
+        setSubuserEntry((prev: any) => (prev === null ? prev : null))
       }
     } catch {
-      setSubuserEntry(null)
+      setSubuserEntry((prev: any) => (prev === null ? prev : null))
     }
   }, [id, user?.email, user?.id])
 
@@ -1509,7 +1522,7 @@ const dmcaAlert = isDmcaProtected ? (
           <div className="border border-border bg-card overflow-hidden min-w-0 w-full">
             {activeTab === "console" && (
               <Suspense fallback={<LoadingState message={t("states.loadingConsole")} />}>
-                <ConsoleTabLazy serverId={id} installing={server?.installing} />
+                <ConsoleTab serverId={id} installing={server?.installing} />
               </Suspense>
             )}
             {activeTab === "stats" && (

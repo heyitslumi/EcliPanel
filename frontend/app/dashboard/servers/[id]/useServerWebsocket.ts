@@ -41,7 +41,10 @@ export interface ServerResources {
 }
 
 export function useServerWebsocket(serverId: string): ServerWebsocketState {
-  const wsRef = useRef<WingsSocket | null>(null)
+  // Stable WebSocket instance — never replaced during the component lifetime
+  const wsRef = useRef<WingsSocket>(new WingsSocket())
+  const stableWs = wsRef.current
+
   const intentionallyClosedRef = useRef(false)
   const tokenRefreshFailuresRef = useRef(0)
 
@@ -54,19 +57,9 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
   const [transferProgress, setTransferProgress] = useState<TransferProgress | null>(null)
   const [transferLogs, setTransferLogs] = useState<string[]>([])
 
-  const getWs = useCallback((): WingsSocket => {
-    if (!wsRef.current) {
-      wsRef.current = new WingsSocket()
-    }
-    return wsRef.current
-  }, [])
-
   const connect = useCallback(async () => {
     if (intentionallyClosedRef.current) return
-
-    const ws = getWs()
-
-    if (ws.getState() === State.CONNECTED || ws.getState() === State.CONNECTING) return
+    if (stableWs.getState() === State.CONNECTED || stableWs.getState() === State.CONNECTING) return
 
     setConnectionState('connecting')
 
@@ -83,27 +76,23 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
       }
 
       if (directUrl && directToken) {
-        ws.setToken(directToken)
-        ws.connect(directUrl)
+        stableWs.setToken(directToken)
+        stableWs.connect(directUrl)
       } else {
-        ws.setToken(token)
-        ws.connect(url)
+        stableWs.setToken(token)
+        stableWs.connect(url)
       }
     } catch {
       setConnectionState('disconnected')
     }
-  }, [serverId, getWs])
+  }, [serverId, stableWs])
 
   useEffect(() => {
-    const ws = getWs()
-
     const onOpen = () => {
       setConnected(true)
       setConnectionState('connected')
       setSocketError(null)
       tokenRefreshFailuresRef.current = 0
-      // Don't send logs/stats here — auth hasn't completed yet.
-      // Wings ignores commands before auth success.
     }
 
     const onClose = () => {
@@ -126,16 +115,15 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
       setConnected(true)
       setConnectionState('connected')
       tokenRefreshFailuresRef.current = 0
-
-      ws.send('send logs', [])
-      ws.send('send stats', [])
+      stableWs.send('send logs', [])
+      stableWs.send('send stats', [])
     }
 
     const onTokenExpiring = async () => {
       try {
         const creds = await apiFetch(API_ENDPOINTS.serverWebsocket.replace(':id', serverId))
         if (creds?.data?.token) {
-          ws.setToken(creds.data.token, true)
+          stableWs.setToken(creds.data.token, true)
           tokenRefreshFailuresRef.current = 0
         }
       } catch {
@@ -158,7 +146,6 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
 
     const onStatus = (args: unknown[]) => {
       const status = String(args?.[0] ?? '').toLowerCase()
-
       setConnectionState(status)
 
       if (status === 'running' || status === 'connected' || status === 'online') {
@@ -178,21 +165,12 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
       }
     }
 
-    const onInstallStarted = () => {
-      setInstalling(true)
-    }
-
+    const onInstallStarted = () => { setInstalling(true) }
     const onInstallCompleted = (args: unknown[]) => {
       setInstalling(false)
-      const successful = String(args?.[0] ?? '') === 'true'
-      if (!successful) {
-        setConnectionState('install_failed')
-      }
+      if (String(args?.[0] ?? '') !== 'true') setConnectionState('install_failed')
     }
-
-    const onInstallOutput = () => {
-      setInstalling(true)
-    }
+    const onInstallOutput = () => { setInstalling(true) }
 
     const onStats = (args: unknown[]) => {
       const stats = (args?.[0] ?? {}) as Record<string, unknown>
@@ -206,44 +184,40 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
     }
 
     const onDaemonError = (args: unknown[]) => {
-      const msg = args?.join(' ') ?? 'Daemon error'
       setSocketError({
         type: SocketErrorType.DAEMON_ERROR,
-        message: String(msg),
+        message: String(args?.join(' ') ?? 'Daemon error'),
         recoverable: true,
         reconnectAttempt: 0,
         nextRetryMs: 0,
       })
     }
 
-    ws.on('SOCKET_OPEN', onOpen)
-    ws.on('SOCKET_CLOSE', onClose)
-    ws.on('SOCKET_ERROR_STATE', onErrorState)
-    ws.on('SOCKET_ERROR_CLEAR', onErrorClear)
-    ws.on('auth success', onAuthSuccess)
-    ws.on('token expiring', onTokenExpiring)
-    ws.on('token expired', onTokenExpired)
-    ws.on('status', onStatus)
-    ws.on('install started', onInstallStarted)
-    ws.on('install completed', onInstallCompleted)
-    ws.on('install output', onInstallOutput)
-    ws.on('stats', onStats)
-    ws.on('daemon error', onDaemonError)
-    
-    ws.on('transfer status', (args: unknown[]) => {
+    stableWs.on('SOCKET_OPEN', onOpen)
+    stableWs.on('SOCKET_CLOSE', onClose)
+    stableWs.on('SOCKET_ERROR_STATE', onErrorState)
+    stableWs.on('SOCKET_ERROR_CLEAR', onErrorClear)
+    stableWs.on('auth success', onAuthSuccess)
+    stableWs.on('token expiring', onTokenExpiring)
+    stableWs.on('token expired', onTokenExpired)
+    stableWs.on('status', onStatus)
+    stableWs.on('install started', onInstallStarted)
+    stableWs.on('install completed', onInstallCompleted)
+    stableWs.on('install output', onInstallOutput)
+    stableWs.on('stats', onStats)
+    stableWs.on('daemon error', onDaemonError)
+
+    stableWs.on('transfer status', (args: unknown[]) => {
       const status = String(args?.[0] ?? '')
       if (status === 'processing') {
         setTransferring(true)
-      } else if (status === 'completed') {
-        setTransferring(false)
-        setTransferProgress(null)
-      } else if (status === 'failure') {
+      } else if (status === 'completed' || status === 'failure') {
         setTransferring(false)
         setTransferProgress(null)
       }
     })
 
-    ws.on('transfer progress', (args: unknown[]) => {
+    stableWs.on('transfer progress', (args: unknown[]) => {
       const p = (args?.[0] ?? {}) as Record<string, unknown>
       setTransferring(true)
       setTransferProgress({
@@ -254,44 +228,31 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
       })
     })
 
-    ws.on('transfer logs', (args: unknown[]) => {
+    stableWs.on('transfer logs', (args: unknown[]) => {
       const msg = String(args?.[0] ?? '')
-      if (msg) {
-        setTransferLogs(prev => [...prev.slice(-100), msg])
-      }
+      if (msg) setTransferLogs(prev => [...prev.slice(-100), msg])
     })
 
-    // Defer connect() so child components (ConsoleTab) have time to
-    // register their own ws.on(...) handlers before the WebSocket
-    // handshake completes.  Otherwise console output events arrive
-    // during the auth window and are dropped.
     const id = setTimeout(() => connect(), 0)
 
     return () => {
       clearTimeout(id)
       intentionallyClosedRef.current = true
-      ws.close()
-      wsRef.current = null
+      stableWs.close()
     }
-  }, [serverId, getWs, connect]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [serverId, stableWs, connect])
 
   const reconnect = useCallback(() => {
-    const ws = getWs()
     intentionallyClosedRef.current = false
     tokenRefreshFailuresRef.current = 0
-    ws.close()
-    wsRef.current = new WingsSocket()
-
-    setTimeout(() => {
-      connect()
-    }, 200)
-  }, [getWs, connect])
+    stableWs.close()
+    setTimeout(() => connect(), 200)
+  }, [stableWs, connect])
 
   const sendCommand = useCallback(
     (cmd: string) => {
-      const ws = getWs()
-      if (ws.isConnected()) {
-        ws.send('send command', [cmd])
+      if (stableWs.isConnected()) {
+        stableWs.send('send command', [cmd])
       } else {
         apiFetch(API_ENDPOINTS.serverCommands.replace(':id', serverId), {
           method: 'POST',
@@ -299,11 +260,11 @@ export function useServerWebsocket(serverId: string): ServerWebsocketState {
         }).catch(() => {})
       }
     },
-    [serverId, getWs],
+    [serverId, stableWs],
   )
 
   return {
-    ws: getWs(),
+    ws: stableWs,
     connected,
     connectionState,
     installing,

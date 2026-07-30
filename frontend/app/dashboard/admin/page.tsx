@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { useTranslations } from "next-intl"
+import AdminLayout from "./layout"
 import { PanelHeader } from "@/components/panel/header"
 import { StatCard, SectionHeader, StatusBadge } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -4173,7 +4174,7 @@ remote: ${panelUrl}`
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <AdminLayout>
       <PanelHeader title={t("header.title")} description={t("header.description")} />
       <div className="border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground mb-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -7962,6 +7963,6 @@ remote: ${panelUrl}`
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </AdminLayout>
   )
 }

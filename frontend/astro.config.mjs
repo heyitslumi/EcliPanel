@@ -15,6 +15,7 @@ export default defineConfig({
   site: process.env.SITE_URL || 'https://ecli.app',
   security: {
     checkOrigin: false,
+    csp: false,
   },
 
   vite: {

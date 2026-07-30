@@ -239,6 +239,7 @@ export default function TicketDetailPage({
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const prevTicketRef = useRef<any>(null)
+  const lastMsgHashRef = useRef<string>("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -256,7 +257,9 @@ export default function TicketDetailPage({
           setChangeNotifications((prev) => [...prev, ...diff])
         prevTicketRef.current = data
         setTicket(data)
-        setMessages(buildMessages(data, t))
+        const initMsgs = buildMessages(data, t)
+        lastMsgHashRef.current = JSON.stringify(initMsgs)
+        setMessages(initMsgs)
         setReplyPriority(data?.priority || "medium")
         setAdminStatus(data?.status || "")
         setAdminPriority(data?.priority || "medium")
@@ -289,7 +292,12 @@ export default function TicketDetailPage({
           setChangeNotifications((prev) => [...prev, ...diff])
         prevTicketRef.current = data
         setTicket(data)
-        setMessages(buildMessages(data, t))
+        const newMsgs = buildMessages(data, t)
+        const msgHash = JSON.stringify(newMsgs)
+        if (msgHash !== lastMsgHashRef.current) {
+          lastMsgHashRef.current = msgHash
+          setMessages(newMsgs)
+        }
       } catch {
         // ignore poll errors
       }
@@ -298,17 +306,17 @@ export default function TicketDetailPage({
     return () => clearInterval(pollId)
   }, [id, isAdmin, user?.id, t])
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on initial load + when new messages arrive
   useEffect(() => {
-    requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-    })
-  }, [messages])
-
-  // Initial scroll
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "instant" })
-  }, [loading])
+    if (!loading && messages.length > 0) {
+      // Double rAF ensures DOM has painted before scrolling
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" })
+        })
+      })
+    }
+  }, [loading, messages.length])
 
   // Auto-resize textarea
   useEffect(() => {

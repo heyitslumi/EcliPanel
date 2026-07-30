@@ -591,7 +591,7 @@ app.request(async (rawCtx: unknown) => {
     });
   }
 
-  const _rateLimitIP = remoteAddr || effectiveIP;
+  const _rateLimitIP = effectiveIP || remoteAddr;
   const now = Date.now();
   const existing = _rateBuckets.get(_rateLimitIP);
   const bucket =

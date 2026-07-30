@@ -1,5 +1,6 @@
 "use client"
 
+import "@xterm/xterm/css/xterm.css"
 import { useRef, useState, useEffect, useCallback } from "react"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
@@ -602,7 +603,6 @@ export function ConsoleTab({ serverId, installing: installingProp }: ConsoleTabP
       const { Terminal } = await import("@xterm/xterm")
       const { FitAddon } = await import("@xterm/addon-fit")
       const { WebLinksAddon } = await import("@xterm/addon-web-links")
-      await import("@xterm/xterm/css/xterm.css")
 
       if (cancelledRef.current || !termRef.current || termDisposed) return
 
