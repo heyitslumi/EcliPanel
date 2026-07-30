@@ -2,7 +2,7 @@
 
 import { calculateEloResources } from "@/lib/elo-resources"
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -47,8 +47,7 @@ function EloBadge({ score }: { score: number }) {
 
 export default function EloUserProfile() {
   const t = useTranslations("eloPage")
-  const params = useParams()
-  const userId = params?.id as string
+  const userId = (() => { try { const m = window.location.pathname.match(/\/users\/([^/]+)/); return m?.[1] || ""; } catch { return ""; } })()
   const [data, setData] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 

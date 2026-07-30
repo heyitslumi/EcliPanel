@@ -110,8 +110,8 @@ export function UsageBar({ label, value, max = 100, color = "primary" }: { label
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-mono text-foreground">{value}%</span>
+        <span className="text-muted-foreground truncate max-w-[70%]" title={label}>{label}</span>
+        <span className="font-mono text-foreground shrink-0">{value}%</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden bg-secondary">
         <div

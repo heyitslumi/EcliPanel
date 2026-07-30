@@ -2010,7 +2010,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-destructive">{passwordError}</p>
                   </div>
                 )}
-                <div className="grid grid-cols-1 gap-4">
+                <form onSubmit={(e) => { e.preventDefault(); updatePassword(); }} className="grid grid-cols-1 gap-4">
                   <div className="relative">
                     <FormInput
                       label={t("security.currentPassword")}
@@ -2063,7 +2063,7 @@ export default function SettingsPage() {
                       placeholder={t("security.confirmPasswordPlaceholder")}
                     />
                   </div>
-                </div>
+                </form>
                 <div className="mt-5 flex justify-end">
                   <button
                     onClick={updatePassword}

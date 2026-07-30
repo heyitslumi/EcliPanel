@@ -307,7 +307,7 @@ export default function MetricsTab() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={serverStatusData} margin={{ top: 8, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, angle: -90, textAnchor: "end" }} tickLine={false} axisLine={false} interval={0} />
                 <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} width={38} />
                 <Tooltip content={<SharedTooltip />} />
                 <Bar dataKey="value" name={t("cards.servers.title")} radius={[6, 6, 0, 0]}>

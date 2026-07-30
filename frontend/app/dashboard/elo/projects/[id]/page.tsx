@@ -2,7 +2,6 @@
 
 import { calculateEloResources } from "@/lib/elo-resources"
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { PanelHeader } from "@/components/panel/header"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -71,10 +70,15 @@ function StatCard({ icon: Icon, label, children }: { icon: any; label: string; c
   )
 }
 
+function getIdFromPath(): string | null {
+  if (typeof window === "undefined") return null;
+  const m = window.location.pathname.match(/\/projects\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
 export default function EloProjectProfile() {
   const t = useTranslations("eloPage")
-  const params = useParams()
-  const id = params?.id as string
+  const [id] = useState(() => getIdFromPath())
   const [project, setProject] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedDevlog, setExpandedDevlog] = useState<number | null>(null)

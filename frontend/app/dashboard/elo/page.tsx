@@ -214,8 +214,18 @@ function EloProgression({ eloScore, isHackClub, averageElo }: { eloScore: number
 export default function EloDashboard() {
   const t = useTranslations("eloPage")
   const searchParams = useSearchParams()
-  const [myProjects, setMyProjects] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const prefetched = (() => {
+    try {
+      const el = document.getElementById("__elo_data");
+      if (el?.textContent) return JSON.parse(el.textContent);
+    } catch {}
+    return null;
+  })();
+
+  const [myProjects, setMyProjects] = useState<any>(prefetched)
+  const [loading, setLoading] = useState(!prefetched)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [eloStats, setEloStats] = useState<any>(null)
   const [editingProject, setEditingProject] = useState<any | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [editDesc, setEditDesc] = useState("")
@@ -225,7 +235,6 @@ export default function EloDashboard() {
   const [editScreenshots, setEditScreenshots] = useState("")
   const [editSaving, setEditSaving] = useState(false)
   const [expandedReadme, setExpandedReadme] = useState<number | null>(null)
-  const [eloStats, setEloStats] = useState<{ averageElo: number; medianElo: number; totalProjects: number } | null>(null)
   const [devlogProjectId, setDevlogProjectId] = useState<number | null>(null)
   const [devlogTitle, setDevlogTitle] = useState("")
   const [devlogContent, setDevlogContent] = useState("")
@@ -233,23 +242,32 @@ export default function EloDashboard() {
   const [devlogImages, setDevlogImages] = useState<string[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
 
-  const loadMyProjects = () => {
-    setLoading(true)
-    Promise.all([
-      apiFetch(API_ENDPOINTS.eloMy),
-      apiFetch("/api/elo/stats").catch(() => null),
-    ]).then(([data, stats]) => {
-      setMyProjects(data)
-      if (stats) setEloStats(stats)
-    }).catch(() => {
-      setMyProjects(null)
-    }).finally(() => {
-      setLoading(false)
-    })
-  }
-
   useEffect(() => {
-    loadMyProjects()
+    let cancelled = false
+    async function fetchData() {
+      try {
+        const promises: Promise<any>[] = [apiFetch(API_ENDPOINTS.eloMy)]
+        if (prefetched) {
+          const stats = await apiFetch("/api/elo/stats").catch(() => null);
+          if (!cancelled && stats) setEloStats(stats);
+          return;
+        }
+        promises.push(apiFetch("/api/elo/stats").catch(() => null));
+        const [data, stats] = await Promise.all(promises);
+        if (cancelled) return
+        setMyProjects(data)
+        if (stats) setEloStats(stats)
+        setLoadError(null)
+      } catch (e: any) {
+        if (cancelled) return
+        setMyProjects(null)
+        setLoadError(e?.message || "Failed to load")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchData()
+    return () => { cancelled = true }
   }, [])
 
   const openEdit = (p: any) => {
@@ -340,11 +358,19 @@ export default function EloDashboard() {
       />
       <ScrollArea className="flex-1 overflow-x-hidden max-w-[100vw] box-border">
         <PageLayout>
+          {loadError && !loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="bg-destructive/10 border border-destructive/20 p-4 max-w-md text-center">
+                <p className="text-sm text-destructive">{loadError}</p>
+                <button onClick={() => { setLoadError(null); setLoading(true); }} className="mt-2 text-xs text-primary hover:underline">Retry</button>
+              </div>
+            </div>
+          )}
           {loading ? (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : (
+          ) : loadError ? null : (
             <>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="border border-border/50 bg-card px-4 py-2.5 flex items-center gap-3">

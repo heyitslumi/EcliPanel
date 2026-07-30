@@ -8,8 +8,30 @@ const { locale, messages, initialUser, pathname } = await getPageData(
   Astro.request.headers,
   Astro.url.pathname,
 );
+
+const cookieHeader = Astro.request.headers.get("cookie") || "";
+const BACKEND_URL = (import.meta.env.BACKEND_URL || import.meta.env.PUBLIC_API_BASE || "").replace(/\/+$/, "");
+
+let eloPrefetch: any = null;
+
+if (cookieHeader && BACKEND_URL && initialUser) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/elo/my`, { headers: { cookie: cookieHeader } });
+    if (res.ok) {
+      eloPrefetch = await res.json();
+    }
+  } catch { /* sob */ }
+}
 ---
 
 <BaseLayout>
-  <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={pathname} />
+  <PageShell
+    client:only="react"
+    locale={locale}
+    messages={messages}
+    initialUser={initialUser}
+    page="app"
+    pathname={pathname}
+  />
+  {eloPrefetch && <script id="__elo_data" type="application/json">{JSON.stringify(eloPrefetch)}</script>}
 </BaseLayout>

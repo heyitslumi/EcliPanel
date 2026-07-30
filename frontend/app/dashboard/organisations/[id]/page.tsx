@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { PanelHeader } from "@/components/panel/header";
@@ -36,8 +36,7 @@ function getAvatarUrl(url?: string): string | undefined {
 
 export default function OrganisationDetail() {
   const t = useTranslations("organisationsDetailPage");
-  const params = useParams();
-  const id = params?.id as string | undefined;
+  const id = (() => { try { const m = window.location.pathname.match(/\/organisations\/([^/]+)/); return m?.[1]; } catch { return undefined; } })();
   const orgId = id ?? "";
   const perms = useOrgPermissions(orgId);
   const { user } = useAuth();

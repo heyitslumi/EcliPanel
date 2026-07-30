@@ -2,7 +2,7 @@
 
 import { calculateEloResources } from "@/lib/elo-resources"
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -67,8 +67,7 @@ function StatBox({ icon: Icon, label, value }: { icon: any; label: string; value
 
 export default function PublicEloProjectProfile() {
   const t = useTranslations("eloPage")
-  const params = useParams()
-  const id = params?.id as string
+  const id = (() => { try { const m = window.location.pathname.match(/\/projects\/([^/]+)/); return m?.[1] || ""; } catch { return ""; } })()
   const [project, setProject] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedDevlog, setExpandedDevlog] = useState<number | null>(null)

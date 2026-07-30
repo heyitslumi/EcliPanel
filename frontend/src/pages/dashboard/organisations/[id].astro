@@ -8,8 +8,10 @@ const { locale, messages, initialUser, pathname } = await getPageData(
   Astro.request.headers,
   Astro.url.pathname,
 );
+const { id } = Astro.params;
 ---
 
 <BaseLayout>
   <PageShell client:only="react" locale={locale} messages={messages} initialUser={initialUser} page="app" pathname={pathname} />
+  <script id="__astro_params" type="application/json">{JSON.stringify({ id })}</script>
 </BaseLayout>

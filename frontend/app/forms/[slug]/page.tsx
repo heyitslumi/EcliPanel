@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useParams, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
@@ -181,7 +181,7 @@ function VisibilityBadge({ visibility, labels }: { visibility: string; labels: R
 
 export default function PublicFormPage() {
   const t = useTranslations("publicFormPage")
-  const params = useParams<{ slug: string }>()
+  const params = (() => { try { const m = window.location.pathname.match(/\/([^/]+)$/); return { slug: m?.[1] || "" }; } catch { return { slug: "" }; } })()
   const searchParams = useSearchParams()
   const { user } = useAuth()
 

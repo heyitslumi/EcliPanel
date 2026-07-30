@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { CheckCircle, Clock, Loader2, Users, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
@@ -39,7 +39,7 @@ interface BookingEvent {
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 export default function BookingPage() {
-  const { id } = useParams<{ id: string }>()
+  const id = (() => { try { const m = window.location.pathname.match(/\/book\/([^/]+)/); return m?.[1] || ""; } catch { return ""; } })()
   const router = useRouter()
   const isSchedule = typeof id === "string" && id.startsWith("avail-")
   const scheduleSlug = isSchedule ? (id as string).replace("avail-", "") : null

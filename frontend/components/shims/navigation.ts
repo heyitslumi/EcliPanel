@@ -101,20 +101,30 @@ export function useSearchParams(): URLSearchParams {
 }
 
 export function useParams<T extends Record<string, string> = Record<string, string>>(): T {
-  const [params, setParams] = useState<T>({} as T);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const el = document.getElementById("__astro_params");
-        if (el && el.textContent) {
-          setParams(JSON.parse(el.textContent));
-        }
-      } catch {
-        // hello world!
+  const [params, setParams] = useState<T>(() => {
+    if (typeof document !== "undefined") {
+      const el = document.getElementById("__astro_params");
+      if (el?.textContent) {
+        try { return JSON.parse(el.textContent) as T; } catch {}
       }
     }
-  }, []);
+    return {} as T;
+  });
+
+  useEffect(() => {
+    if (Object.keys(params).length > 0) return;
+    let attempts = 0;
+    const tryRead = () => {
+      if (typeof document === "undefined") return;
+      const el = document.getElementById("__astro_params");
+      if (el?.textContent) {
+        try { setParams(JSON.parse(el.textContent)); } catch {}
+        return;
+      }
+      if (++attempts < 5) setTimeout(tryRead, 50 * attempts);
+    };
+    tryRead();
+  }, [params]);
 
   return params;
 }

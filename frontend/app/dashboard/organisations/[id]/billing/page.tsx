@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PanelHeader } from "@/components/panel/header";
 import { PageLayout, SectionHeader } from "@/components/panel/shared";
@@ -17,8 +17,7 @@ import { CreditCard, Globe, FileText, Loader2, ArrowRight, Check } from "lucide-
 export default function OrgBillingPage() {
   const t = useTranslations("orgBilling");
   const bt = useTranslations("billingPage");
-  const params = useParams();
-  const orgId = (params?.id as string) ?? "";
+  const orgId = (() => { try { const m = window.location.pathname.match(/\/organisations\/([^/]+)/); return m?.[1] || ""; } catch { return ""; } })();
   const perms = useOrgPermissions(orgId);
   const router = useRouter();
 

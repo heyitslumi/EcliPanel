@@ -1,7 +1,7 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/panel-config";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { motion, type Variants } from "framer-motion";
@@ -83,7 +83,7 @@ export function ContributorClient() {
   const [data, setData] = useState<ContributorsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  let { id } = useParams<{ id: string }>();
+  let id = (() => { try { const m = window.location.pathname.match(/\/contributors\/([^/]+)/); return m?.[1] || ""; } catch { return ""; } })();
   try {
     id = decodeURIComponent(id);
   } catch {

@@ -229,11 +229,11 @@ function BarStat({
         },
       }}
     >
-      <p className="text-[#171717]/60 font-flink text-2xl sm:text-xl leading-tight">
+      <p className="text-[#171717]/60 font-flink text-sm sm:text-xs leading-tight truncate w-full" title={label}>
         {label}
       </p>
 
-      <p className="text-[#171717] font-flink text-sm sm:text-xs leading-none">
+      <p className="text-[#171717] font-flink text-lg sm:text-sm leading-none mt-1">
         {value.toLocaleString()}
       </p>
     </motion.div>

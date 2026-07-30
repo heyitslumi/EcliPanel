@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import Link from "next/link"
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 
 export default function ResetPasswordPage() {
   const t = useTranslations("resetPasswordPage")
-  const { token } = useParams() as { token: string }
+  const token = (() => { try { const m = window.location.pathname.match(/\/([^/]+)$/); return m?.[1] || ""; } catch { return ""; } })()
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [message, setMessage] = useState<string | null>(null)

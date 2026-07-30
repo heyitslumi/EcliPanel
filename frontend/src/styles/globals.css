@@ -3,6 +3,14 @@
 @import "shadcn/tailwind.css";
 @plugin "@tailwindcss/typography";
 
+.guide-highlight {
+  position: relative;
+  z-index: 199999;
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.5), 0 0 0 8px hsl(var(--primary) / 0.2);
+  border-radius: 4px;
+  transition: box-shadow 0.2s ease;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 .prose {

@@ -10,7 +10,12 @@ export const ALL: APIRoute = async ({ request, params }) => {
     });
   }
 
-  const url = new URL(request.url);
+  let url: URL;
+  try {
+    url = new URL(request.url);
+  } catch {
+    url = new URL(request.url, "http://localhost");
+  }
   const path = params.path || "";
 
   let targetUrl: string;
@@ -40,6 +45,8 @@ export const ALL: APIRoute = async ({ request, params }) => {
     if (auth) headers.set("authorization", auth);
     const contentType = request.headers.get("content-type");
     if (contentType) headers.set("content-type", contentType);
+    const origin = request.headers.get("origin");
+    if (origin) headers.set("origin", origin);
 
     const ct = request.headers.get("content-type") || "";
     const isMultipart = ct.includes("multipart/form-data");

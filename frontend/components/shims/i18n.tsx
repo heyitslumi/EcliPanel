@@ -9,6 +9,8 @@ interface I18nContextValue {
   messages: Messages;
 }
 
+const EMPTY_OBJ: Record<string, any> = Object.freeze({});
+
 function getNested(obj: Record<string, any>, path: string): string | undefined {
   const keys = path.split(".");
   let current: any = obj;
@@ -34,17 +36,16 @@ export function IntlProvider({
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+const FALLBACK_I18N: I18nContextValue = Object.freeze({ locale: "en", messages: Object.freeze({}) });
+
 function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
-  if (!ctx) {
-    return { locale: "en", messages: {} };
-  }
-  return ctx;
+  return ctx || FALLBACK_I18N;
 }
 
 export function useTranslations(namespace: string) {
   const { messages } = useI18n();
-  const ns = messages[namespace] ?? {};
+  const ns = messages[namespace] ?? EMPTY_OBJ;
 
   return useMemo(() => {
     function t(key: string, values?: Record<string, any>): any {

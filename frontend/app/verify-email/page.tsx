@@ -17,7 +17,15 @@ function VerifyEmailClient() {
     }
 
     const apiPath = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
-    window.location.assign(apiPath);
+    fetch(apiPath, { redirect: "follow" })
+      .then(res => {
+        if (res.ok || res.redirected) {
+          window.location.href = "/dashboard?emailVerified=1";
+        } else {
+          setError(t("errors.generic"));
+        }
+      })
+      .catch(() => setError(t("errors.generic")));
   }, [token, t]);
 
   return (
