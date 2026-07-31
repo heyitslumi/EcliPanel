@@ -6610,7 +6610,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         const timeout = setTimeout(() => controller.abort(), 10000);
         try {
           const res = await fetch(
-            `https://api.papermc.io/v2/projects/paper/versions/${encodeURIComponent(requestedVersion)}/builds`,
+            `https://fill.papermc.io/v3/projects/paper/versions/${encodeURIComponent(requestedVersion)}/builds`,
             { signal: controller.signal }
           );
           if (!res.ok) {
@@ -6618,10 +6618,14 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
             return { error: ctx.t('server.failed_to_fetch_paper_builds') };
           }
           const data = await res.json();
-          const raw = Array.isArray(data) ? data : (Array.isArray(data.builds) ? data.builds : []);
+          const raw: unknown[] = Array.isArray(data) ? data : (Array.isArray((data as Record<string, unknown>).builds) ? (data as Record<string, unknown>).builds as unknown[] : []);
+          const mapped = raw.map((b: unknown) => {
+            const entry = b as Record<string, unknown>;
+            return { ...entry, build: entry.id ?? entry.build };
+          });
           return {
             version: requestedVersion,
-            builds: raw,
+            builds: mapped,
             currentVersion,
             currentBuild,
           };
@@ -6636,7 +6640,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       try {
-        const res = await fetch('https://api.papermc.io/v2/projects/paper', {
+        const res = await fetch('https://fill.papermc.io/v3/projects/paper', {
           signal: controller.signal,
         });
         if (!res.ok) {
@@ -6644,8 +6648,14 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
           return { error: ctx.t('server.failed_to_fetch_paper_versions') };
         }
         const data = (await res.json()) as Record<string, unknown>;
+        const groups = (data.versions ?? {}) as Record<string, string[]>;
+        const flat: string[] = [];
+        for (const arr of Object.values(groups)) {
+          if (Array.isArray(arr)) flat.push(...arr);
+        }
+        flat.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         return {
-          versions: data.versions ?? [],
+          versions: flat,
           currentVersion,
           currentBuild,
         };
@@ -6693,37 +6703,42 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
         try {
-          const projRes = await fetch('https://api.papermc.io/v2/projects/paper', {
+          const projRes = await fetch('https://fill.papermc.io/v3/projects/paper', {
             signal: controller.signal,
           });
           if (!projRes.ok) throw new Error('project fetch failed');
           const projData = (await projRes.json()) as Record<string, unknown>;
-          const versionList = (projData.versions as string[]) ?? [];
-          if (versionList.length === 0) throw new Error('no versions');
-          const latestVer = versionList[versionList.length - 1];
+          const groups = (projData.versions ?? {}) as Record<string, string[]>;
+          const flat: string[] = [];
+          for (const arr of Object.values(groups)) {
+            if (Array.isArray(arr)) flat.push(...arr);
+          }
+          flat.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+          if (flat.length === 0) throw new Error('no versions');
+          const latestVer = flat[flat.length - 1];
 
           const buildsRes = await fetch(
-            `https://api.papermc.io/v2/projects/paper/versions/${encodeURIComponent(latestVer)}/builds`,
+            `https://fill.papermc.io/v3/projects/paper/versions/${encodeURIComponent(latestVer)}/builds`,
             { signal: controller.signal }
           );
           if (!buildsRes.ok) throw new Error('builds fetch failed');
-          const buildsBody = await buildsRes.json();
-          const rawBuilds: unknown[] = Array.isArray(buildsBody) ? buildsBody : (Array.isArray((buildsBody as Record<string, unknown>).builds) ? (buildsBody as Record<string, unknown>).builds as unknown[] : []);
+          const rawBuilds: unknown[] = await buildsRes.json();
           if (rawBuilds.length === 0) throw new Error('no builds');
 
           const lastBuild = rawBuilds[rawBuilds.length - 1] as Record<string, unknown>;
-          const buildNum = lastBuild?.build;
+          const buildNum = lastBuild?.id ?? lastBuild?.build;
           if (buildNum === undefined || buildNum === null) throw new Error('missing build number');
 
           const buildNumStr = String(buildNum);
           const dl = (lastBuild.downloads as Record<string, unknown>) ?? {};
-          const appDl = (dl.application as Record<string, unknown>) ?? (dl['server:default'] as Record<string, unknown>) ?? {};
+          const appDl = (dl['server:default'] as Record<string, unknown>) ?? (dl.application as Record<string, unknown>) ?? {};
           const jarName = (appDl.name as string) ?? `paper-${latestVer}-${buildNumStr}.jar`;
+          const dlUrl = (appDl.url as string) ?? '';
 
           env.MINECRAFT_VERSION = latestVer;
           env.BUILD_NUMBER = buildNumStr;
           env.SERVER_JARFILE = jarName;
-          env.DL_PATH = `https://api.papermc.io/v2/projects/paper/versions/${latestVer}/builds/${buildNumStr}/downloads/${jarName}`;
+          env.DL_PATH = dlUrl;
         } catch (e) {
           ctx.set.status = 502;
           return { error: e instanceof Error ? e.message : 'Failed to resolve latest Paper version' };
@@ -6739,9 +6754,10 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
         let jarName: string;
+        let dlUrl: string;
         try {
           const res = await fetch(
-            `https://api.papermc.io/v2/projects/paper/versions/${encodeURIComponent(String(version))}/builds/${encodeURIComponent(String(build))}`,
+            `https://fill.papermc.io/v3/projects/paper/versions/${encodeURIComponent(String(version))}/builds/${encodeURIComponent(String(build))}`,
             { signal: controller.signal }
           );
           if (!res.ok) {
@@ -6750,8 +6766,9 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
           }
           const buildData = (await res.json()) as Record<string, unknown>;
           const downloads = (buildData.downloads as Record<string, unknown>) ?? {};
-          const appDownload = (downloads.application as Record<string, unknown>) ?? {};
+          const appDownload = (downloads['server:default'] as Record<string, unknown>) ?? (downloads.application as Record<string, unknown>) ?? {};
           jarName = (appDownload.name as string) ?? `paper-${version}-${build}.jar`;
+          dlUrl = (appDownload.url as string) ?? '';
         } catch {
           ctx.set.status = 502;
           return { error: ctx.t('server.failed_to_validate_paper_build') };
@@ -6762,7 +6779,7 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         env.MINECRAFT_VERSION = String(version);
         env.BUILD_NUMBER = String(build);
         env.SERVER_JARFILE = jarName;
-        env.DL_PATH = `https://api.papermc.io/v2/projects/paper/versions/${version}/builds/${build}/downloads/${jarName}`;
+        env.DL_PATH = dlUrl;
       }
 
       cfg.environment = env;
