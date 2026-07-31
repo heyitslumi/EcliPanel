@@ -115,7 +115,13 @@ async function flush() {
   try { await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }); } catch { /* best-effort */ }
 }
 
+function hasAnalyticsConsent(): boolean {
+  const v = localStorage.getItem("cookie_consent");
+  return v === "all" || v === "1";
+}
+
 function enqueue(payload: TelemetryPayload) {
+  if (!hasAnalyticsConsent()) return;
   globalBuffer.push(payload);
   if (globalBuffer.length >= BATCH_SIZE) { flush(); }
   else if (!globalTimer) { globalTimer = setTimeout(flush, FLUSH_INTERVAL); }

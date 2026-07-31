@@ -8,7 +8,7 @@ export function CookieConsent() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("cookie_consent") === "1") return;
+    if (localStorage.getItem("cookie_consent") !== null) return;
     const id = setTimeout(() => setVisible(true), 500);
     return () => clearTimeout(id);
   }, []);
@@ -30,12 +30,20 @@ export function CookieConsent() {
               <Link href="/legal/privacy-policy" className="underline underline-offset-2 hover:text-neutral-300 transition-colors">Privacy Policy</Link>
             </p>
           </div>
-          <button
-            onClick={() => { localStorage.setItem("cookie_consent", "1"); setDismissed(true); }}
-            className="w-full sm:w-auto sm:self-start h-10 px-8 bg-white text-black text-sm font-medium hover:bg-neutral-200 active:scale-[0.98] transition-all"
-          >
-            Accept all cookies
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <button
+              onClick={() => { localStorage.setItem("cookie_consent", "essential"); setDismissed(true); }}
+              className="h-10 px-6 border border-white/20 text-white text-sm font-medium hover:bg-white/5 active:scale-[0.98] transition-all"
+            >
+              Essential only
+            </button>
+            <button
+              onClick={() => { localStorage.setItem("cookie_consent", "all"); setDismissed(true); }}
+              className="h-10 px-8 bg-white text-black text-sm font-medium hover:bg-neutral-200 active:scale-[0.98] transition-all"
+            >
+              Accept all
+            </button>
+          </div>
         </div>
       </div>
     </div>
