@@ -6945,6 +6945,81 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
   );
 
   app.get(
+    prefix + '/servers/v1/:id/world',
+    async (ctx: AuthenticatedHandlerContext) => {
+      const { id } = (ctx.params ?? {}) as Record<string, string>;
+      const cfg = await cfgRepo().findOneBy({ uuid: id });
+      if (!cfg) {
+        ctx.set.status = 404;
+        return { error: ctx.t('server.notFound') };
+      }
+
+      const svc = await serviceFor(id);
+      if (!(svc instanceof WingsApiService)) {
+        ctx.set.status = 400;
+        return { error: ctx.t('server.this_endpoint_is_only_available_for_wings_nodes') };
+      }
+
+      try {
+        // Send /seed and poll the log for output (Wings commands write to console, not HTTP response)
+        const fileLines = async () => {
+          const res = await (svc as WingsApiService).readFile(id, 'logs/latest.log');
+          return typeof res.data === 'string' ? res.data : String(res.data ?? '');
+        };
+
+        let beforeText: string;
+        try { beforeText = await fileLines(); } catch { beforeText = ''; }
+        const beforeLen = beforeText.length;
+
+        await svc.executeServerCommand(id, 'seed');
+
+        let fullText = beforeText;
+        for (const delay of [400, 600, 800]) {
+          await new Promise(r => setTimeout(r, delay));
+          try {
+            fullText = await fileLines();
+            if (fullText.length > beforeLen) break;
+          } catch {}
+        }
+
+        const newContent = fullText.slice(Math.max(0, beforeLen - 200));
+        const seedMatch = newContent.match(/Seed:\s*\[?([\d-]+)\]?/i);
+        const seed = seedMatch ? seedMatch[1] : null;
+        if (!seed) {
+          ctx.set.status = 502;
+          return { error: 'Server did not return a seed — make sure the server is running' };
+        }
+
+        let levelName: string | undefined;
+        try {
+          const propsRes = await (svc as WingsApiService).readFile(id, 'server.properties');
+          const text = typeof (propsRes as any)?.data === 'string' ? (propsRes as any).data : '';
+          for (const line of text.split('\n')) {
+            const m = line.trim().match(/^level-name\s*=\s*(.+)$/i);
+            if (m) { levelName = m[1].trim(); break; }
+          }
+        } catch {}
+
+        return { seed, levelName };
+      } catch {
+        ctx.set.status = 502;
+        return { error: 'Failed to query world seed from server' };
+      }
+    },
+    {
+      beforeHandle: [authenticate, requireProvider('wings'), authorize('servers:read')],
+      response: {
+        200: t.Any(),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+        502: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Query world seed via server console', tags: ['Servers', 'Minecraft'] },
+    }
+  );
+
+  app.get(
     prefix + '/servers/v1/:id/mounts',
     async (ctx: AuthenticatedHandlerContext) => {
       const { id } = (ctx.params ?? {}) as Record<string, string>;

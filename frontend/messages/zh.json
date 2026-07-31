@@ -6480,7 +6480,22 @@
       "ops": "管理员",
       "versions": "版本",
       "plugins": "插件",
-      "settings": "设置"
+      "settings": "设置",
+      "world": "世界"
+    },
+    "world": {
+      "seed": "种子",
+      "worldName": "世界名称",
+      "seedType": "种子类型",
+      "standard": "标准",
+      "signedNegative": "负数",
+      "structureMap": "结构地图",
+      "structureMapDesc": "切换结构、生物群系和地形图层以探索您的世界。",
+      "noWorldData": "未找到世界数据",
+      "noWorldDataDesc": "无法读取 level.dat。请确保服务器至少生成过一次世界。",
+      "readingWorld": "正在读取世界数据...",
+      "serverOffline": "服务器必须在线才能获取种子",
+      "failedToParse": "无法从服务器响应中解析种子"
     },
     "players": {
       "onlineCount": "{online} / {max} 名玩家在线",
@@ -6596,7 +6611,8 @@
       "installPlugin": "安装插件失败",
       "toggleWhitelist": "切换白名单失败",
       "saveSettings": "保存设置失败",
-      "reinstallInitiated": "重装已启动 – 服务器将使用新版本重装。"
+      "reinstallInitiated": "重装已启动 – 服务器将使用新版本重装。",
+      "loadWorld": "无法加载世界数据"
     },
     "startup": {
       "startupCommand": "启动命令",

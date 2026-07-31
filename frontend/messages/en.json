@@ -6578,7 +6578,8 @@
       "ops": "OPs",
       "versions": "Versions",
       "plugins": "Plugins",
-      "settings": "Settings"
+      "settings": "Settings",
+      "world": "World"
     },
     "players": {
       "onlineCount": "{online} / {max} players online",
@@ -6681,6 +6682,20 @@
       "deopConfirm": "Deop \"{player}\"?",
       "reasonPlaceholder": "Reason (optional)"
     },
+    "world": {
+      "seed": "Seed",
+      "worldName": "World Name",
+      "seedType": "Seed Type",
+      "standard": "Standard",
+      "signedNegative": "Signed (negative)",
+      "structureMap": "Structure Map",
+      "structureMapDesc": "Toggle structures, biomes, and terrain layers to explore your world.",
+      "noWorldData": "No world data found",
+      "noWorldDataDesc": "Unable to read level.dat. Make sure the server has generated a world at least once.",
+      "readingWorld": "Reading world data...",
+      "serverOffline": "Server must be online to query world seed",
+      "failedToParse": "Failed to parse seed from server response"
+    },
     "errors": {
       "loadPlayers": "Failed to load players",
       "loadPaperVersions": "Failed to load Paper versions",
@@ -6694,7 +6709,8 @@
       "installPlugin": "Failed to install plugin",
       "toggleWhitelist": "Failed to toggle whitelist",
       "saveSettings": "Failed to save settings",
-      "reinstallInitiated": "Reinstall initiated – the server will be reinstalled with the new version."
+      "reinstallInitiated": "Reinstall initiated – the server will be reinstalled with the new version.",
+      "loadWorld": "Failed to load world data"
     },
     "startup": {
       "startupCommand": "Startup Command",

@@ -6481,7 +6481,22 @@
       "ops": "OP",
       "versions": "バージョン",
       "plugins": "プラグイン",
-      "settings": "設定"
+      "settings": "設定",
+      "world": "ワールド"
+    },
+    "world": {
+      "seed": "シード",
+      "worldName": "ワールド名",
+      "seedType": "シードタイプ",
+      "standard": "標準",
+      "signedNegative": "負の数",
+      "structureMap": "構造マップ",
+      "structureMapDesc": "構造、バイオーム、地形レイヤーを切り替えて探索します。",
+      "noWorldData": "ワールドデータが見つかりません",
+      "noWorldDataDesc": "level.dat を読み取れません。サーバーがワールドを生成していることを確認してください。",
+      "readingWorld": "ワールドデータを読み込み中...",
+      "serverOffline": "シードを取得するにはサーバーがオンラインである必要があります",
+      "failedToParse": "サーバー応答からシードを解析できません"
     },
     "players": {
       "onlineCount": "{online} / {max} 人のプレイヤーがオンライン",
@@ -6597,7 +6612,8 @@
       "installPlugin": "プラグインのインストールに失敗しました",
       "toggleWhitelist": "ホワイトリストの切り替えに失敗しました",
       "saveSettings": "設定の保存に失敗しました",
-      "reinstallInitiated": "再インストールが開始されました – サーバーは新しいバージョンで再インストールされます。"
+      "reinstallInitiated": "再インストールが開始されました – サーバーは新しいバージョンで再インストールされます。",
+      "loadWorld": "ワールドデータの読み込みに失敗しました"
     },
     "startup": {
       "startupCommand": "起動コマンド",

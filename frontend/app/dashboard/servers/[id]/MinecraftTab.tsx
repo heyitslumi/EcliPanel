@@ -64,7 +64,7 @@ function mcAvatar(p: { name: string; uuid?: string }, size = 32) {
 
 interface Player { name: string; uuid?: string }
 
-type McTabView = "online" | "whitelist" | "bans" | "ops" | "versions" | "plugins" | "playerdat" | "settings"
+type McTabView = "online" | "whitelist" | "bans" | "ops" | "versions" | "plugins" | "playerdat" | "settings" | "world"
 
 interface MinecraftTabProps {
   serverId: string
@@ -199,6 +199,12 @@ export function MinecraftTab({ serverId, server, subuserEntry }: MinecraftTabPro
   const [knownPlayers, setKnownPlayers] = useState<Player[]>([])
   const [knownPlayersTotal, setKnownPlayersTotal] = useState(0)
   const [knownPlayersLoading, setKnownPlayersLoading] = useState(false)
+
+  // seed thingy
+
+  const [worldInfo, setWorldInfo] = useState<{ seed: string; levelName?: string } | null>(null)
+  const [worldLoading, setWorldLoading] = useState(false)
+  const [seedCopied, setSeedCopied] = useState(false)
 
   // ─── Load players ───────────────────────────────────────────────────────────
 
@@ -481,6 +487,15 @@ export function MinecraftTab({ serverId, server, subuserEntry }: MinecraftTabPro
     if (tab === "playerdat") loadKnownPlayers()
   }, [tab, loadKnownPlayers])
 
+  useEffect(() => {
+    if (tab !== "world") return
+    setWorldLoading(true)
+    apiFetch(API_ENDPOINTS.serverWorld.replace(":id", serverId))
+      .then((data: any) => setWorldInfo({ seed: data.seed ?? "", levelName: data.levelName }))
+      .catch(() => setError(t("errors.loadWorld")))
+      .finally(() => setWorldLoading(false))
+  }, [serverId, tab])
+
   // ─── Derived ────────────────────────────────────────────────────────────────
 
   const filteredPlayers = players.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -496,6 +511,7 @@ export function MinecraftTab({ serverId, server, subuserEntry }: MinecraftTabPro
     { id: "plugins", label: t("tabs.plugins"), icon: Package },
     { id: "playerdat", label: "Players", icon: Users },
     { id: "settings", label: t("tabs.settings"), icon: Settings },
+    { id: "world", label: t("tabs.world"), icon: Globe },
   ]
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -1155,6 +1171,84 @@ export function MinecraftTab({ serverId, server, subuserEntry }: MinecraftTabPro
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WORLD VIEWER via Seed*/}
+      {tab === "world" && (
+        <div className="space-y-4 min-w-0">
+          {worldLoading ? (
+            <LoadingState message={t("world.readingWorld")} />
+          ) : worldInfo ? (
+            <>
+              <div className="border border-border bg-card">
+                <div className="p-3.5 sm:p-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">{worldInfo.levelName || t("world.worldName")}</h3>
+                  </div>
+                </div>
+                <div className="p-3.5 sm:p-4 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("world.seed")}</label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-secondary/30 border border-border px-3 py-2.5 text-sm font-mono text-foreground select-all break-all">{worldInfo.seed}</code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-10 p-0 flex-shrink-0"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(worldInfo.seed)
+                            setSeedCopied(true)
+                            setTimeout(() => setSeedCopied(false), 2000)
+                          } catch {}
+                        }}
+                        title={t("world.seed")}
+                      >
+                        {seedCopied ? <Check className="h-4 w-4 text-green-500" /> : <span className="text-xs">Copy</span>}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {worldInfo.levelName && (
+                      <div className="border border-border bg-secondary/20 p-3">
+                        <p className="text-[11px] text-muted-foreground mb-0.5">{t("world.worldName")}</p>
+                        <p className="text-sm text-foreground truncate">{worldInfo.levelName}</p>
+                      </div>
+                    )}
+                    <div className="border border-border bg-secondary/20 p-3">
+                      <p className="text-[11px] text-muted-foreground mb-0.5">{t("world.seedType")}</p>
+                      <p className="text-sm text-foreground">{BigInt(worldInfo.seed) < 0n ? t("world.signedNegative") : t("world.standard")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <CollapsibleSection title={t("world.structureMap")} icon={Globe} defaultOpen>
+                <div className="space-y-2 pt-3">
+                  <p className="text-xs text-muted-foreground">{t("world.structureMapDesc")}</p>
+                  <div className="border border-border overflow-hidden" style={{ aspectRatio: "16/10" }}>
+                    <iframe
+                      src={`/api/proxy/web/mcseedmap/${encodeURIComponent(worldInfo.seed)}`}
+                      className="w-full h-full border-0"
+                      sandbox="allow-scripts allow-popups"
+                      loading="lazy"
+                      title={t("world.structureMap")}
+                    />
+                  </div>
+                </div>
+              </CollapsibleSection>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center border border-border bg-card">
+              <div className="rounded-full bg-secondary/50 p-3 mb-3">
+                <Globe className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">{t("world.noWorldData")}</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">{t("world.noWorldDataDesc")}</p>
+              </p>
             </div>
           )}
         </div>
