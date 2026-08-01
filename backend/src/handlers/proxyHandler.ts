@@ -224,13 +224,32 @@ export function proxyRoutes(app: any, prefix: string) {
         let html = new TextDecoder().decode(body);
         html = html.replace(new RegExp('<script[^>]*\\b(?:' + AD.source + ')[^>]*>[\\s\\S]*?<\\/script>', 'gi'), '');
 
-        const siteHost = (() => { try { return new URL(origin).hostname; } catch { return ''; } })();
+        const siteHost = (() => {
+          try {
+            const url = new URL(origin);
+            if (!['http:', 'https:'].includes(url.protocol)) return '';
+            const hostname = url.hostname.toLowerCase().trim();
+            if (!hostname || hostname.includes(':') || url.port || url.username || url.password) {
+              return '';
+            }
+            if (!hostname.includes('.') && hostname !== 'localhost') return '';
+            return hostname;
+          } catch {
+            return '';
+          }
+        })();
+
         if (siteHost) {
-          const siteRe = new RegExp('https?:\\/\\/' + siteHost.replace(/\./g, '\\.'), 'gi');
+          const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const siteRe = new RegExp('https?://' + esc(siteHost) + '(?=[/"\\s]|$)', 'gi');
+          const protoRelativeRe = new RegExp('//(?=' + esc(siteHost) + '(?:[/"\\s]|$))', 'gi');
           html = html.replace(siteRe, proxyPath);
-          html = html.replace(new RegExp('\\/\\/' + siteHost.replace(/\./g, '\\.'), 'gi'), proxyPath);
+          html = html.replace(protoRelativeRe, proxyPath);
           html = html.replace(/srcset=["']([^"']+)["']/gi, (_m: string, urls: string) => {
-            return 'srcset="' + urls.split(',').map((u: string) => u.trim().replace(siteRe, proxyPath)).join(', ') + '"';
+            return 'srcset="' + urls.split(',').map((u: string) => {
+              const trimmed = u.trim();
+              return trimmed.replace(siteRe, proxyPath);
+            }).join(', ') + '"';
           });
         }
 
