@@ -22,6 +22,7 @@ import { createActivityLog } from './logHandler';
 import { updateElo, kFactorForProject, calculateEloResources } from '../services/eloService';
 import { sanitizeError } from '../utils/sanitizeError';
 import { getRolloutTreatment } from '../services/rolloutService';
+import { getGeoBlockLevel, requiresKyc, isKycVerified } from '../utils/eu';
 import { httpRequest } from '../utils/http';
 import path from 'path';
 import fs from 'fs';
@@ -262,6 +263,47 @@ export async function eloRoutes(app: any, prefix = '') {
 
       const user = ctx.user;
       const isAdmin = hasPermissionSync(ctx, 'admin:access');
+      
+      const geoLevel = await getGeoBlockLevel(user.billingCountry);
+      if (!isAdmin && geoLevel >= 4) {
+        ctx.set.status = 403;
+        return { error: ctx.t('user.serverCreationDisabled') };
+      }
+
+      if (!isAdmin && (await requiresKyc(user.billingCountry)) && !(await isKycVerified(user.id))) {
+        ctx.set.status = 403;
+        return { error: ctx.t('server.kyc_verification_required_for_your_country_please_verify_you') };
+      }
+
+      const effectivePortalType = user.portalType;
+
+      if (!isAdmin) {
+        const passkeyCount = await AppDataSource.getRepository(
+          require('../models/passkey.entity').Passkey
+        ).count({ where: { user: { id: user.id } } });
+        const hasSecurityMethod = passkeyCount > 0 || !!user.twoFactorEnabled;
+        if (!hasSecurityMethod) {
+          ctx.set.status = 403;
+          return { error: ctx.t('user.mustEnable2fa') };
+        }
+
+        if (
+          geoLevel >= 3 &&
+          (effectivePortalType === 'free' || effectivePortalType === 'educational')
+        ) {
+          ctx.set.status = 403;
+          return { error: ctx.t('plan.restrictedCountryEdu') };
+        }
+        if (geoLevel >= 2 && effectivePortalType === 'free') {
+          ctx.set.status = 403;
+          return { error: ctx.t('plan.restrictedCountry') };
+        }
+
+        if (!user.emailVerified) {
+          ctx.set.status = 403;
+          return { error: ctx.t('user.mustVerifyEmail') };
+        }
+      }
 
       const body = ctx.body as Record<string, any>;
       const { eggId, name, nodeId, memory: reqMem, disk: reqDisk, cpu: reqCpu } = body;
