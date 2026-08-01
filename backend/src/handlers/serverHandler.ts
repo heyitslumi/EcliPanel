@@ -57,6 +57,7 @@ import {
 } from '../utils/ipv6';
 import { t } from 'elysia';
 import { httpRequest } from '../utils/http';
+import { assertSafeUrl } from '../utils/ssrf';
 import {
   DEFAULT_STARTUP_DETECTION_PATTERN,
   normalizeStartupDonePatterns,
@@ -4552,6 +4553,13 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       const adapter = 'wings';
       const truncate_directory = body.truncate_directory === true;
       const download_url = body.download_url;
+      if (download_url !== undefined && download_url !== null && download_url !== '') {
+        const safe = await assertSafeUrl(String(download_url));
+        if (!safe) {
+          ctx.set.status = 400;
+          return { error: ctx.t('server.invalidDownloadUrl') || 'download_url must be a public http(s) URL' };
+        }
+      }
       try {
         const svc = await serviceFor(id);
         const res = await svc.restoreServerBackup(id, bid, {
