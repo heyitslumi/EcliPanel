@@ -400,6 +400,24 @@ export async function orderRoutes(app: any, prefix = '') {
       const f = await requireFeature(ctx, 'billing');
       if (f !== true) return f;
       const user = ctx.user as any;
+
+      try {
+        const ip = (ctx.ip || ctx.request?.ip || '').toString().slice(0, 200);
+        const rl = await require('../config/redis').consumeRateLimit(
+          `rate:order:create:user:${user?.id}:ip:${ip}`,
+          Number(process.env.ORDER_CREATE_RATE || 20),
+          Number(process.env.ORDER_CREATE_WINDOW || 3600)
+        );
+        if (!rl.allowed) {
+          ctx.set.status = 429;
+          ctx.set.headers = {
+            ...(ctx.set.headers || {}),
+            'Retry-After': String(rl.retryAfterSeconds),
+          };
+          return { error: 'rate_limited', retryAfter: rl.retryAfterSeconds };
+        }
+      } catch {}
+
       const body = ctx.body as Partial<Order>;
 
       if (body.orgId) {

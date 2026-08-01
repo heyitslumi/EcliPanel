@@ -249,6 +249,24 @@ export async function couponRoutes(app: any, prefix = '') {
       if (f !== true) return f;
 
       const user = ctx.user as any;
+
+      try {
+        const ip = (ctx.ip || ctx.request?.ip || '').toString().slice(0, 200);
+        const rl = await require('../config/redis').consumeRateLimit(
+          `rate:coupon:validate:user:${user?.id}:ip:${ip}`,
+          Number(process.env.COUPON_VALIDATE_RATE || 30),
+          Number(process.env.COUPON_VALIDATE_WINDOW || 3600)
+        );
+        if (!rl.allowed) {
+          ctx.set.status = 429;
+          ctx.set.headers = {
+            ...(ctx.set.headers || {}),
+            'Retry-After': String(rl.retryAfterSeconds),
+          };
+          return { error: 'rate_limited', retryAfter: rl.retryAfterSeconds };
+        }
+      } catch {}
+
       const body = ctx.body as any;
       const { code, orderAmount } = body;
 

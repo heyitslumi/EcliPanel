@@ -122,11 +122,16 @@ export async function apiKeyRoutes(app: any, prefix = '') {
           return { error: ctx.t('admin.apiKeyAdminOnly') };
         }
       }
+      
+      const requestedPerms = Array.isArray(permissions) ? permissions : [];
+      const grantedPerms = requestedPerms.filter(
+        (p: unknown) => typeof p === 'string' && hasPermissionSync(ctx, p)
+      );
 
       const ent = repo.create({
         name,
         type,
-        permissions: permissions || [],
+        permissions: grantedPerms,
         key,
         user: userRef,
         createdAt: new Date(),
