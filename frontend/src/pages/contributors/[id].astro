@@ -13,7 +13,7 @@ try {
   if (res.ok) {
     const data = await res.json();
     const list = Array.isArray(data?.contributors) ? data.contributors : [];
-    const c = list.find((x: any) => String(x.login || "").toLowerCase() === id) ?? null;
+    const c = list.find((x: any) => String(x.login || "").toLowerCase() === String(id || "").toLowerCase()) ?? null;
     if (c) { title = `${c.displayName || c.login} — Contributors — EclipseSystems`; description = c.title || c.bio || ""; }
   }
 } catch {}
