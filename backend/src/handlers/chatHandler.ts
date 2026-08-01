@@ -564,6 +564,7 @@ export async function chatRoutes(app: any, prefix = '') {
   }, { beforeHandle: [optionalAuth], detail: { tags: ['Chat', 'Admin'], summary: 'Unhide a message (moderator)' } });
 
   app.get(prefix + '/admin/chat/ip-logs', async (ctx: any) => {
+    if (!isChatMod(ctx)) { ctx.set.status = 403; return { error: ctx.t('chat.not_authorized') }; }
     const messageId = ctx.query?.messageId ? Number(ctx.query.messageId) : undefined;
     const qb = ipLogRepo().createQueryBuilder('l');
     if (messageId) qb.where('l.messageId = :messageId', { messageId });
