@@ -1243,12 +1243,18 @@ export async function initApp() {
         });
       }
 
+      const inlineExts = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+      const isInlineImage = inlineExts.has(ext);
+      const responseType = isInlineImage ? (mimeTypes[ext] ?? 'application/octet-stream') : 'application/octet-stream';
+
       return new Response(new Uint8Array(buf), {
         status: 200,
         headers: {
-          'Content-Type': contentType,
+          'Content-Type': responseType,
           'Content-Length': String(buf.length),
           'Cache-Control': 'private, max-age=300',
+          'X-Content-Type-Options': 'nosniff',
+          ...(isInlineImage ? {} : { 'Content-Disposition': 'attachment' }),
         },
       });
     },
