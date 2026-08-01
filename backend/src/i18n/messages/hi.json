@@ -549,7 +549,14 @@
     "invalid_user_id": "अमान्य उपयोगकर्ता ID",
     "user_not_found_1": "उपयोगकर्ता नहीं मिला",
     "invalid_user_id_1": "अमान्य उपयोगकर्ता ID",
-    "user_not_found_2": "उपयोगकर्ता नहीं मिला"
+    "user_not_found_2": "उपयोगकर्ता नहीं मिला",
+    "companyMailboxNotFound": "कंपनी मेलबॉक्स नहीं मिला",
+    "companyMailboxNotProvisioned": "कंपनी मेलबॉक्स अभी तक प्रावधानित नहीं है। मेल सिंक जॉब चलाएं या बाद में पुनः प्रयास करें।",
+    "mailboxRotationFailed": "मेलबॉक्स पासवर्ड रोटेट करने में विफल",
+    "mailboxMessageNotFound": "मेलबॉक्स संदेश नहीं मिला",
+    "mailboxDeleteFailed": "मेलबॉक्स संदेश हटाने में विफल",
+    "mailboxReplyFailed": "जवाब भेजने में विफल",
+    "mailboxSendFailed": "ईमेल भेजने में विफल"
   },
   "system": {
     "jwtUnavailable": "jwt अनुपलब्ध",

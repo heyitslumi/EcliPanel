@@ -18,6 +18,9 @@ const STAFF_PERMS = [
   "deletions:write", "idverification:read", "admin:student:verify",
   "tickets:read", "chat:manage", "ai:read",
   "applications:manage", "admin.shorturl.add",
+  "admin:mailbox:hi", "admin:mailbox:support", "admin:mailbox:hello",
+  "admin:mailbox:contact", "admin:mailbox:security",
+  "admin:mailbox:abuse", "admin:mailbox:legal", "admin:mailbox:hq",
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

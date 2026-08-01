@@ -1,8 +1,8 @@
 import { BaseEmail } from './BaseEmail';
-import { Hr, Section } from '@react-email/components';
+import { Section } from '@react-email/components';
 
 interface NotificationProps {
-  title: string;
+  title?: string;
   message: string;
   messageHtml?: string;
   details?: string;
@@ -46,9 +46,11 @@ const detailsStyle = {
 export function Notification({ title, message, messageHtml, details, t }: NotificationProps) {
   return (
     <BaseEmail previewText={title} t={t}>
-      <Section style={{ marginBottom: '32px', paddingBottom: '24px' }}>
-        <h1 style={headingStyle}>{title}</h1>
-      </Section>
+      {title ? (
+        <Section style={{ marginBottom: '32px', paddingBottom: '24px' }}>
+          <h1 style={headingStyle}>{title}</h1>
+        </Section>
+      ) : null}
 
       <Section style={{ marginBottom: '24px' }}>
         {messageHtml ? (
@@ -59,15 +61,6 @@ export function Notification({ title, message, messageHtml, details, t }: Notifi
       </Section>
 
       {details && <Section style={detailsStyle}>{details}</Section>}
-
-      <Hr
-        style={{
-          height: '1px',
-          background: 'linear-gradient(to right, transparent, #2a2a4a 50%, transparent)',
-          border: 'none',
-          margin: '24px 0',
-        }}
-      />
     </BaseEmail>
   );
 }

@@ -1,7 +1,7 @@
 import { schedule } from '../utils/cron';
 import { AppDataSource } from '../config/typeorm';
 import { User } from '../models/user.entity';
-import { ensureMailboxAccountForUser, isMailcowConfigured } from '../services/mailcowService';
+import { ensureCompanyMailboxes, ensureMailboxAccountForUser, isMailcowConfigured } from '../services/mailcowService';
 
 export async function syncMailboxAccounts() {
   if (!AppDataSource.isInitialized) return;
@@ -30,6 +30,12 @@ export async function syncMailboxAccounts() {
         );
       }
     }
+  }
+
+  if (!sawCriticalFailure) {
+    await ensureCompanyMailboxes().catch(e =>
+      console.error('[mailboxSyncJob] failed to ensure company mailboxes', e)
+    );
   }
 }
 

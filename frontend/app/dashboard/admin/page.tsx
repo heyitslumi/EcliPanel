@@ -147,6 +147,11 @@ const OutboundEmailsTab = dynamic(() => import("./tabs/OutboundEmailsTab"), {
   loading: () => <div className="text-sm text-muted-foreground p-4">Loading outbound emails...</div>,
 })
 
+const CompanyMailboxesTab = dynamic(() => import("./tabs/CompanyMailboxesTab"), {
+  ssr: false,
+  loading: () => <div className="text-sm text-muted-foreground p-4">Loading company mailboxes...</div>,
+})
+
 const DeletionsTab = dynamic(() => import("./tabs/DeletionsTab"), {
   ssr: false,
   loading: () => <div className="text-sm text-muted-foreground p-4">Loading deletions tab...</div>,
@@ -1010,6 +1015,7 @@ export default function AdminPanel() {
     { value: 'logs', label: t('tabs.logs'), category: 'security', permissions: ['logs:read'] },
     { value: 'announcements', label: t('tabs.announcements'), category: 'communication', permissions: ['admin:announcements'] },
     { value: 'tickets', label: t('tabs.tickets'), category: 'communication', feature: 'ticketing', permissions: ['tickets:read', 'tickets:ban', 'tickets:delete', 'admin:ticket:staff'] },
+    { value: 'company-mailboxes', label: t('tabs.companyMailboxes'), category: 'communication', permissions: ['admin:mailbox:hi', 'admin:mailbox:support', 'admin:mailbox:hello', 'admin:mailbox:contact', 'admin:mailbox:security', 'admin:mailbox:abuse', 'admin:mailbox:legal', 'admin:mailbox:hq'] },
     { value: 'chat', label: t('tabs.chat') || 'Chat', category: 'communication', feature: 'chat', permissions: ['chat:manage'] },
     { value: 'feedback', label: t('tabs.feedback'), category: 'communication', permissions: ['admin:access'] },
     { value: 'oauth', label: t('tabs.oauth'), category: 'integrations', feature: 'oauth', permissions: ['oauth:manage', 'admin:oauth'] },
@@ -5210,6 +5216,10 @@ remote: ${panelUrl}`
             </TabsContent>
             <TabsContent value="applications" className="mt-4">
               {activeTab === "applications" ? <ApplicationsTab /> : null}
+            </TabsContent>
+            {/* ═══════════════ COMPANY MAILBOXES ════════════════════════════ */}
+            <TabsContent value="company-mailboxes" className="mt-4">
+              {activeTab === "company-mailboxes" ? <CompanyMailboxesTab /> : null}
             </TabsContent>
             {/* ═══════════════ KYC / VERIFICATIONS ════════════════════════════ */}
             <TabsContent value="verifications" className="mt-4">

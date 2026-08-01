@@ -1658,7 +1658,8 @@
       "rollouts": "发布",
       "audit": "审计",
       "feedback": "反馈",
-      "chat": "聊天"
+      "chat": "聊天",
+      "companyMailboxes": "公司邮箱"
     },
     "shortUrls": {
       "overview": {
@@ -6876,5 +6877,88 @@
     "retryActivation": "重新激活",
     "activationFailed": "激活失败",
     "syncFailed": "同步失败"
+  },
+  "companyMailboxesTab": {
+    "noAccess": "您没有访问任何公司邮箱的权限。请让管理员授予 admin:mailbox 权限。",
+    "aliasOf": "别名",
+    "viaAlias": "通过 {alias}",
+    "notProvisioned": "尚未配置 — 邮箱同步任务将创建它",
+    "openSogo": "打开 SOGo 网页邮箱",
+    "openSogoLogin": "打开 SOGo 登录",
+    "rotatePassword": "轮换密码",
+    "rotateConfirm": "轮换此邮箱的密码？当前密码将立即失效。",
+    "rotateFailed": "密码轮换失败：{reason}",
+    "searchPlaceholder": "搜索主题、发件人、正文…",
+    "unreadOnly": "未读",
+    "refresh": "刷新",
+    "noMessages": "没有邮件",
+    "unknownSender": "未知发件人",
+    "spam": "垃圾邮件",
+    "virus": "病毒",
+    "total": "{count} 封邮件",
+    "from": "发件人",
+    "to": "收件人",
+    "selectMessage": "选择一封邮件进行查看",
+    "viewHtml": "打开 HTML 版本",
+    "htmlOnlyBody": "（纯 HTML 邮件 — 请打开 HTML 版本）",
+    "emptyBody": "（无文本内容）",
+    "attachments": "{count} 个附件",
+    "credsTitle": "邮箱登录凭据",
+    "credsHint": "旧密码已失效。请使用这些信息登录 SOGo 或邮件客户端。",
+    "email": "邮箱",
+    "password": "密码",
+    "close": "关闭",
+    "folder": {
+      "INBOX": "收件箱",
+      "Sent": "已发送",
+      "Trash": "回收站",
+      "Junk": "垃圾邮件"
+    },
+    "filter": {
+      "all": "全部",
+      "unread": "未读",
+      "read": "已读",
+      "replied": "已回复",
+      "not-replied": "未回复"
+    },
+    "replied": "已回复",
+    "reply": "回复",
+    "markRead": "标为已读",
+    "markUnread": "标为未读",
+    "delete": "删除",
+    "deleteForever": "永久删除",
+    "deleteConfirm": "将邮件移至回收站？",
+    "deleteForeverConfirm": "永久删除这封邮件？",
+    "actionFailed": "操作失败：{reason}",
+    "replyTitle": "以 {mailbox} 回复",
+    "subject": "主题",
+    "replyPlaceholder": "写下您的回复…",
+    "send": "发送",
+    "cancel": "取消",
+    "cc": "抄送",
+    "bcc": "密送",
+    "optionalField": "（可选）",
+    "priority": {
+      "low": "低",
+      "normal": "普通",
+      "high": "高"
+    },
+    "editor": {
+      "bold": "粗体",
+      "italic": "斜体",
+      "strike": "删除线",
+      "link": "链接",
+      "code": "代码",
+      "list": "列表",
+      "preview": "预览",
+      "edit": "编辑",
+      "loading": "加载中…"
+    },
+    "template": {
+      "plain": "普通邮件",
+      "notification": "品牌通知"
+    },
+    "compose": "写邮件",
+    "composeTitle": "从 {mailbox} 写邮件"
   }
 }

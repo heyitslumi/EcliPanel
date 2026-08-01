@@ -129,11 +129,61 @@ function normalizeLocalPart(email: string) {
   return local || 'user';
 }
 
-function randomPassword() {
-  return Buffer.from(randomBytes(16))
-    .toString('base64')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .slice(0, 24);
+function securePick(set: string): string {
+  const len = set.length;
+  const max = 256 - (256 % len);
+
+  let byte: number;
+  do {
+    byte = randomBytes(1)[0];
+  } while (byte >= max);
+
+  return set[byte % len];
+}
+
+function secureShuffle<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = securePickInt(i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function securePickInt(max: number): number {
+  const byteCount = Math.ceil(Math.log2(max) / 8) || 1;
+  const maxVal = 256 ** byteCount;
+  const limit = maxVal - (maxVal % max);
+
+  let val: number;
+  do {
+    const bytes = randomBytes(byteCount);
+    val = 0;
+    for (let i = 0; i < byteCount; i++) {
+      val = val * 256 + bytes[i];
+    }
+  } while (val >= limit);
+
+  return val % max;
+}
+
+export function randomPassword(): string {
+  // Vewy secuwe - Kimi K3 seriously lectured me so yep here we go
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digits = "0123456789";
+  const special = "!@#$%^&*()-_=+";
+  const all = lower + upper + digits + special;
+
+  const chars = [
+    securePick(lower),
+    securePick(upper),
+    securePick(digits),
+    securePick(special),
+    ...Array.from({ length: 20 }, () => securePick(all)),
+  ];
+
+  return secureShuffle(chars).join("");
 }
 
 function resolveMailboxDomain() {
@@ -167,7 +217,7 @@ async function getMailcowMailboxDetails(email: string) {
 }
 
 async function deleteMailcowAlias(aliasAddress: string) {
-  const payload = { address: aliasAddress };
+  const payload = { items: [aliasAddress] };
 
   const handleError = (err: any) => {
     const message = String(err?.message || err || '');
@@ -192,7 +242,7 @@ async function deleteMailcowAlias(aliasAddress: string) {
 }
 
 async function deleteMailcowMailbox(localPart: string, domain: string) {
-  const payload = { local_part: localPart, domain };
+  const payload = { items: [buildMailboxAddress(localPart, domain)] };
 
   const handleError = (err: any) => {
     const message = String(err?.message || err || '');
@@ -282,7 +332,15 @@ export async function isPanelAssignedMailboxEmail(email: string) {
   return false;
 }
 
-export async function createMailcowMailbox(localPart: string, domain: string, displayName: string) {
+const USER_MAILBOX_QUOTA_BYTES = String(1024 * 1024 * 1024);
+const COMPANY_MAILBOX_QUOTA_BYTES = String(10 * 1024 * 1024 * 1024); // 10GB for us but for users js 1 gb hehe
+
+export async function createMailcowMailbox(
+  localPart: string,
+  domain: string,
+  displayName: string,
+  quotaBytes: string = USER_MAILBOX_QUOTA_BYTES
+) {
   const password = randomPassword();
   const data = {
     local_part: localPart,
@@ -290,7 +348,7 @@ export async function createMailcowMailbox(localPart: string, domain: string, di
     password: password,
     password2: password,
     active: '1',
-    quota: '100',
+    quota: quotaBytes,
     authsource: 'mailcow',
     name: displayName,
     tls_enforce_in: '0',
@@ -298,6 +356,13 @@ export async function createMailcowMailbox(localPart: string, domain: string, di
   };
   await mailcowFetch('add/mailbox', data);
   return { localPart, domain, password };
+}
+
+async function ensureMailcowMailboxQuota(email: string, quotaBytes: string) {
+  await mailcowFetch('edit/mailbox', {
+    items: [email],
+    attr: { quota: quotaBytes },
+  });
 }
 
 export async function createMailcowAlias(
@@ -338,10 +403,11 @@ export async function rotateMailboxPasswordForAccount(account: MailboxAccount) {
   const newPass = randomPassword();
   try {
     await mailcowFetch('edit/mailbox', {
-      local_part: account.localPart,
-      domain: account.domain,
-      password: newPass,
-      password2: newPass,
+      items: [account.email],
+      attr: {
+        password: newPass,
+        password2: newPass,
+      },
     });
 
     account.password = newPass;
@@ -504,4 +570,109 @@ export function getMailboxConnectionInfo(domain?: string) {
     smtpPort: smtpConfig.port,
     smtpSecure: smtpConfig.secure,
   };
+}
+
+// admin:mailbox:{address} for prms
+export const COMPANY_MAILBOXES = [
+  { localPart: 'contact', userId: -1, aliases: ['hi', 'support', 'hello'] },
+  { localPart: 'security', userId: -2, aliases: [] },
+  { localPart: 'legal', userId: -3, aliases: ['abuse'] },
+  { localPart: 'hq', userId: -4, aliases: [] },
+] as const;
+
+export const COMPANY_MAILBOX_ADDRESSES = ['hi', 'support', 'hello', 'contact', 'security', 'abuse', 'legal', 'hq'] as const;
+
+export function companyMailboxPermission(address: string): string {
+  return `admin:mailbox:${address}`;
+}
+
+export function companyMailboxEntryForAddress(address: string) {
+  const a = String(address || '').toLowerCase();
+  return COMPANY_MAILBOXES.find((e) => e.localPart === a || e.aliases.includes(a as never)) || null;
+}
+
+export function companyMailboxEntryForUserId(userId: number) {
+  return COMPANY_MAILBOXES.find((e) => e.userId === userId) || null;
+}
+
+export function getSogoUrl(): string {
+  const configured = String(process.env.SOGO_URL || '').trim();
+  if (configured) return configured.replace(/\/+$/, '');
+  const domain = resolveMailboxDomain();
+  return `https://mail.${domain}/SOGo`;
+}
+
+export async function ensureCompanyMailboxes(): Promise<void> {
+  if (!isMailcowConfigured()) return;
+  const domain = resolveMailboxDomain();
+  const accountRepo = AppDataSource.getRepository(MailboxAccount);
+
+  for (const entry of COMPANY_MAILBOXES) {
+    const email = buildMailboxAddress(entry.localPart, domain);
+    try {
+      let account = await accountRepo.findOneBy({ userId: entry.userId }).catch(() => null);
+      if (account) {
+        const aliasAddresses = entry.aliases.map((a) => buildMailboxAddress(a, domain));
+        const existingAliases = Array.isArray(account.aliases) ? account.aliases : [];
+        for (const aliasAddress of aliasAddresses) {
+          if (!existingAliases.some((a) => a.address === aliasAddress)) {
+            await createMailcowAlias(aliasAddress, email, `Alias for ${email}`).catch(() => null);
+            existingAliases.push({ address: aliasAddress, canSendFrom: true, createdAt: new Date().toISOString() });
+          }
+        }
+        if (existingAliases.length !== (Array.isArray(account.aliases) ? account.aliases.length : 0)) {
+          account.aliases = existingAliases;
+          await accountRepo.save(account);
+        }
+        try {
+          await ensureMailcowMailboxQuota(email, COMPANY_MAILBOX_QUOTA_BYTES);
+        } catch { /* womp womp sad trombone */ }
+        continue;
+      }
+
+      await ensureMailcowDomain(domain);
+      const imapConfig = getImapConfig(domain);
+      const smtpConfig = getSmtpConfig(domain);
+      const base = {
+        userId: entry.userId,
+        uuid: `company-${entry.localPart}`,
+        localPart: entry.localPart,
+        domain,
+        email,
+        imapHost: imapConfig.host,
+        imapPort: imapConfig.port,
+        imapSecure: imapConfig.secure,
+        smtpHost: smtpConfig.host,
+        smtpPort: smtpConfig.port,
+        smtpSecure: smtpConfig.secure,
+        enabled: true,
+      };
+
+      const existingMailbox = await getMailcowMailboxDetails(email).catch(() => null);
+      if (!existingMailbox) {
+        const created = await createMailcowMailbox(entry.localPart, domain, `Company ${entry.localPart}@${domain}`, COMPANY_MAILBOX_QUOTA_BYTES);
+        const aliasAddresses = entry.aliases.map((a) => buildMailboxAddress(a, domain));
+        const aliases: Array<{ address: string; canSendFrom: boolean; createdAt: string }> = [];
+        for (const aliasAddress of aliasAddresses) {
+          try {
+            await createMailcowAlias(aliasAddress, email, `Alias for ${email}`);
+            aliases.push({ address: aliasAddress, canSendFrom: true, createdAt: new Date().toISOString() });
+          } catch { /* oop */ }
+        }
+        await accountRepo.save(accountRepo.create({
+          ...base,
+          password: created.password,
+          aliases,
+        }));
+      } else {
+        const account = accountRepo.create(base);
+        const rotated = await rotateMailboxPasswordForAccount(account);
+        if (!rotated.success) {
+          console.warn('[mailcowService] failed to claim existing company mailbox', email, rotated.error);
+        }
+      }
+    } catch (err: any) {
+      console.warn('[mailcowService] failed to ensure company mailbox', email, err?.message || err);
+    }
+  }
 }

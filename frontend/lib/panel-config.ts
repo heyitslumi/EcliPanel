@@ -430,6 +430,10 @@ export const API_ENDPOINTS = {
   adminUserProfile: "/api/admin/users/:id/profile",
   adminUserAiLink: "/api/admin/users/:id/ai/:linkId",
   adminOutboundEmails: "/api/admin/outbound-emails",
+  adminCompanyMailboxes: "/api/admin/company-mailboxes",
+  adminCompanyMailboxMessages: "/api/admin/company-mailboxes/:address/messages",
+  adminCompanyMailboxRotate: "/api/admin/company-mailboxes/:address/rotate-password",
+  adminCompanyMailboxPreview: "/api/admin/company-mailboxes/:address/preview",
   adminLogs: "/api/admin/logs",
   adminSlowQueries: "/api/admin/slow-queries",
   adminGlobalSearch: "/api/admin/search",
@@ -963,6 +967,7 @@ export const ADMIN_NAVIGATION: NavSection[] = [
     items: [
       { label: "Announcements", href: "/dashboard/admin?tab=announcements", icon: Megaphone },
       { label: "Tickets", href: "/dashboard/admin?tab=tickets", icon: MessageSquare },
+      { label: "Company Mailboxes", href: "/dashboard/admin?tab=company-mailboxes", icon: Mail },
       { label: "Chat", href: "/dashboard/admin?tab=chat", icon: MessageCircle },
       { label: "Feedback", href: "/dashboard/admin?tab=feedback", icon: ThumbsUp },
     ],

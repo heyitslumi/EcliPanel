@@ -51,10 +51,10 @@ export function BaseEmail({ previewText, children, t }: BaseEmailProps) {
           {children}
           <Hr
             style={{
+              border: 'none',
+              borderTop: '1px solid #2a2a4a',
               height: '1px',
-              border: '1px solid #2a2a4a',
-              marginTop: '32px',
-              paddingTop: '24px',
+              margin: '32px 0',
             }}
           />
           <Section style={footerStyle}>

@@ -25,10 +25,10 @@ export class MailMessage {
   @Column({ nullable: true })
   subject?: string;
 
-  @Column('text')
+  @Column({ type: 'longtext' })
   body: string;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'longtext' })
   html?: string;
 
   @Column({ nullable: true, type: 'simple-json' })
@@ -40,7 +40,7 @@ export class MailMessage {
     cid?: string;
   }[];
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'longtext' })
   headers?: string;
 
   @Index()
@@ -59,7 +59,7 @@ export class MailMessage {
   @Column({ nullable: true })
   virusName?: string;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'longtext' })
   rawHeaders?: string;
 
   @Column({ nullable: true })
@@ -99,6 +99,13 @@ export class MailMessage {
 
   @Column({ default: false })
   read: boolean;
+
+  @Index()
+  @Column({ default: 'INBOX' })
+  folder: string;
+
+  @Column({ default: false })
+  replied: boolean;
 
   @Column({ type: 'datetime' })
   receivedAt: Date;

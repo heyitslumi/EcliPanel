@@ -109,6 +109,14 @@ export async function initMail() {
   await transporter.verify();
 }
 
+export async function renderEmailTemplate(
+  name: string,
+  vars: Record<string, any>,
+  locale?: Locale
+) {
+  return renderReactTemplate(name, vars, locale);
+}
+
 async function renderReactTemplate(name: string, vars: Record<string, any>, locale?: Locale) {
   const templateName = name as TemplateName;
   const TemplateComponent = emailTemplates[templateName];

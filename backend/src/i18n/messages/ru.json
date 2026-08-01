@@ -549,7 +549,14 @@
     "invalid_user_id": "Invalid user ID",
     "user_not_found_1": "User not found",
     "invalid_user_id_1": "Invalid user ID",
-    "user_not_found_2": "User not found"
+    "user_not_found_2": "User not found",
+    "companyMailboxNotFound": "Корпоративный почтовый ящик не найден",
+    "companyMailboxNotProvisioned": "Корпоративный почтовый ящик ещё не настроен. Запустите задачу синхронизации почты или попробуйте позже.",
+    "mailboxRotationFailed": "Не удалось сменить пароль почтового ящика",
+    "mailboxMessageNotFound": "Сообщение ящика не найдено",
+    "mailboxDeleteFailed": "Не удалось удалить сообщение ящика",
+    "mailboxReplyFailed": "Не удалось отправить ответ",
+    "mailboxSendFailed": "Не удалось отправить письмо"
   },
   "system": {
     "jwtUnavailable": "JWT недоступен",

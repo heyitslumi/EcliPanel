@@ -18,6 +18,14 @@ import { scheduleMetricsCollectionJob } from './jobs/metricsCollectionJob';
 import { scheduleExportJobRunner } from './jobs/exportJobRunner';
 import { scheduleDeletionExecutionJob } from './jobs/deletionExecutionJob';
 import { scheduleMailboxSyncJob } from './jobs/mailboxSyncJob';
+import { companyMailboxEntryForUserId, companyMailboxPermission } from './services/mailcowService';
+import { MailboxAccount } from './models/mailboxAccount.entity';
+import { MailMessage } from './models/mailMessage.entity';
+import {
+  fetchAttachmentFromMailbox,
+  getCachedAttachment,
+  setCachedAttachment,
+} from './services/imapFetcher';
 import { scheduleOutboundEmailRunner } from './jobs/outboundEmailRunner';
 import { scheduleAdminBroadcastJobRunner } from './jobs/adminBroadcastJobRunner';
 import { scheduleSunsetPolicyJob } from './jobs/sunsetPolicyJob';
@@ -1110,7 +1118,7 @@ export async function initApp() {
       const relPath = String(ctx.params?.['*'] || '');
       let filepath: string;
       try {
-        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), relPath);
+        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), `mailbox/${relPath}`);
       } catch {
         return new Response(JSON.stringify({ error: 'not found' }), {
           status: 404,
@@ -1145,7 +1153,11 @@ export async function initApp() {
           });
         }
       } else {
-        if (String(requester.id) !== ownerId && !hasPermissionSync(ctx, 'mailbox:read')) {
+        const companyEntry = companyMailboxEntryForUserId(Number(ownerId));
+        const companyAllowed = companyEntry &&
+          (hasPermissionSync(ctx, companyMailboxPermission(companyEntry.localPart)) ||
+            companyEntry.aliases.some(a => hasPermissionSync(ctx, companyMailboxPermission(a))));
+        if (String(requester.id) !== ownerId && !hasPermissionSync(ctx, 'mailbox:read') && !companyAllowed) {
           return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' },
@@ -1164,28 +1176,72 @@ export async function initApp() {
         '.pdf': 'application/pdf',
         '.txt': 'text/plain',
       };
+      const savedMessageId = parts[2];
+      const fileName = parts.slice(3).join('/');
+      const cacheKey = `${ownerId}/${savedMessageId}/${fileName}`;
+      const cached = getCachedAttachment(cacheKey);
+      let buf: Buffer<ArrayBufferLike> | null = cached?.buffer ?? null;
+      let contentType = cached?.contentType ?? mimeTypes[ext] ?? 'application/octet-stream';
 
-      try {
-        let buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
+      if (!buf) {
         try {
-          buf = decryptBuffer(buf);
+          buf = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
+          try {
+            buf = decryptBuffer(buf);
+          } catch {
+            // meow
+          }
+          contentType = mimeTypes[ext] ?? 'application/octet-stream';
         } catch {
-          // meow
+          buf = null;
         }
-        return new Response(new Uint8Array(buf), {
-          status: 200,
-          headers: {
-            'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-            'Content-Length': String(buf.length),
-            'Cache-Control': 'private, max-age=300',
-          },
-        });
-      } catch {
+      }
+
+      if (!buf) {
+        try {
+          const ownerIdNum = Number(ownerId);
+          const account = Number.isFinite(ownerIdNum)
+            ? await AppDataSource.getRepository(MailboxAccount).findOneBy({ userId: ownerIdNum })
+            : null;
+          const message = Number.isFinite(ownerIdNum)
+            ? await AppDataSource.getRepository(MailMessage).findOneBy({
+                id: Number(savedMessageId),
+                userId: ownerIdNum,
+              })
+            : null;
+          if (account && message?.messageId) {
+            const att = await fetchAttachmentFromMailbox(
+              account,
+              message.messageId,
+              fileName,
+              message.folder
+            );
+            if (att) {
+              buf = att.buffer;
+              contentType = att.contentType;
+              setCachedAttachment(cacheKey, { buffer: att.buffer, contentType: att.contentType });
+            }
+          }
+        } catch {
+          buf = null;
+        }
+      }
+
+      if (!buf) {
         return new Response(JSON.stringify({ error: 'not found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' },
         });
       }
+
+      return new Response(new Uint8Array(buf), {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': String(buf.length),
+          'Cache-Control': 'private, max-age=300',
+        },
+      });
     },
     {
       beforeHandle: authenticate,
@@ -1197,7 +1253,7 @@ export async function initApp() {
       const relPath = String(ctx.params?.['*'] || '');
       let filepath: string;
       try {
-        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), relPath);
+        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), `mailbox/${relPath}`);
       } catch {
         return new Response(JSON.stringify({ error: 'not found' }), {
           status: 404,
@@ -1232,7 +1288,11 @@ export async function initApp() {
           });
         }
       } else {
-        if (String(requester.id) !== ownerId && !hasPermissionSync(ctx, 'mailbox:read')) {
+        const companyEntry = companyMailboxEntryForUserId(Number(ownerId));
+        const companyAllowed = companyEntry &&
+          (hasPermissionSync(ctx, companyMailboxPermission(companyEntry.localPart)) ||
+            companyEntry.aliases.some(a => hasPermissionSync(ctx, companyMailboxPermission(a))));
+        if (String(requester.id) !== ownerId && !hasPermissionSync(ctx, 'mailbox:read') && !companyAllowed) {
           return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' },
@@ -1251,28 +1311,72 @@ export async function initApp() {
         '.pdf': 'application/pdf',
         '.txt': 'text/plain',
       };
+      const savedMessageId = parts[2];
+      const fileName = parts.slice(3).join('/');
+      const cacheKey = `${ownerId}/${savedMessageId}/${fileName}`;
+      const cached = getCachedAttachment(cacheKey);
+      let buf: Buffer<ArrayBufferLike> | null = cached?.buffer ?? null;
+      let contentType = cached?.contentType ?? mimeTypes[ext] ?? 'application/octet-stream';
 
-      try {
-        let buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
+      if (!buf) {
         try {
-          buf = decryptBuffer(buf);
+          buf = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
+          try {
+            buf = decryptBuffer(buf);
+          } catch {
+            // meow
+          }
+          contentType = mimeTypes[ext] ?? 'application/octet-stream';
         } catch {
-          // meow
+          buf = null;
         }
-        return new Response(new Uint8Array(buf), {
-          status: 200,
-          headers: {
-            'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-            'Content-Length': String(buf.length),
-            'Cache-Control': 'private, max-age=300',
-          },
-        });
-      } catch {
+      }
+
+      if (!buf) {
+        try {
+          const ownerIdNum = Number(ownerId);
+          const account = Number.isFinite(ownerIdNum)
+            ? await AppDataSource.getRepository(MailboxAccount).findOneBy({ userId: ownerIdNum })
+            : null;
+          const message = Number.isFinite(ownerIdNum)
+            ? await AppDataSource.getRepository(MailMessage).findOneBy({
+                id: Number(savedMessageId),
+                userId: ownerIdNum,
+              })
+            : null;
+          if (account && message?.messageId) {
+            const att = await fetchAttachmentFromMailbox(
+              account,
+              message.messageId,
+              fileName,
+              message.folder
+            );
+            if (att) {
+              buf = att.buffer;
+              contentType = att.contentType;
+              setCachedAttachment(cacheKey, { buffer: att.buffer, contentType: att.contentType });
+            }
+          }
+        } catch {
+          buf = null;
+        }
+      }
+
+      if (!buf) {
         return new Response(JSON.stringify({ error: 'not found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' },
         });
       }
+
+      return new Response(new Uint8Array(buf), {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': String(buf.length),
+          'Cache-Control': 'private, max-age=300',
+        },
+      });
     },
   );
 

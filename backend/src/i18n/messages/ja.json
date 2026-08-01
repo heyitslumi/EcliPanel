@@ -549,7 +549,14 @@
     "invalid_user_id": "無効なユーザーID",
     "user_not_found_1": "ユーザーが見つかりません",
     "invalid_user_id_1": "無効なユーザーID",
-    "user_not_found_2": "ユーザーが見つかりません"
+    "user_not_found_2": "ユーザーが見つかりません",
+    "companyMailboxNotFound": "会社メールボックスが見つかりません",
+    "companyMailboxNotProvisioned": "会社メールボックスはまだプロビジョニングされていません。メール同期ジョブを実行するか、後でもう一度お試しください。",
+    "mailboxRotationFailed": "メールボックスのパスワードのローテーションに失敗しました",
+    "mailboxMessageNotFound": "メールボックスのメッセージが見つかりません",
+    "mailboxDeleteFailed": "メールボックスのメッセージの削除に失敗しました",
+    "mailboxReplyFailed": "返信の送信に失敗しました",
+    "mailboxSendFailed": "メールの送信に失敗しました"
   },
   "system": {
     "jwtUnavailable": "JWTが利用できません",

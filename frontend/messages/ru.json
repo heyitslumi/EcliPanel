@@ -1454,7 +1454,8 @@
       "tunnels": "Туннели",
       "rollouts": "Роллауты",
       "audit": "Аудит",
-      "feedback": "Отзывы"
+      "feedback": "Отзывы",
+      "companyMailboxes": "Корпоративные ящики"
     },
     "tunnelsTab": {
       "header": {
@@ -6933,5 +6934,88 @@
     "retryActivation": "Повторить активацию",
     "activationFailed": "Ошибка активации",
     "syncFailed": "Ошибка синхронизации"
+  },
+  "companyMailboxesTab": {
+    "noAccess": "У вас нет доступа к корпоративным почтовым ящикам. Попросите администратора выдать право admin:mailbox.",
+    "aliasOf": "алиас",
+    "viaAlias": "через {alias}",
+    "notProvisioned": "Ещё не создан — задание синхронизации почты создаст его",
+    "openSogo": "Открыть веб-почту SOGo",
+    "openSogoLogin": "Открыть вход SOGo",
+    "rotatePassword": "Сменить пароль",
+    "rotateConfirm": "Сменить пароль этого ящика? Текущий пароль перестанет работать сразу.",
+    "rotateFailed": "Не удалось сменить пароль: {reason}",
+    "searchPlaceholder": "Поиск по теме, отправителю, тексту…",
+    "unreadOnly": "Непрочитанные",
+    "refresh": "Обновить",
+    "noMessages": "Сообщений нет",
+    "unknownSender": "Неизвестный отправитель",
+    "spam": "Спам",
+    "virus": "Вирус",
+    "total": "{count} сообщений",
+    "from": "От",
+    "to": "Кому",
+    "selectMessage": "Выберите сообщение для просмотра",
+    "viewHtml": "Открыть HTML-версию",
+    "htmlOnlyBody": "(Письмо только в HTML — откройте HTML-версию)",
+    "emptyBody": "(нет текстового содержимого)",
+    "attachments": "Вложений: {count}",
+    "credsTitle": "Учётные данные почтового ящика",
+    "credsHint": "Старый пароль больше не работает. Используйте эти данные для входа в SOGo или почтовый клиент.",
+    "email": "Email",
+    "password": "Пароль",
+    "close": "Закрыть",
+    "folder": {
+      "INBOX": "Входящие",
+      "Sent": "Отправленные",
+      "Trash": "Корзина",
+      "Junk": "Спам"
+    },
+    "filter": {
+      "all": "Все",
+      "unread": "Непрочитанные",
+      "read": "Прочитанные",
+      "replied": "С ответом",
+      "not-replied": "Без ответа"
+    },
+    "replied": "Есть ответ",
+    "reply": "Ответить",
+    "markRead": "Прочитано",
+    "markUnread": "Непрочитано",
+    "delete": "Удалить",
+    "deleteForever": "Удалить навсегда",
+    "deleteConfirm": "Переместить сообщение в корзину?",
+    "deleteForeverConfirm": "Удалить сообщение безвозвратно?",
+    "actionFailed": "Ошибка: {reason}",
+    "replyTitle": "Ответ от {mailbox}",
+    "subject": "Тема",
+    "replyPlaceholder": "Напишите ответ…",
+    "send": "Отправить",
+    "cancel": "Отмена",
+    "cc": "Копия",
+    "bcc": "Скрытая копия",
+    "optionalField": "(необязательно)",
+    "priority": {
+      "low": "Низкий",
+      "normal": "Обычный",
+      "high": "Высокий"
+    },
+    "editor": {
+      "bold": "Жирный",
+      "italic": "Курсив",
+      "strike": "Зачёркнутый",
+      "link": "Ссылка",
+      "code": "Код",
+      "list": "Список",
+      "preview": "Просмотр",
+      "edit": "Правка",
+      "loading": "Загрузка…"
+    },
+    "template": {
+      "plain": "Обычное письмо",
+      "notification": "Брендированное уведомление"
+    },
+    "compose": "Написать",
+    "composeTitle": "Новое письмо от {mailbox}"
   }
 }

@@ -12,7 +12,7 @@ import { Organisation } from '../models/organisation.entity';
 import { WingsApiService } from '../services/wingsApiService';
 import { authenticate } from '../middleware/auth';
 import { hasPermissionSync, authorize } from '../middleware/authorize';
-import { sendMail } from '../services/mailService';
+import { renderEmailTemplate, sendMail } from '../services/mailService';
 import { createAdminBroadcastJob } from '../services/adminBroadcastService';
 import { UserLog } from '../models/userLog.entity';
 import { ApiRequestLog } from '../models/apiRequestLog.entity';
@@ -23,6 +23,18 @@ import { getConfiguredFraudModels, runFraudScanForUser } from '../services/fraud
 import { t } from 'elysia';
 import { createExportJob, getExportJob, listExportJobs } from '../services/exportJobService';
 import { ExportJob } from '../models/exportJob.entity';
+import { MailboxAccount } from '../models/mailboxAccount.entity';
+import { MailMessage } from '../models/mailMessage.entity';
+import { deleteMessageFromMailbox, fetchMailboxNow } from '../services/imapFetcher';
+import {
+  COMPANY_MAILBOXES,
+  companyMailboxEntryForAddress,
+  companyMailboxPermission,
+  ensureCompanyMailboxes,
+  getSogoUrl,
+  isMailcowConfigured,
+  rotateMailboxPasswordForAccount,
+} from '../services/mailcowService';
 import { PanelSetting } from '../models/panelSetting.entity';
 import { saveServerConfig, removeServerConfig, mergeDuplicateServerConfigs } from './remoteHandler';
 import { requireFeature } from '../middleware/featureToggle';
@@ -10138,6 +10150,426 @@ export async function adminRoutes(app: any, prefix = '') {
     {
       beforeHandle: [authenticate, authorize('admin:access')],
       detail: { summary: 'Delete today\'s votes for a user (reset cooldown)', tags: ['Admin', 'ELO'] },
+    }
+  );
+
+  const canAccessCompanyMailbox = (ctx: AdminRouteContext, entry: { localPart: string; aliases: readonly string[] }) =>
+    hasPermissionSync(ctx, companyMailboxPermission(entry.localPart)) ||
+    entry.aliases.some(a => hasPermissionSync(ctx, companyMailboxPermission(a)));
+
+  const loadCompanyAccount = async (ctx: AdminRouteContext, address: string) => {
+    const entry = companyMailboxEntryForAddress(address);
+    if (!entry) {
+      ctx.set.status = 404;
+      return { error: ctx.t('admin.companyMailboxNotFound') };
+    }
+    if (!canAccessCompanyMailbox(ctx, entry)) {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+    try { await ensureCompanyMailboxes(); } catch { /* um idk tbh atp im out lol */ }
+    const account = await AppDataSource.getRepository(MailboxAccount)
+      .findOneBy({ userId: entry.userId })
+      .catch(() => null);
+    if (!account) {
+      ctx.set.status = 404;
+      return { error: ctx.t('admin.companyMailboxNotProvisioned') };
+    }
+    return { entry, account };
+  };
+
+  app.get(
+    prefix + '/admin/company-mailboxes',
+    async (ctx: AdminRouteContext) => {
+      const hasAny = COMPANY_MAILBOXES.some(e => canAccessCompanyMailbox(ctx, e));
+      if (!hasAny) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      const domain = String(process.env.MAILBOX_DOMAIN || process.env.MAIL_DOMAIN || 'ecli.app').trim();
+      const mailboxRepo = AppDataSource.getRepository(MailboxAccount);
+      const accounts = await mailboxRepo.find({ where: { enabled: true } });
+
+      const mailboxes = COMPANY_MAILBOXES
+        .filter(e => canAccessCompanyMailbox(ctx, e))
+        .map(e => {
+          const account = accounts.find(a => a.userId === e.userId);
+          return {
+            localPart: e.localPart,
+            email: account?.email || `${e.localPart}@${domain}`,
+            aliases: e.aliases.map(a => ({ address: `${a}@${domain}`, localPart: a })),
+            provisioned: Boolean(account),
+          };
+        });
+
+      return {
+        mailboxes,
+        sogoUrl: getSogoUrl(),
+      };
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }) },
+      detail: { summary: 'List company mailboxes', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  app.get(
+    prefix + '/admin/company-mailboxes/:address/messages',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const { account } = loaded;
+
+      const folder = (String(ctx.query?.folder || 'INBOX') || 'INBOX').toUpperCase();
+      if (isMailcowConfigured()) {
+        try { await fetchMailboxNow(account, [folder]); } catch (err: any) {
+          console.warn('[adminHandler] ondemand company mailbox fetch failed for', account.email, err?.message || err);
+        }
+      }
+
+      const page = Math.max(1, Number(ctx.query?.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(ctx.query?.limit) || 20));
+      const searchQuery = String(ctx.query?.q || '').trim();
+      const unreadOnly = String(ctx.query?.unread || '') === 'true';
+      const repliedFilter = String(ctx.query?.replied || '').trim();
+
+      const messageRepo = AppDataSource.getRepository(MailMessage);
+      const qb = messageRepo
+        .createQueryBuilder('message')
+        .where('message.userId = :userId', { userId: account.userId })
+        .andWhere('message.folder = :folder', { folder });
+
+      if (searchQuery) {
+        qb.andWhere(
+          '(message.subject LIKE :q OR message.fromAddress LIKE :q OR message.body LIKE :q)',
+          { q: `%${searchQuery}%` }
+        );
+      }
+      if (unreadOnly) {
+        qb.andWhere('message.read = false');
+      }
+      if (String(ctx.query?.read || '') === 'true') {
+        qb.andWhere('message.read = true');
+      }
+      if (repliedFilter === 'true') {
+        qb.andWhere('message.replied = true');
+      } else if (repliedFilter === 'false') {
+        qb.andWhere('message.replied = false');
+      }
+
+      const total = await qb.getCount();
+      const messages = await qb
+        .orderBy('message.receivedAt', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getMany();
+
+      const items = messages.map(message => {
+        const item: Record<string, unknown> = {
+          id: message.id,
+          messageId: message.messageId || undefined,
+          fromAddress: message.fromAddress || undefined,
+          toAddress: message.toAddress || undefined,
+          subject: message.subject || 'No subject',
+          body: message.body || '',
+          html: message.html || undefined,
+          receivedAt: message.receivedAt instanceof Date
+            ? message.receivedAt.toISOString()
+            : String(message.receivedAt),
+          read: !!message.read,
+          replied: !!message.replied,
+          folder: message.folder || 'INBOX',
+          isSpam: !!message.isSpam,
+          isVirus: !!message.isVirus,
+          spamScore: typeof message.spamScore === 'number' ? message.spamScore : undefined,
+          virusName: message.virusName || undefined,
+          attachments: message.attachments || undefined,
+        };
+        return item;
+      });
+
+      return { meta: { page, limit, total }, messages: items };
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Fetch company mailbox messages', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  app.post(
+    prefix + '/admin/company-mailboxes/:address/rotate-password',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const { entry, account } = loaded;
+
+      const result = await rotateMailboxPasswordForAccount(account);
+      if (!result.success) {
+        ctx.set.status = 500;
+        return { error: ctx.t('admin.mailboxRotationFailed'), details: String(result.error || 'unknown') };
+      }
+
+      return {
+        success: true,
+        localPart: entry.localPart,
+        email: account.email,
+        password: result.password,
+        sogoUrl: getSogoUrl(),
+      };
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Rotate company mailbox password', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  const loadCompanyMessage = async (ctx: AdminRouteContext, loaded: any) => {
+    const messageRepo = AppDataSource.getRepository(MailMessage);
+    const msg = await messageRepo
+      .findOneBy({ id: Number((ctx.params as any).id), userId: loaded.account.userId })
+      .catch(() => null);
+    if (!msg) {
+      ctx.set.status = 404;
+      return null;
+    }
+    return msg;
+  };
+
+  app.get(
+    prefix + '/admin/company-mailboxes/:address/messages/:id/html',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const msg = await loadCompanyMessage(ctx, loaded);
+      if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
+      return new Response(msg.html || `<pre>${msg.body || ''}</pre>`, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Render a company mailbox message as HTML', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  app.post(
+    prefix + '/admin/company-mailboxes/:address/messages/:id/read',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const msg = await loadCompanyMessage(ctx, loaded);
+      if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
+      msg.read = Boolean((ctx.body as Record<string, unknown> | undefined)?.read);
+      await AppDataSource.getRepository(MailMessage).save(msg);
+      return { success: true };
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Mark a company mailbox message as read/unread', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  const DEPARTMENT_NAMES: Record<string, string> = {
+    contact: 'Support',
+    hi: 'Support',
+    support: 'Support',
+    hello: 'Support',
+    security: 'Security',
+    legal: 'Legal',
+    abuse: 'Legal',
+    hq: 'HQ',
+  };
+
+  const sendFromCompanyMailbox = async (
+      ctx: AdminRouteContext,
+      loaded: { entry: { localPart: string }; account: MailboxAccount },
+      msg: MailMessage | null,
+      bodyFields: Record<string, unknown>
+    ) => {
+      const { entry, account } = loaded;
+      const { to, cc, bcc, subject, body, html, priority, template } = bodyFields;
+      const toAddress = String(to || msg?.fromAddress || '').trim();
+      if (!toAddress) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.recipientEmailRequired') };
+      }
+      const ccValue = typeof cc === 'string' ? String(cc).trim() : '';
+      const bccValue = typeof bcc === 'string' ? String(bcc).trim() : '';
+      const messageText = String(body || '').trim();
+      const messageHtml = typeof html === 'string' ? html : undefined;
+      if (!messageText && !messageHtml) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.messageBodyRequired') };
+      }
+      const subjectLine = String(subject || '').trim() ||
+        (msg?.subject ? `Re: ${String(msg.subject).replace(/^re:\s*/i, '')}` : '');
+
+      const PRIORITY_HEADERS: Record<string, { x: string; importance: string }> = {
+        low: { x: '5', importance: 'Low' },
+        normal: { x: '3', importance: 'Normal' },
+        high: { x: '1', importance: 'High' },
+      };
+      const prio = PRIORITY_HEADERS[String(priority || 'normal').toLowerCase()] || PRIORITY_HEADERS.normal;
+
+      const deptLabel = DEPARTMENT_NAMES[entry.localPart] ||
+        (entry.localPart.charAt(0).toUpperCase() + entry.localPart.slice(1));
+      const fromName = `EclipseSystems ${deptLabel}`;
+
+      let finalHtml: string | undefined = messageHtml;
+      let finalText: string = messageText || (messageHtml ? 'See HTML content' : '');
+      if (String(template || '').trim() && String(template).trim() !== 'plain') {
+        finalHtml = await renderEmailTemplate(String(template).trim(), {
+          message: messageText,
+          messageHtml,
+          details: `${fromName} <${account.email}>`,
+        }).catch(() => messageHtml || '');
+        finalText = messageText;
+      }
+
+      try {
+        const result = await sendMail({
+          from: { name: fromName, address: account.email },
+          to: toAddress,
+          replyTo: account.email,
+          cc: ccValue || undefined,
+          bcc: bccValue || undefined,
+          subject: subjectLine,
+          text: finalText || (finalHtml ? 'See HTML content' : ''),
+          html: finalHtml,
+          inReplyTo: msg?.messageId || undefined,
+          references: msg?.messageId || undefined,
+          headers: prio.x !== '3' ? { 'X-Priority': prio.x, Importance: prio.importance } : undefined,
+          smtp: {
+            host: account.smtpHost || '',
+            port: Number(account.smtpPort ?? 587),
+            secure: account.smtpSecure !== false,
+            user: account.email,
+            pass: account.password || '',
+          },
+        });
+
+        const messageRepo = AppDataSource.getRepository(MailMessage);
+        await messageRepo.save(messageRepo.create({
+          userId: account.userId,
+          fromAddress: account.email,
+          toAddress,
+          messageId: typeof result?.messageId === 'string' ? result.messageId : undefined,
+          subject: subjectLine,
+          body: finalText,
+          html: finalHtml,
+          read: true,
+          folder: 'Sent',
+          replied: false,
+          receivedAt: new Date(),
+        }));
+        if (msg && !msg.replied) {
+          msg.replied = true;
+          await messageRepo.save(msg);
+        }
+        return { success: true };
+      } catch (err: any) {
+        ctx.set.status = 500;
+        return { error: ctx.t('admin.mailboxSendFailed'), details: String(err?.message || err) };
+      }
+    };
+
+    app.post(
+      prefix + '/admin/company-mailboxes/:address/send',
+      async (ctx: AdminRouteContext) => {
+        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+        if ('error' in loaded) return loaded;
+        return sendFromCompanyMailbox(ctx, loaded, null, (ctx.body || {}) as Record<string, unknown>);
+      },
+      {
+        beforeHandle: authenticate,
+        response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+        detail: { summary: 'Send a new email from a company mailbox', tags: ['Admin', 'Mailbox'] },
+      }
+    );
+
+    app.post(
+      prefix + '/admin/company-mailboxes/:address/preview',
+      async (ctx: AdminRouteContext) => {
+        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+        if ('error' in loaded) return loaded;
+        const { entry, account } = loaded;
+        const { subject, body, html, template } = (ctx.body || {}) as Record<string, unknown>;
+        const messageText = String(body || '').trim();
+        const messageHtml = typeof html === 'string' ? html : undefined;
+        const subjectLine = String(subject || '').trim();
+
+        const deptLabel = DEPARTMENT_NAMES[entry.localPart] ||
+          (entry.localPart.charAt(0).toUpperCase() + entry.localPart.slice(1));
+        const fromName = `EclipseSystems ${deptLabel}`;
+
+        let outHtml = messageHtml || `<pre>${messageText.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`;
+        if (String(template || '').trim() && String(template).trim() !== 'plain') {
+          outHtml = await renderEmailTemplate(String(template).trim(), {
+            message: messageText,
+            messageHtml,
+            details: `${fromName} <${account.email}>`,
+          }).catch(() => outHtml);
+        }
+
+        return { html: outHtml, from: `${fromName} <${account.email}>`, subject: subjectLine };
+      },
+      {
+        beforeHandle: authenticate,
+        response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+        detail: { summary: 'Preview a company mailbox email render', tags: ['Admin', 'Mailbox'] },
+      }
+    );
+
+    app.post(
+      prefix + '/admin/company-mailboxes/:address/messages/:id/reply',
+      async (ctx: AdminRouteContext) => {
+        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+        if ('error' in loaded) return loaded;
+        const msg = await loadCompanyMessage(ctx, loaded);
+        if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
+        return sendFromCompanyMailbox(ctx, loaded, msg, (ctx.body || {}) as Record<string, unknown>);
+      },
+      {
+        beforeHandle: authenticate,
+        response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+        detail: { summary: 'Reply to a company mailbox message from the panel', tags: ['Admin', 'Mailbox'] },
+      }
+    );
+
+  app.delete(
+    prefix + '/admin/company-mailboxes/:address/messages/:id',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const { account } = loaded;
+      const msg = await loadCompanyMessage(ctx, loaded);
+      if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
+
+      if (String(msg.folder || '').toUpperCase() === 'TRASH') {
+        const removed = await deleteMessageFromMailbox(account, msg, 'Trash');
+        if (removed) {
+          await AppDataSource.getRepository(MailMessage).remove(msg);
+        }
+        return removed
+          ? { success: true }
+          : (ctx.set.status = 500, { error: ctx.t('admin.mailboxDeleteFailed') });
+      }
+
+      const moved = await deleteMessageFromMailbox(account, msg, 'INBOX');
+      return moved
+        ? { success: true }
+        : (ctx.set.status = 500, { error: ctx.t('admin.mailboxDeleteFailed') });
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Delete a company mailbox message', tags: ['Admin', 'Mailbox'] },
     }
   );
 }

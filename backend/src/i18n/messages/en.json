@@ -549,7 +549,14 @@
     "invalid_user_id": "Invalid user ID",
     "user_not_found_1": "User not found",
     "invalid_user_id_1": "Invalid user ID",
-    "user_not_found_2": "User not found"
+    "user_not_found_2": "User not found",
+    "companyMailboxNotFound": "Company mailbox not found",
+    "companyMailboxNotProvisioned": "Company mailbox is not provisioned yet. Run the mailbox sync job or try again later.",
+    "mailboxRotationFailed": "Failed to rotate mailbox password",
+    "mailboxMessageNotFound": "Mailbox message not found",
+    "mailboxDeleteFailed": "Failed to delete mailbox message",
+    "mailboxReplyFailed": "Failed to send reply",
+    "mailboxSendFailed": "Failed to send email"
   },
   "system": {
     "jwtUnavailable": "jwt unavailable",

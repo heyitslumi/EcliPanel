@@ -1390,7 +1390,8 @@
       "rollouts": "रोलआउट",
       "audit": "ऑडिट",
       "feedback": "प्रतिक्रिया",
-      "chat": "चैट"
+      "chat": "चैट",
+      "companyMailboxes": "कंपनी मेलबॉक्स"
     },
     "shortUrls": {
       "overview": {
@@ -6877,5 +6878,88 @@
     "retryActivation": "सक्रियण पुनः प्रयास करें",
     "activationFailed": "सक्रियण विफल",
     "syncFailed": "सिंक विफल"
+  },
+  "companyMailboxesTab": {
+    "noAccess": "आपके पास किसी कंपनी मेलबॉक्स तक पहुंच नहीं है। एडमिन से admin:mailbox अनुमति मांगें।",
+    "aliasOf": "उपनाम",
+    "viaAlias": "{alias} के माध्यम से",
+    "notProvisioned": "अभी तक प्रावधानित नहीं — मेल सिंक जॉब इसे बनाएगा",
+    "openSogo": "SOGo वेबमेल खोलें",
+    "openSogoLogin": "SOGo लॉगिन खोलें",
+    "rotatePassword": "पासवर्ड बदलें",
+    "rotateConfirm": "इस मेलबॉक्स का पासवर्ड बदलें? वर्तमान पासवर्ड तुरंत अमान्य हो जाएगा।",
+    "rotateFailed": "पासवर्ड बदलने में विफल: {reason}",
+    "searchPlaceholder": "विषय, प्रेषक, पाठ खोजें…",
+    "unreadOnly": "अपठित",
+    "refresh": "ताज़ा करें",
+    "noMessages": "कोई संदेश नहीं",
+    "unknownSender": "अज्ञात प्रेषक",
+    "spam": "स्पैम",
+    "virus": "वायरस",
+    "total": "{count} संदेश",
+    "from": "से",
+    "to": "को",
+    "selectMessage": "देखने के लिए संदेश चुनें",
+    "viewHtml": "HTML संस्करण खोलें",
+    "htmlOnlyBody": "（केवल HTML संदेश — HTML संस्करण खोलें）",
+    "emptyBody": "（कोई टेक्स्ट सामग्री नहीं）",
+    "attachments": "{count} अनुलग्नक",
+    "credsTitle": "मेलबॉक्स लॉगिन क्रेडेंशियल",
+    "credsHint": "पुराना पासवर्ड अब काम नहीं करेगा। SOGo या मेल क्लाइंट में लॉगिन के लिए इनका उपयोग करें।",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "close": "बंद करें",
+    "folder": {
+      "INBOX": "इनबॉक्स",
+      "Sent": "भेजे गए",
+      "Trash": "कचरा",
+      "Junk": "जंक"
+    },
+    "filter": {
+      "all": "सभी",
+      "unread": "अपठित",
+      "read": "पठित",
+      "replied": "उत्तरित",
+      "not-replied": "अनुत्तरित"
+    },
+    "replied": "उत्तरित",
+    "reply": "उत्तर दें",
+    "markRead": "पठित चिह्नित करें",
+    "markUnread": "अपठित चिह्नित करें",
+    "delete": "हटाएं",
+    "deleteForever": "स्थायी रूप से हटाएं",
+    "deleteConfirm": "इस संदेश को कचरे में ले जाएं?",
+    "deleteForeverConfirm": "क्या यह संदेश स्थायी रूप से हटाएं?",
+    "actionFailed": "कार्रवाई विफल: {reason}",
+    "replyTitle": "{mailbox} के रूप में उत्तर दें",
+    "subject": "विषय",
+    "replyPlaceholder": "अपना उत्तर लिखें…",
+    "send": "भेजें",
+    "cancel": "रद्द करें",
+    "cc": "CC",
+    "bcc": "BCC",
+    "optionalField": "（वैकल्पिक）",
+    "priority": {
+      "low": "कम",
+      "normal": "सामान्य",
+      "high": "उच्च"
+    },
+    "editor": {
+      "bold": "बोल्ड",
+      "italic": "इटैलिक",
+      "strike": "स्ट्राइक",
+      "link": "लिंक",
+      "code": "कोड",
+      "list": "सूची",
+      "preview": "पूर्वावलोकन",
+      "edit": "संपादित करें",
+      "loading": "लोड हो रहा है…"
+    },
+    "template": {
+      "plain": "सादा ईमेल",
+      "notification": "ब्रांडेड अधिसूचना"
+    },
+    "compose": "लिखें",
+    "composeTitle": "{mailbox} से लिखें"
   }
 }

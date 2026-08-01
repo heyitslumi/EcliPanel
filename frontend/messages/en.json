@@ -1660,7 +1660,8 @@
       "rollouts": "Rollouts",
       "audit": "Audit",
       "feedback": "Feedback",
-      "chat": "Chat"
+      "chat": "Chat",
+      "companyMailboxes": "Company Mailboxes"
     },
     "shortUrls": {
       "overview": {
@@ -6961,5 +6962,88 @@
     "add": "Add",
     "adding": "Adding...",
     "emailPlaceholder": "user@example.com"
+  },
+  "companyMailboxesTab": {
+    "noAccess": "You don't have access to any company mailboxes. Ask an admin to grant you an admin:mailbox permission.",
+    "aliasOf": "alias",
+    "viaAlias": "via {alias}",
+    "notProvisioned": "Not provisioned yet — mailbox sync job will create it",
+    "openSogo": "Open SOGo Webmail",
+    "openSogoLogin": "Open SOGo Login",
+    "rotatePassword": "Rotate Password",
+    "rotateConfirm": "Rotate the password for this mailbox? The current password will stop working immediately.",
+    "rotateFailed": "Failed to rotate password: {reason}",
+    "searchPlaceholder": "Search subject, sender, body…",
+    "unreadOnly": "Unread",
+    "refresh": "Refresh",
+    "noMessages": "No messages",
+    "unknownSender": "Unknown sender",
+    "spam": "Spam",
+    "virus": "Virus",
+    "total": "{count} messages",
+    "from": "From",
+    "to": "To",
+    "selectMessage": "Select a message to view it",
+    "viewHtml": "Open HTML version",
+    "htmlOnlyBody": "(HTML-only message — open the HTML version)",
+    "emptyBody": "(no text content)",
+    "attachments": "{count} attachment(s)",
+    "credsTitle": "Mailbox Login Credentials",
+    "credsHint": "The old password no longer works. Use these to log in to SOGo or an email client.",
+    "email": "Email",
+    "password": "Password",
+    "close": "Close",
+    "folder": {
+      "INBOX": "Inbox",
+      "Sent": "Sent",
+      "Trash": "Trash",
+      "Junk": "Junk"
+    },
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read",
+      "replied": "Replied",
+      "not-replied": "Not replied"
+    },
+    "replied": "Replied",
+    "reply": "Reply",
+    "markRead": "Mark read",
+    "markUnread": "Mark unread",
+    "delete": "Delete",
+    "deleteForever": "Delete forever",
+    "deleteConfirm": "Move this message to Trash?",
+    "deleteForeverConfirm": "Permanently delete this message?",
+    "actionFailed": "Action failed: {reason}",
+    "replyTitle": "Reply as {mailbox}",
+    "subject": "Subject",
+    "replyPlaceholder": "Write your reply…",
+    "send": "Send",
+    "cancel": "Cancel",
+    "cc": "CC",
+    "bcc": "BCC",
+    "optionalField": "(optional)",
+    "priority": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High"
+    },
+    "editor": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "link": "Link",
+      "code": "Code",
+      "list": "List",
+      "preview": "Preview",
+      "edit": "Edit",
+      "loading": "Loading…"
+    },
+    "template": {
+      "plain": "Plain email",
+      "notification": "Branded notification"
+    },
+    "compose": "Compose",
+    "composeTitle": "Compose from {mailbox}"
   }
 }

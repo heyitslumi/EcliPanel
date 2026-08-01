@@ -549,7 +549,14 @@
     "invalid_user_id": "用户ID无效",
     "user_not_found_1": "用户未找到",
     "invalid_user_id_1": "用户ID无效",
-    "user_not_found_2": "用户未找到"
+    "user_not_found_2": "用户未找到",
+    "companyMailboxNotFound": "未找到公司邮箱",
+    "companyMailboxNotProvisioned": "公司邮箱尚未配置。请运行邮箱同步任务或稍后重试。",
+    "mailboxRotationFailed": "邮箱密码轮换失败",
+    "mailboxMessageNotFound": "邮箱消息未找到",
+    "mailboxDeleteFailed": "删除邮箱消息失败",
+    "mailboxReplyFailed": "发送回复失败",
+    "mailboxSendFailed": "发送邮件失败"
   },
   "system": {
     "jwtUnavailable": "JWT不可用",
