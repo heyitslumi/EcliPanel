@@ -1468,6 +1468,10 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       const newRole: 'member' | 'admin' | 'owner' = ['member', 'admin', 'owner'].includes(String(rawRole))
         ? (String(rawRole) as 'member' | 'admin' | 'owner')
         : 'member';
+      if (newRole === 'owner' && actor.id !== org.ownerId && !hasPermissionSync(ctx, 'org:write')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
       const membership = memberRepo.create({
         userId: target.id,
         organisationId: org.id,

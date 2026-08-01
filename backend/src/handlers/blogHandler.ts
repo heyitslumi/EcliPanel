@@ -1151,6 +1151,14 @@ export async function blogRoutes(app: any, prefix = '') {
       }
 
       const role = ['owner', 'admin', 'author'].includes(body?.role) ? body.role : 'author';
+      if (role === 'owner') {
+        const blogOwner = await AppDataSource.getRepository(Blog).findOneBy({ id: blogId });
+        const actorMember = await memberRepo.findOne({ where: { blogId, userId } });
+        if (blogOwner?.userId !== userId && actorMember?.role !== 'owner' && !hasPermissionSync(ctx, 'blog:manage')) {
+          ctx.set.status = 403;
+          return { error: ctx.t('blog.onlyOwnerCanTransfer') };
+        }
+      }
       const member = memberRepo.create({
         blogId,
         userId: targetUser.id,
