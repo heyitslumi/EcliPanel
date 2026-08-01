@@ -50,9 +50,12 @@ export function sha256Base64(input: string | Uint8Array): string {
 }
 
 export function timingSafeEqual(a: Uint8Array | string, b: Uint8Array | string): boolean {
-  const aBuf = typeof a === 'string' ? Buffer.from(a) : Buffer.from(a);
-  const bBuf = typeof b === 'string' ? Buffer.from(b) : Buffer.from(b);
-  if (aBuf.length !== bBuf.length) return false;
+  const aBuf = new Uint8Array(
+    new Bun.CryptoHasher('sha256').update(typeof a === 'string' ? Buffer.from(a) : Buffer.from(a)).digest()
+  );
+  const bBuf = new Uint8Array(
+    new Bun.CryptoHasher('sha256').update(typeof b === 'string' ? Buffer.from(b) : Buffer.from(b)).digest()
+  );
   let diff = 0;
   for (let i = 0; i < aBuf.length; i++) {
     diff |= aBuf[i] ^ bBuf[i];

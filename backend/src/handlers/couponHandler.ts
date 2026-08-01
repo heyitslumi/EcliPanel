@@ -393,19 +393,54 @@ export async function couponRoutes(app: any, prefix = '') {
         return { error: ctx.t('coupon.this_coupon_has_expired') };
       }
 
-      if (coupon.maxUsesTotal != null && coupon.currentUsesTotal >= coupon.maxUsesTotal) {
+      const reserveGlobal = await couponRepo
+        .createQueryBuilder()
+        .update()
+        .set({ currentUsesTotal: () => 'currentUsesTotal + 1' })
+        .where('id = :id', { id: coupon.id })
+        .andWhere('(maxUsesTotal IS NULL OR currentUsesTotal < maxUsesTotal)')
+        .execute();
+      if ((reserveGlobal.affected ?? 0) === 0) {
         ctx.set.status = 400;
         return { error: ctx.t('coupon.this_coupon_has_reached_its_global_usage_limit') };
       }
+      let reserved = true;
+      let reservedUseId: number | undefined;
+      const rollbackReservation = async () => {
+        if (!reserved) return;
+        reserved = false;
+        await couponRepo
+          .createQueryBuilder()
+          .update()
+          .set({ currentUsesTotal: () => 'GREATEST(currentUsesTotal - 1, 0)' })
+          .where('id = :id', { id: coupon.id })
+          .execute()
+          .catch(() => {});
+        if (reservedUseId != null) {
+          await couponUseRepo.delete({ id: reservedUseId }).catch(() => {});
+        }
+      };
 
       if (coupon.maxUsesPerUser != null) {
-        const userUseCount = await couponUseRepo.count({
-          where: { couponId: coupon.id, userId: user.id },
-        });
-        if (userUseCount >= coupon.maxUsesPerUser) {
+        const res = await couponUseRepo.query(
+          `INSERT INTO coupon_use (couponId, userId, usedAt)
+           SELECT ?, ?, ?
+           WHERE (SELECT COUNT(*) FROM coupon_use WHERE couponId = ? AND userId = ?) < ?`,
+          [coupon.id, user.id, new Date(), coupon.id, user.id, coupon.maxUsesPerUser]
+        );
+        if ((res?.affectedRows ?? 0) === 0) {
+          await rollbackReservation();
           ctx.set.status = 400;
           return { error: ctx.t('coupon.you_have_already_used_this_coupon_the_maximum_number_of_time') };
         }
+        reservedUseId = Number(res?.insertId);
+      } else {
+        const ins = await couponUseRepo.insert({
+          couponId: coupon.id,
+          userId: user.id,
+          usedAt: new Date(),
+        });
+        reservedUseId = (ins.identifiers?.[0] as any)?.id as number | undefined;
       }
 
       let discountAmount = 0;
@@ -425,62 +460,57 @@ export async function couponRoutes(app: any, prefix = '') {
 
       discountAmount = Math.min(discountAmount, Number(order.amount));
 
-      order.couponId = coupon.id;
-      order.couponCode = coupon.code;
-      order.discountAmount = Math.round(discountAmount * 100) / 100;
-      order.amount = Math.max(0, Math.round((Number(order.amount) - discountAmount) * 100) / 100);
+      try {
+        order.couponId = coupon.id;
+        order.couponCode = coupon.code;
+        order.discountAmount = Math.round(discountAmount * 100) / 100;
+        order.amount = Math.max(0, Math.round((Number(order.amount) - discountAmount) * 100) / 100);
 
-      if (order.amount === 0) {
-        order.status = 'active';
-        order.notes = order.notes
-          ? `${order.notes}; Auto-paid by coupon ${coupon.code}`
-          : `Auto-paid by coupon ${coupon.code}`;
-        const isQueuedForRenewal = (order.notes || '').includes('queue_for_renewal');
-        if (!isQueuedForRenewal) {
-          const prevActive = (await orderRepo.find({
-            where: { userId: user.id, status: 'active' },
-          })).filter(o => !(o.notes || '').includes('dns_addon') && !(o.notes || '').includes('org_order') && !o.orgId);
+        if (order.amount === 0) {
+          order.status = 'active';
+          order.notes = order.notes
+            ? `${order.notes}; Auto-paid by coupon ${coupon.code}`
+            : `Auto-paid by coupon ${coupon.code}`;
+          const isQueuedForRenewal = (order.notes || '').includes('queue_for_renewal');
+          if (!isQueuedForRenewal) {
+            const prevActive = (await orderRepo.find({
+              where: { userId: user.id, status: 'active' },
+            })).filter(o => !(o.notes || '').includes('dns_addon') && !(o.notes || '').includes('org_order') && !o.orgId);
 
-          for (const prev of prevActive) {
-            prev.status = 'cancelled';
-            prev.notes = prev.notes
-              ? `${prev.notes}; Replaced by order #${order.id} on ${new Date().toISOString()}`
-              : `Replaced by order #${order.id} on ${new Date().toISOString()}`;
-            if (prev.couponId) {
-              const prevCoupon = await couponRepo.findOneBy({ id: Number(prev.couponId) });
-              if (prevCoupon) {
-                prevCoupon.currentUsesTotal = Math.max(0, prevCoupon.currentUsesTotal - 1);
-                await couponRepo.save(prevCoupon);
+            for (const prev of prevActive) {
+              prev.status = 'cancelled';
+              prev.notes = prev.notes
+                ? `${prev.notes}; Replaced by order #${order.id} on ${new Date().toISOString()}`
+                : `Replaced by order #${order.id} on ${new Date().toISOString()}`;
+              if (prev.couponId) {
+                const prevCoupon = await couponRepo.findOneBy({ id: Number(prev.couponId) });
+                if (prevCoupon) {
+                  prevCoupon.currentUsesTotal = Math.max(0, prevCoupon.currentUsesTotal - 1);
+                  await couponRepo.save(prevCoupon);
+                }
+                await couponUseRepo.delete({ couponId: prev.couponId, userId: prev.userId });
               }
-              await couponUseRepo.delete({ couponId: prev.couponId, userId: prev.userId });
+            }
+            if (prevActive.length > 0) await orderRepo.save(prevActive);
+
+            if (order.planId != null) {
+              try {
+                const planRepo = AppDataSource.getRepository(require('../models/plan.entity').Plan);
+                const plan = await planRepo.findOneBy({ id: Number(order.planId) });
+                if (plan) {
+                  const { activateOrderPlan } = require('./orderHandler');
+                  await activateOrderPlan(order, plan);
+                }
+              } catch (_e) {}
             }
           }
-          if (prevActive.length > 0) await orderRepo.save(prevActive);
-
-          if (order.planId != null) {
-            try {
-              const planRepo = AppDataSource.getRepository(require('../models/plan.entity').Plan);
-              const plan = await planRepo.findOneBy({ id: Number(order.planId) });
-              if (plan) {
-                const { activateOrderPlan } = require('./orderHandler');
-                await activateOrderPlan(order, plan);
-              }
-            } catch (_e) {}
-          }
         }
+
+        await orderRepo.save(order);
+      } catch (e) {
+        await rollbackReservation();
+        throw e;
       }
-
-      coupon.currentUsesTotal += 1;
-
-      const couponUse = couponUseRepo.create({
-        couponId: coupon.id,
-        userId: user.id,
-        usedAt: new Date(),
-      });
-
-      await couponRepo.save(coupon);
-      await couponUseRepo.save(couponUse);
-      await orderRepo.save(order);
 
       return {
         success: true,

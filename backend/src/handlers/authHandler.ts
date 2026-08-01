@@ -15,7 +15,7 @@ import { resolveLocale } from '../i18n/resolve';
 import { cancelPendingAutoSunsetDeletionRequest } from '../services/sunsetPolicyService';
 import { validatePassword } from '../utils/passwordValidation';
 import { storeCsrfToken } from '../middleware/csrf';
-import { randomHex, randomInt, sha256Hex } from '../utils/bunCrypto';
+import { randomHex, randomInt, sha256Hex, timingSafeEqual } from '../utils/bunCrypto';
 import { verifyAnyToken } from '../utils/pqJwt';
 import { slackGithubStates, handleSlackGithubCallback } from './slackHandler';
 import type { VerifyTempTokenResult } from '../types/context';
@@ -741,7 +741,7 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
 
         if (emailCode) {
           const expected = await redisGet(`tfa:email:${payload.tfaSession}`);
-          if (expected && expected === String(emailCode)) {
+          if (expected && timingSafeEqual(String(expected), String(emailCode))) {
             await redisDel(`tfa:email:${payload.tfaSession}`);
           } else {
             ctx.set.status = 400;
@@ -1055,7 +1055,7 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
     await redisSet(`email-verify:token:${token}`, String(user.id), 86400);
     await redisSet(`email-verify:code:${user.id}`, code, 86400);
 
-    const panelUrl = process.env.PANEL_URL || 'https://panel.ecli.app';
+    const panelUrl = process.env.PANEL_URL || 'https://ecli.app';
     const verifyUrl = `${panelUrl}/verify-email?token=${token}`;
     try {
       await sendMail({

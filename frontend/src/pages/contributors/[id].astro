@@ -6,10 +6,16 @@ const { locale, messages, initialUser, pathname } = await getPageData(Astro.cook
 const { id } = Astro.params;
 const siteUrl = (process.env.SITE_URL || "https://ecli.app");
 const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_BASE || "") || "").replace(/\/+$/, "");
-let title = `Contributor — EclipseSystems`, description = "", ogImage = `${siteUrl}/assets/contributors/og-default.png`;
+let title = `Contributor — EclipseSystems`, description = "";
+let ogImage = `${siteUrl}/contributors/${id}/og.png`;
 try {
-  const res = await fetch(`${backendUrl}/api/public/contributors/${id}`);
-  if (res.ok) { const c = await res.json(); title = `${c.name || id} — Contributors — EclipseSystems`; description = c.bio || c.role || ""; ogImage = c.avatarUrl || c.socialImage || ogImage; }
+  const res = await fetch(`${backendUrl}/api/public/contributors`);
+  if (res.ok) {
+    const data = await res.json();
+    const list = Array.isArray(data?.contributors) ? data.contributors : [];
+    const c = list.find((x: any) => String(x.login || "").toLowerCase() === id) ?? null;
+    if (c) { title = `${c.displayName || c.login} — Contributors — EclipseSystems`; description = c.title || c.bio || ""; }
+  }
 } catch {}
 ---
 

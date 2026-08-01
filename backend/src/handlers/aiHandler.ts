@@ -545,12 +545,12 @@ export async function aiRoutes(app: AIApp, prefix = '') {
         continue;
       }
       const url = `${ep.base.replace(/\/$/, '')}/${restPath}`;
-      const headers: Record<string, string> =
-        ctx.headers && typeof (ctx.headers as { get?: unknown }).get !== 'function'
-          ? { ...(ctx.headers as Record<string, string>) }
-          : {};
+      const headers: Record<string, string> = {
+        'content-type': 'application/json',
+        accept: 'application/json',
+        'user-agent': 'EcliPanel-AIProxy/3.0',
+      };
       if (ep.apiKey) headers.authorization = `Bearer ${ep.apiKey}`;
-      delete headers.host;
       try {
         const method = String(ctx.method || 'GET').toUpperCase();
         const res2 = await fetch(url, {

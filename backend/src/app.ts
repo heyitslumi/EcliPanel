@@ -309,65 +309,71 @@ app.decorate('log', console)
       expiresAt: t.String(),
     }),
   })
-  .use(
+function isAllowedCorsOrigin(origin: string | null | undefined): boolean {
+  const rawCfg = [process.env.FRONTEND_URL, process.env.PANEL_URL]
+    .filter(Boolean)
+    .join(',')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
+  if (
+    process.env.FRONTEND_URL === '*' ||
+    process.env.FRONTEND_URL === 'true' ||
+    process.env.PANEL_URL === '*' ||
+    process.env.PANEL_URL === 'true'
+  )
+    return true;
+  if (!origin || origin === 'null') return false;
+  if (rawCfg.length === 0) return true;
+
+  const normalize = (s: unknown) => {
+    if (!s && s !== '') return '';
+    if (s instanceof URL) return s.origin;
+    const str = typeof s === 'string' ? s : String(s);
+    try {
+      return new URL(str).origin;
+    } catch {
+      try {
+        return new URL(str.startsWith('http') ? str : `https://${str}`).origin;
+      } catch {
+        return str.replace(/\/+$/g, '');
+      }
+    }
+  };
+
+  const originNorm = normalize(origin);
+  const cfg = rawCfg.map(normalize);
+  if (cfg.includes(originNorm)) return true;
+
+  let originHost: string | null = null;
+  try {
+    originHost = new URL(originNorm).hostname;
+  } catch {
+    originHost = originNorm;
+  }
+
+  for (const c of cfg) {
+    try {
+      const cHost = new URL(c).hostname;
+      if (originHost === cHost) return true;
+      if (originHost.endsWith('.' + cHost)) return true;
+    } catch {
+      // skip
+    }
+  }
+
+  return false;
+}
+
+const corsOriginCallback = (request: Request) => {
+  const origin = request?.headers?.get?.('origin') ?? undefined;
+  if (!origin) return true;
+  return isAllowedCorsOrigin(origin);
+};
+
+app.use(
     cors({
-      origin: (request: Request) => {
-        const origin = request?.headers?.get?.('origin') ?? undefined;
-        const rawCfg = [process.env.FRONTEND_URL, process.env.PANEL_URL]
-          .filter(Boolean)
-          .join(',')
-          .split(',')
-          .map(o => o.trim())
-          .filter(Boolean);
-        if (
-          process.env.FRONTEND_URL === '*' ||
-          process.env.FRONTEND_URL === 'true' ||
-          process.env.PANEL_URL === '*' ||
-          process.env.PANEL_URL === 'true'
-        )
-          return true;
-        if (origin === 'null') return false;
-        if (!origin) return true;
-        if (rawCfg.length === 0) return true;
-
-        const normalize = (s: unknown) => {
-          if (!s && s !== '') return '';
-          if (s instanceof URL) return s.origin;
-          const str = typeof s === 'string' ? s : String(s);
-          try {
-            return new URL(str).origin;
-          } catch {
-            try {
-              return new URL(str.startsWith('http') ? str : `https://${str}`).origin;
-            } catch {
-              return str.replace(/\/+$/g, '');
-            }
-          }
-        };
-
-        const originNorm = normalize(origin);
-        const cfg = rawCfg.map(normalize);
-        if (cfg.includes(originNorm)) return true;
-
-        let originHost: string | null = null;
-        try {
-          originHost = new URL(originNorm).hostname;
-        } catch {
-          originHost = originNorm;
-        }
-
-        for (const c of cfg) {
-          try {
-            const cHost = new URL(c).hostname;
-            if (originHost === cHost) return true;
-            if (originHost.endsWith('.' + cHost)) return true;
-          } catch {
-            // skip
-          }
-        }
-
-        return false;
-      },
+      origin: corsOriginCallback,
       credentials: true,
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
@@ -442,10 +448,12 @@ app.error((rawCtx: unknown) => {
     status = ctx.code;
   }
 
-  const origin = (ctx.request as Request)?.headers?.get?.('origin') || '*';
+  const origin = (ctx.request as Request)?.headers?.get?.('origin') || undefined;
   const corsHeaders = {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
+    // never echo an arbitrary Origin with credentials: only configured origins
+    ...(origin && isAllowedCorsOrigin(origin)
+      ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true' }
+      : {}),
     'Access-Control-Allow-Headers':
       'Content-Type, Authorization, X-Requested-With, Accept, Origin, x-sftp-password, x-path, x-csrf-token',
     'Access-Control-Expose-Headers': 'Content-Type, Content-Length, Cache-Control',
@@ -568,7 +576,7 @@ app.request(async (rawCtx: unknown) => {
     }
   }
 
-  const effectiveIP: string = cfIPv6 || cfIP || xForwardedFor || xRealIP || remoteAddr || 'unknown';
+  const effectiveIP: string = cfIPv6 || cfIP || remoteAddr || xForwardedFor || xRealIP || 'unknown';
 
   try {
     ctx.ip = effectiveIP;
@@ -611,13 +619,14 @@ app.request(async (rawCtx: unknown) => {
   _rateBuckets.set(_rateLimitIP, bucket);
 
   if (bucket.count > 500) {
-    const origin = getHeader('origin') || process.env.FRONTEND_URL || '*';
+    const origin = getHeader('origin') || undefined;
     return new Response(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Credentials': 'true',
+        ...(origin && isAllowedCorsOrigin(origin)
+          ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true' }
+          : {}),
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin, x-sftp-password, x-path, x-csrf-token',
         'Access-Control-Expose-Headers': 'Content-Type, Content-Length, Cache-Control',
       },
@@ -629,7 +638,7 @@ app.request(async (rawCtx: unknown) => {
     const authHeader = getHeader('authorization') || '';
     const qToken = ctx.query?.token;
     const rawToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : qToken;
-    if (rawToken && !isWsUpgrade) {
+    if (rawToken && isWsUpgrade) {
       try {
         const decoded = app.pqJwt.verifyAnyToken(rawToken);
         ctx.pqJwtPayload = decoded;
@@ -1568,7 +1577,6 @@ export async function initApp() {
         '.png': 'image/png',
         '.gif': 'image/gif',
         '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
       };
       try {
         const buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
@@ -1610,7 +1618,6 @@ export async function initApp() {
         '.png': 'image/png',
         '.gif': 'image/gif',
         '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
       };
       try {
         const buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;

@@ -3694,6 +3694,8 @@
       "changePassword": "Change Password",
       "currentPassword": "Current Password",
       "currentPasswordPlaceholder": "Enter current password",
+      "currentPasswordRequired": "Enter your current password to change your email address",
+      "emailStepUpHint": "Required to confirm the email change",
       "newPassword": "New Password",
       "newPasswordPlaceholder": "New password",
       "newPasswordHint": "At least 8 characters",

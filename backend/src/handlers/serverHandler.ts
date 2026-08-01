@@ -7147,27 +7147,9 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
       const socketScheme =
         backendBase.startsWith('https') || incomingProto === 'https' ? 'wss' : 'ws';
 
-      const cookieName = process.env.JWT_COOKIE_NAME || 'token';
-      const getCookieToken = () => {
-        const cookieValue = (ctx.cookie &&
-          ctx.cookie[cookieName] &&
-          ctx.cookie[cookieName].value) as string | undefined;
-        if (cookieValue) return cookieValue;
-        const raw = (ctx.headers && (ctx.headers.cookie as string)) || '';
-        const parts = String(raw)
-          .split(';')
-          .map((s: string) => s.trim());
-        const pair = parts.find(p => p.startsWith(cookieName + '='));
-        if (pair) return pair.split('=')[1];
-        return '';
-      };
-
-      const panelJwt =
-        getCookieToken() ||
-        ((ctx.headers['authorization'] as string) || '').replace(/^Bearer\s+/i, '');
       const wsUrl =
         backendBase.replace(/^https?/, socketScheme) +
-        `/api/servers/v1/${id}/ws/proxy?token=${encodeURIComponent(panelJwt)}`;
+        `/api/servers/v1/${id}/ws/proxy`;
 
       const nodeUrl = String((node as any).backendWingsUrl || node.url).replace(/\/+$/, '');
       const nodeProtocol = node.useSSL === false ? 'ws:' : 'wss:';

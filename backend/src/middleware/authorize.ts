@@ -151,26 +151,20 @@ export function authorize(required: string) {
       return { error: t('validation.ageVerificationRequired', 'Age verification required') };
     }
 
-    const serverReadPerms = [
-      'servers:read', 'files:read', 'backups:read',
-      'schedules:read', 'configuration:read', 'version:read',
-      'logs:read', 'databases:read',
-    ];
-    if (serverReadPerms.includes(required)) return;
 
     if (isServerRelated && required !== 'servers:create') {
-      try {
-        const { ServerSubuser } = require('../models/serverSubuser.entity');
-        const subuserRepo = AppDataSource.getRepository(ServerSubuser);
-        const serverUuid =
-          ctx.params?.id ||
-          ctx.params?.serverId ||
-          ctx.request?.body?.serverUuid ||
-          ctx.request?.body?.id ||
-          ctx.query?.serverUuid ||
-          ctx.query?.server;
+      const serverUuid =
+        ctx.params?.id ||
+        ctx.params?.serverId ||
+        ctx.request?.body?.serverUuid ||
+        ctx.request?.body?.id ||
+        ctx.query?.serverUuid ||
+        ctx.query?.server;
 
-        if (serverUuid) {
+      if (serverUuid) {
+        try {
+          const { ServerSubuser } = require('../models/serverSubuser.entity');
+          const subuserRepo = AppDataSource.getRepository(ServerSubuser);
           const cfgRepo = AppDataSource.getRepository(
             require('../models/serverConfig.entity').ServerConfig
           );
@@ -203,9 +197,15 @@ export function authorize(required: string) {
             if (sub.permissions.includes('read') && ['console', 'activity', 'stats'].includes(subPermNeeded)) return;
             if (sub.permissions.includes('write') && ['files', 'backups', 'startup', 'settings', 'databases', 'schedules'].includes(subPermNeeded)) return;
           }
+        } catch (e) {
+          ctx.set.status = 403;
+          return { error: t('common.insufficientPermissions', 'Insufficient permissions') };
         }
-      } catch (e) {
-        // uwu
+
+        if (!hasPermissionSync(ctx, 'admin:access')) {
+          ctx.set.status = 403;
+          return { error: t('common.insufficientPermissions', 'Insufficient permissions') };
+        }
       }
     }
 

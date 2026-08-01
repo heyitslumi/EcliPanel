@@ -1,4 +1,5 @@
 import { optionalAuth } from '../middleware/auth';
+import { safeFetch } from '../utils/ssrf';
 import { AppDataSource } from '../config/typeorm';
 import { Node } from '../models/node.entity';
 import { TunnelDevice } from '../models/tunnelDevice.entity';
@@ -41,17 +42,14 @@ export function proxyRoutes(app: any, prefix: string) {
   app.get(prefix + '/proxy/image', async (ctx: any) => {
     const rawUrl = ctx.query.url;
     if (!rawUrl || typeof rawUrl !== 'string') { ctx.set.status = 400; return { error: ctx.t('proxy.missing_url_parameter') }; }
-    let parsed: URL;
-    try { parsed = new URL(rawUrl); } catch { ctx.set.status = 400; return { error: ctx.t('proxy.invalid_url') }; }
-    if (!['http:', 'https:'].includes(parsed.protocol)) { ctx.set.status = 400; return { error: ctx.t('proxy.only_http_https_urls_allowed') }; }
-    const blocklist = new Set(['127.0.0.1', 'localhost', '::1', '0.0.0.0']);
-    if (blocklist.has(parsed.hostname) || /^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^169\.254\./.test(parsed.hostname) || parsed.hostname.endsWith('.local')) {
-      ctx.set.status = 403; return { error: ctx.t('proxy.internal_private_host_not_allowed') };
-    }
     let remoteRes: Response;
     try {
-      remoteRes = await fetch(parsed.href, { headers: { 'User-Agent': 'EcliPanel-ImageProxy/3.0', 'Accept': 'image/*' }, signal: AbortSignal.timeout(15000), redirect: 'follow' });
-    } catch { ctx.set.status = 502; return { error: ctx.t('proxy.failed_to_fetch_image') }; }
+      remoteRes = await safeFetch(rawUrl, {
+        headers: { 'User-Agent': 'EcliPanel-ImageProxy/3.0', 'Accept': 'image/*' },
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch { remoteRes = null; }
+    if (!remoteRes) { ctx.set.status = 403; return { error: ctx.t('proxy.internal_private_host_not_allowed') }; }
     if (!remoteRes.ok) { ctx.set.status = 502; return { error: `Upstream returned ${remoteRes.status}` }; }
     const contentType = remoteRes.headers.get('content-type') || 'application/octet-stream';
     if (!contentType.startsWith('image/')) { ctx.set.status = 400; return { error: ctx.t('proxy.url_does_not_point_to_an_image') }; }
@@ -66,14 +64,17 @@ export function proxyRoutes(app: any, prefix: string) {
   app.all(prefix + '/proxy/external', async (ctx: any) => {
     const url = ctx.query.url;
     if (!url || typeof url !== 'string') { ctx.set.status = 400; return { error: 'Missing url param' }; }
-    let parsed: URL;
-    try { parsed = new URL(url); } catch { ctx.set.status = 400; return { error: 'Invalid url' }; }
-    if (!['http:', 'https:'].includes(parsed.protocol)) { ctx.set.status = 400; return { error: 'Only http/https allowed' }; }
+    let upstream: Response | null = null;
     try {
-      const upstream = await fetch(parsed.href, { method: ctx.request.method || 'GET', headers: { 'User-Agent': 'EcliPanel-Proxy/3.0', 'Accept': '*/*' }, signal: AbortSignal.timeout(15000), redirect: 'follow' });
-      const ct = upstream.headers.get('content-type') || 'application/octet-stream';
-      return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400' } });
-    } catch { ctx.set.status = 502; return { error: 'Failed to fetch external resource' }; }
+      upstream = await safeFetch(url, {
+        method: ctx.request.method || 'GET',
+        headers: { 'User-Agent': 'EcliPanel-Proxy/3.0', 'Accept': '*/*' },
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch { upstream = null; }
+    if (!upstream) { ctx.set.status = 403; return { error: 'Host not allowed' }; }
+    const ct = upstream.headers.get('content-type') || 'application/octet-stream';
+    return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400' } });
   }, { beforeHandle: [optionalAuth], detail: { tags: ['Proxy'], summary: 'Generic external URL proxy' } });
 
   const SITES: Record<string, string> = { chunkbase: 'https://www.chunkbase.com', mcseedmap: 'https://mcseedmap.net' };
