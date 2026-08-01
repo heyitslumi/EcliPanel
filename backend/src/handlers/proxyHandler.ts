@@ -42,7 +42,7 @@ export function proxyRoutes(app: any, prefix: string) {
   app.get(prefix + '/proxy/image', async (ctx: any) => {
     const rawUrl = ctx.query.url;
     if (!rawUrl || typeof rawUrl !== 'string') { ctx.set.status = 400; return { error: ctx.t('proxy.missing_url_parameter') }; }
-    let remoteRes: Response;
+    let remoteRes: Response | null = null;
     try {
       remoteRes = await safeFetch(rawUrl, {
         headers: { 'User-Agent': 'EcliPanel-ImageProxy/3.0', 'Accept': 'image/*' },
