@@ -6,9 +6,10 @@ import { helmet } from 'elysia-helmet';
 import jsonwebtoken from 'jsonwebtoken';
 import { registerRoutes } from './routes/index';
 import { setupMiddleware, authenticate } from './middleware';
+import { optionalAuth } from './middleware/auth';
 import { i18n } from './i18n/plugin';
 import { preloadAll } from './i18n/loader';
-import { hasPermissionSync } from './middleware/authorize';
+import { hasPermissionSync, isAdminContext } from './middleware/authorize';
 import { setupConfig } from './config';
 import { createActivityLog } from './handlers/logHandler';
 import { logAdminAction } from './services/adminAuditService';
@@ -1567,6 +1568,35 @@ export async function initApp() {
     async (rawCtx: unknown) => {
       const ctx = rawCtx as unknown as AppRequestContext;
       const relPath = String(ctx.params?.['*'] || '');
+      const isPublicFile = /^(?:avatar_(?:user|org)_\d+|blog_\d+_\d+)\.[a-z0-9]+$/i.test(relPath);
+      if (!isPublicFile) {
+        const requester = ctx.user;
+        const apiKey = ctx.apiKey;
+        if (!requester && !apiKey) {
+          return new Response(JSON.stringify({ error: 'Missing Authorization token' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!isAdminContext(ctx)) {
+          const ownerId = requester?.id ?? null;
+          if (!ownerId) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          const ownerMatch = relPath.match(/^(?:ticket|elo_screenshot)_(\d+)_/i);
+          if (ownerMatch && Number(ownerMatch[1]) !== ownerId) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        }
+      }
+
       let filepath: string;
       try {
         filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), relPath);
@@ -1591,7 +1621,8 @@ export async function initApp() {
           headers: {
             'Content-Type': mimeTypes[ext] || 'application/octet-stream',
             'Content-Length': String(buf.length),
-            'Cache-Control': 'public, max-age=86400',
+            'Cache-Control': isPublicFile ? 'public, max-age=86400' : 'private, no-store',
+            ...(isPublicFile ? {} : { 'X-Content-Type-Options': 'nosniff' }),
           },
         });
       } catch {
@@ -1602,46 +1633,9 @@ export async function initApp() {
       }
     },
     {
+      beforeHandle: [optionalAuth],
       detail: { hide: true },
     }
-    ,
-    async (rawCtx: unknown) => {
-      const ctx = rawCtx as unknown as AppRequestContext;
-      const relPath = String(ctx.params?.['*'] || '');
-      let filepath: string;
-      try {
-        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads'), relPath);
-      } catch {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      const ext = path.extname(filepath).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-      };
-      try {
-        const buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
-        return new Response(new Uint8Array(buf), {
-          status: 200,
-          headers: {
-            'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-            'Content-Length': String(buf.length),
-            'Cache-Control': 'public, max-age=86400',
-          },
-        });
-      } catch {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    },
   );
 }
 
