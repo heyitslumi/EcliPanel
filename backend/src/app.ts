@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { websocket } from 'elysia/websocket';
 import { jwt } from '@elysia/jwt';
 import cors from '@elysia/cors';
 import { helmet } from 'elysia-helmet';
@@ -99,6 +100,7 @@ function getSafeUploadPath(base: string, relPath: string) {
 // I tried to clean it up but yes..
 const app = new Elysia() as Elysia & AppExtensions;
 app.decorate('log', console)
+  .use(websocket())
   .use(
     openapi({
       path: '/openapi',

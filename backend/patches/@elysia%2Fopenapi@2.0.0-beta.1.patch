@@ -30,3 +30,38 @@ index ca24406b44bde1bf3a25fac94f101d9967e73d98..8df11b0505fadca4745a4c46d6ae0a09
      >
      <\/script>
      <script src="${config.cdn}" crossorigin><\/script>
+diff --git a/dist/gen/index.mjs b/gen/index.mjs
+index 27baa3f4900963856809d0b13dc49e91f454a1d3..936ed97fd99a5e3dec3a1fdd6512a0ade6e56071 100644
+--- a/dist/gen/index.mjs
++++ b/dist/gen/index.mjs
+@@ -1,5 +1,5 @@
+-import { Script } from "../node_modules/typebox/build/type/script/script.mjs";
+-import "../node_modules/typebox/build/type/index.mjs";
++import { Script } from "typebox/type";
++import "typebox/type";
+ 
+ //#region src/gen/index.ts
+ const matchRoute = /: Elysia<(.*)>/gs;
+diff --git a/dist/gen/index.js b/gen/index.js
+index 500863734b896bafa4522c9d5f4500b7d9a3d883..67aa0fa2752cff2ab72175f7d5e145eccc3c5d0d 100644
+--- a/dist/gen/index.js
++++ b/dist/gen/index.js
+@@ -1,6 +1,6 @@
+ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+-const require_script = require('../node_modules/typebox/build/type/script/script.js');
+-require('../node_modules/typebox/build/type/index.js');
++const require_script = require('typebox/type');
++require('typebox/type');
+ 
+ //#region src/gen/index.ts
+ const matchRoute = /: Elysia<(.*)>/gs;
+diff --git a/dist/types.d.ts b/types.d.ts
+index 054bdcb428855b9667e2d2a830ce79737b6e6b3d..a81350e3e54fe65e9d694f233b9713ad1011fbd1 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -1,4 +1,4 @@
+-import { TSchema } from "./node_modules/typebox/build/type/types/schema.js";
++import { TSchema } from "typebox/type";
+ import { OpenAPIV3 } from "./node_modules/openapi-types/dist/index.js";
+ import { ApiReferenceConfiguration } from "./node_modules/@scalar/types/dist/api-reference/api-reference-configuration.js";
+ import { SwaggerUIOptions } from "./swagger/types.js";
