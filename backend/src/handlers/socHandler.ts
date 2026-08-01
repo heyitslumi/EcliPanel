@@ -16,7 +16,7 @@ import { In, Not, IsNull } from 'typeorm';
 import { t } from 'elysia';
 import { PanelSetting } from '../models/panelSetting.entity';
 import { DetectionRule } from '../models/detectionRule.entity';
-import { testRule } from '../services/ruleEngine';
+import { testRule, isSafeRegex, findUnsafeRegex } from '../services/ruleEngine';
 import { Ticket } from '../models/ticket.entity';
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
@@ -841,7 +841,7 @@ export async function socRoutes(app: any, prefix = '') {
 
       const wingsMode = ctx.query?.mode === 'wings';
       if (wingsMode) {
-        const rules = await repo.find({ where: { enabled: true } });
+        const rules = await repo.find({ where: { enabled: true, visibility: 'public' } });
         return { rules, total: rules.length };
       }
 
@@ -1004,6 +1004,19 @@ export async function socRoutes(app: any, prefix = '') {
         ctx.set.status = 400;
         return { error: 'conditions and event are required' };
       }
+
+      const unsafe = findUnsafeRegex(body.conditions);
+      if (unsafe) {
+        ctx.set.status = 400;
+        return { error: `Unsafe regex pattern in condition "${unsafe}": nested/repeated quantifiers are not allowed` };
+      }
+
+      const eventJson = JSON.stringify(body.event);
+      if (eventJson && eventJson.length > 10000) {
+        ctx.set.status = 400;
+        return { error: 'event is too large' };
+      }
+
       const matched = testRule({ conditions: body.conditions }, body.event);
       return { matched };
     },
