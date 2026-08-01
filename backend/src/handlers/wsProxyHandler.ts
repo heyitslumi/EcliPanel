@@ -162,6 +162,7 @@ class WingsProxySession {
           } catch {
             return s;
           }
+        };
         let oHost: string;
         try {
           oHost = new URL(norm(origin)).hostname;
