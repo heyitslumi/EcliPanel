@@ -1454,7 +1454,14 @@ export function tunnelRoutes(app: TunnelApp, prefix: string): void {
         return errorResponse('not_found', 404);
       }
 
-      if (device && allocation.clientDevice?.id !== device.id) {
+      if (device) {
+        if (allocation.clientDevice?.id !== device.id) {
+          return errorResponse('forbidden', 403);
+        }
+      } else if (
+        !ctx.user ||
+        !(await deviceBelongsToUserOrOrg(allocation.clientDevice, ctx.user))
+      ) {
         return errorResponse('forbidden', 403);
       }
 
