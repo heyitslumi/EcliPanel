@@ -64,7 +64,7 @@ export async function oauthWellKnownRoutes(app: any, prefix = '') {
     async ctx => {
       const f = await requireFeature(ctx, 'oauth');
       if (f !== true) return f;
-      const base = process.env.PANEL_API_URL || process.env.PANEL_URL || 'https://panel.ecli.app';
+      const base = process.env.PANEL_API_URL || process.env.PANEL_URL || 'https://ecli.app';
       return {
         issuer: base,
         authorization_endpoint: `${base}/api/oauth/authorize`,
@@ -703,8 +703,17 @@ export async function oauthRoutes(app: any, prefix = '') {
           return { error: 'invalid_grant', error_description: 'Refresh token expired' };
         }
 
-        existing.revoked = true;
-        await tokenRepo.save(existing);
+        const revokeRes = await tokenRepo
+          .createQueryBuilder()
+          .update()
+          .set({ revoked: true })
+          .where('id = :id', { id: existing.id })
+          .andWhere('revoked = false')
+          .execute();
+        if ((revokeRes.affected ?? 0) === 0) {
+          ctx.set.status = 400;
+          return { error: 'invalid_grant', error_description: 'Refresh token already used' };
+        }
 
         const newAccessToken = await randomToken(40);
         const newRefreshToken = await randomToken(40);

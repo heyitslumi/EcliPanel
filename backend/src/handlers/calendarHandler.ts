@@ -69,7 +69,7 @@ export async function calendarRoutes(app: any, prefix = '') {
         try {
           bookingCount = await AppDataSource.getRepository(CalendarBooking).countBy({ eventId: id });
         } catch { /* existence is delulu */ }
-        return { id: ev.id, title: ev.title, description: ev.description, date: ev.date, startTime: ev.startTime, endTime: ev.endTime, color: ev.color, recurring: ev.recurring, recurringEnd: ev.recurringEnd, isAppointment: ev.isAppointment, appointmentEmail: ev.appointmentEmail, appointmentName: ev.appointmentName, bookingFields: ev.bookingFields, bookingData: ev.bookingData, bookingType: ev.bookingType || 'call', maxCapacity: ev.maxCapacity ?? 1, availableDays: ev.availableDays, availableStartTime: ev.availableStartTime, availableEndTime: ev.availableEndTime, slotDuration: ev.slotDuration, bufferMinutes: ev.bufferMinutes ?? 0, bookingStartDate: ev.bookingStartDate, bookingEndDate: ev.bookingEndDate, bookingCount };
+        return { id: ev.id, title: ev.title, description: ev.description, date: ev.date, startTime: ev.startTime, endTime: ev.endTime, color: ev.color, recurring: ev.recurring, recurringEnd: ev.recurringEnd, isAppointment: ev.isAppointment, bookingType: ev.bookingType || 'call', maxCapacity: ev.maxCapacity ?? 1, availableDays: ev.availableDays, availableStartTime: ev.availableStartTime, availableEndTime: ev.availableEndTime, slotDuration: ev.slotDuration, bufferMinutes: ev.bufferMinutes ?? 0, bookingStartDate: ev.bookingStartDate, bookingEndDate: ev.bookingEndDate, bookingCount };
       }
       return ev;
     },

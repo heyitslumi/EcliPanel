@@ -113,7 +113,7 @@ export function verifyAnyToken(token: string): PqJwtPayload {
     try {
       const secret = getLegacySecret();
       if (!secret) throw new Error('JWT_SECRET not configured');
-      const decoded = jsonwebtoken.verify(token, secret) as PqJwtPayload;
+      const decoded = jsonwebtoken.verify(token, secret, { algorithms: ['HS256'] }) as PqJwtPayload;
       return decoded;
     } catch (err) {
       throw err;

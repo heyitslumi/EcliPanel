@@ -484,7 +484,15 @@ export async function blogRoutes(app: any, prefix = '') {
         return { error: ctx.t('blog.notFound') };
       }
 
-      blog.layout = body?.layout || body || {};
+      const layout = (body?.layout || body || {}) as Record<string, any>;
+      const sections = Array.isArray(layout.sections) ? layout.sections : [];
+      const hasScript = sections.some((s: any) => s?.type === 'script');
+      if (hasScript && !hasPermissionSync(ctx, 'admin:access')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      blog.layout = layout;
       await repo.save(blog);
 
       return { layout: blog.layout };
@@ -1456,21 +1464,28 @@ export async function blogRoutes(app: any, prefix = '') {
 
       const frontendUrl = process.env.FRONTEND_URL;
       const blogUrl = `${frontendUrl}/blog/${blog.slug}`;
+      const xmlEscape = (s: string) =>
+        String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
 
       const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
-<title>${blog.name}</title>
+<title>${xmlEscape(blog.name)}</title>
 <link>${blogUrl}</link>
-<description>${blog.description || blog.name}</description>
+<description>${xmlEscape(blog.description || blog.name)}</description>
 <atom:link href="${blogUrl}/rss" rel="self" type="application/rss+xml"/>
 ${posts.map((p: any) => `
 <item>
-<title>${p.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<title>${xmlEscape(p.title)}</title>
 <link>${blogUrl}/${p.slug}</link>
 <guid isPermaLink="true">${blogUrl}/${p.slug}</guid>
 <pubDate>${new Date(p.createdAt).toUTCString()}</pubDate>
-<description>${(p.excerpt || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</description>
+<description>${xmlEscape(p.excerpt || '')}</description>
 </item>`).join('')}
 </channel>
 </rss>`;

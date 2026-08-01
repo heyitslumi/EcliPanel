@@ -432,55 +432,78 @@ export async function orderRoutes(app: any, prefix = '') {
         }
       }
 
-      const { orgId, items, amount, description, planId, notes, activateMode } = body as any;
+      const { orgId, items, description, planId, notes, activateMode } = body as any;
 
-      let effectiveAmount = amount != null ? Number(amount) : 0;
       const isQueuedForRenewal = activateMode === 'renewal';
-      const isFree = effectiveAmount === 0;
 
+      let effectiveAmount: number;
+      let enrichedItems = items;
+
+      if (planId != null) {
+        let plan: any = null;
+        try {
+          const planRepo = AppDataSource.getRepository(Plan);
+          plan = await planRepo.findOneBy({ id: Number(planId) });
+        } catch {
+          ctx.set.status = 500;
+          return { error: ctx.t('orders.planLookupFailed', 'Plan lookup failed') };
+        }
+        if (!plan) {
+          ctx.set.status = 400;
+          return { error: ctx.t('orders.planNotFound', 'Plan not found') };
+        }
+        if (orgId != null && (plan.type === 'free' || plan.type === 'educational')) {
+          ctx.set.status = 400;
+          return { error: ctx.t('organisation.cannotPurchaseTier') };
+        }
+        if (plan.type === 'enterprise' && !hasPermissionSync(ctx, 'orders:update')) {
+          ctx.set.status = 403;
+          return { error: 'Enterprise plans require admin activation. Contact sales.' };
+        }
+        effectiveAmount = plan.price ?? 0;
+        try {
+          const { getEffectivePrice } = require('../utils/regionalPricing');
+          const pricing = await getEffectivePrice(plan, user);
+          if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
+        } catch {}
+        const itemDesc = description || plan.name;
+        if (items) {
+          try {
+            const parsed = JSON.parse(items);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed[0].description = parsed[0].description || itemDesc;
+              parsed[0].price = effectiveAmount;
+              enrichedItems = JSON.stringify(parsed);
+            }
+          } catch {}
+        } else {
+          enrichedItems = JSON.stringify([
+            { description: itemDesc, quantity: 1, price: effectiveAmount }
+          ]);
+        }
+      } else if (String(notes || '').includes('dns_addon')) {
+        let addonPrice = 3;
+        try {
+          const panelRepo = AppDataSource.getRepository(require('../models/panelSetting.entity').PanelSetting);
+          const row = await panelRepo.findOneBy({ key: 'org_dns_addon_price' });
+          const v = Number(row?.value ?? '3');
+          if (Number.isFinite(v) && v >= 0) addonPrice = v;
+        } catch {}
+        effectiveAmount = addonPrice;
+        enrichedItems = JSON.stringify([
+          { description: 'DNS Management Add-on (monthly)', quantity: 1, price: addonPrice },
+        ]);
+      } else {
+        ctx.set.status = 400;
+        return { error: ctx.t('orders.unrecognizedOrderType', 'Unrecognized order type') };
+      }
+
+      const isFree = effectiveAmount === 0;
       let enrichedNotes = notes || undefined;
       if (isQueuedForRenewal) {
         enrichedNotes = enrichedNotes
           ? `${enrichedNotes}; queue_for_renewal:true`
           : 'queue_for_renewal:true';
-      }
-
-      let enrichedItems = items;
-      if (planId != null) {
-        try {
-          const planRepo = AppDataSource.getRepository(Plan);
-          const plan = await planRepo.findOneBy({ id: Number(planId) });
-          if (plan) {
-            if (orgId != null && (plan.type === 'free' || plan.type === 'educational')) {
-              ctx.set.status = 400;
-              return { error: ctx.t('organisation.cannotPurchaseTier') };
-            }
-            if (plan.type === 'enterprise' && !hasPermissionSync(ctx, 'orders:update')) {
-              ctx.set.status = 403;
-              return { error: 'Enterprise plans require admin activation. Contact sales.' };
-            }
-            effectiveAmount = plan.price ?? 0;
-            try {
-              const { getEffectivePrice } = require('../utils/regionalPricing');
-              const pricing = await getEffectivePrice(plan, user);
-              if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
-            } catch {}
-            const itemDesc = description || plan.name;
-            if (items) {
-              try {
-                const parsed = JSON.parse(items);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  parsed[0].description = parsed[0].description || itemDesc;
-                  enrichedItems = JSON.stringify(parsed);
-                }
-              } catch {}
-            } else {
-              enrichedItems = JSON.stringify([
-                { description: itemDesc, quantity: 1, price: effectiveAmount }
-              ]);
-            }
-          }
-        } catch {}
       }
 
       let orderTaxAmount = 0;

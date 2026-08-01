@@ -168,6 +168,23 @@ export function asIdNameBody(body: unknown): { name: string } {
   };
 }
 
+const EMAIL_ADDR_RE =
+  /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/;
+
+export function sanitizeRecipientList(value: unknown, max = 10): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const raw = String(value);
+  const parts = raw
+    .split(/[,;]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0 || parts.length > max) return undefined;
+  for (const part of parts) {
+    if (!EMAIL_ADDR_RE.test(part)) return undefined;
+  }
+  return parts.join(', ');
+}
+
 export function asSendEmailBody(body: unknown): {
   to: string;
   cc?: string;
@@ -177,10 +194,14 @@ export function asSendEmailBody(body: unknown): {
   html?: string;
 } {
   const safe = safeBody(body, { to: '', subject: '', body: '' });
+  const to = sanitizeRecipientList(safe.to, 1);
+  if (!to) return { to: '', cc: undefined, bcc: undefined, subject: '', body: '', html: undefined };
+  const cc = sanitizeRecipientList(safe.cc);
+  const bcc = sanitizeRecipientList(safe.bcc);
   return {
-    to: String(safe.to ?? ''),
-    cc: safe.cc !== undefined && safe.cc !== null ? String(safe.cc) : undefined,
-    bcc: safe.bcc !== undefined && safe.bcc !== null ? String(safe.bcc) : undefined,
+    to,
+    cc,
+    bcc,
     subject: String(safe.subject ?? ''),
     body: String(safe.body ?? ''),
     html: safe.html !== undefined && safe.html !== null ? String(safe.html) : undefined,

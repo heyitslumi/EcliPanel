@@ -139,6 +139,51 @@ class WingsProxySession {
       return;
     }
 
+    const origin = this.getHeader('origin');
+    if (origin) {
+      const allowed = (() => {
+        const cfg = [process.env.FRONTEND_URL, process.env.PANEL_URL]
+          .filter(Boolean)
+          .join(',')
+          .split(',')
+          .map(o => o.trim())
+          .filter(Boolean);
+        if (
+          process.env.FRONTEND_URL === '*' ||
+          process.env.FRONTEND_URL === 'true' ||
+          process.env.PANEL_URL === '*' ||
+          process.env.PANEL_URL === 'true'
+        )
+          return true;
+        if (cfg.length === 0) return true;
+        const norm = (s: string) => {
+          try {
+            return new URL(s.startsWith('http') ? s : `https://${s}`).origin;
+          } catch {
+            return s;
+          }
+        let oHost: string;
+        try {
+          oHost = new URL(norm(origin)).hostname;
+        } catch {
+          return false;
+        }
+        return cfg.some(c => {
+          try {
+            const cHost = new URL(norm(c)).hostname;
+            return oHost === cHost || oHost.endsWith('.' + cHost);
+          } catch {
+            return false;
+          }
+        });
+      })();
+      if (!allowed) {
+        this.sendToClient({ event: 'error', args: ['Forbidden origin'] });
+        this.destroy();
+        return;
+      }
+    }
+
     const token = this.extractPanelToken();
     if (!token) {
       this.sendToClient({ event: 'error', args: ['Missing authentication token'] });
@@ -202,9 +247,6 @@ class WingsProxySession {
   }
 
   private extractPanelToken(): string | null {
-    const queryToken = this.ctx?.query?.token;
-    if (queryToken) return String(queryToken);
-
     const authHeader = this.getHeader('authorization');
     if (authHeader?.startsWith('Bearer ')) {
       return authHeader.slice(7);
@@ -213,6 +255,9 @@ class WingsProxySession {
     const cookie = this.getHeader('cookie') || '';
     const match = cookie.match(/(?:^|;\s*)token=([^;]+)/);
     if (match?.[1]) return decodeURIComponent(match[1]);
+
+    const queryToken = this.ctx?.query?.token;
+    if (queryToken) return String(queryToken);
 
     return null;
   }

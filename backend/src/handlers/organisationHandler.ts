@@ -434,7 +434,6 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
     const membership = await getMembership(user.id, org.id);
     return (
       hasPermissionSync(ctx, 'org:write') ||
-      user.role === 'staff' ||
       user.id === org.ownerId ||
       !!membership
     );
@@ -1748,15 +1747,25 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
       }
       const body = ctx.body as Record<string, unknown>;
       const planId = Number(body.planId);
-      const amount = Number(body.amount || 0);
       const description = String(body.description || '');
       const activateMode = String(body.activateMode || 'now');
-      const items = String(body.items || '[]');
       const notes = body.notes ? String(body.notes) : undefined;
 
       const orderRepo2 = AppDataSource.getRepository(require('../models/order.entity').Order);
+      const panelRepo = AppDataSource.getRepository(require('../models/panelSetting.entity').PanelSetting);
+      const getPanelSetting = async (key: string, def: string): Promise<number> => {
+        try {
+          const row = await panelRepo.findOneBy({ key });
+          const v = Number(row?.value ?? def);
+          return Number.isFinite(v) && v >= 0 ? v : Number(def) || 0;
+        } catch {
+          return Number(def) || 0;
+        }
+      };
+
       let plan: any = null;
-      let effectiveAmount = amount;
+      let effectiveAmount: number;
+      let items: string;
       if (planId && !isNaN(planId)) {
         const planRepo2 = AppDataSource.getRepository(require('../models/plan.entity').Plan);
         plan = await planRepo2.findOneBy({ id: planId });
@@ -1775,6 +1784,26 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           const pricing = await getEffectivePrice(plan, user);
           if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
         } catch {}
+        let formationFee = 0;
+        if (org.status === 'pending' || org.portalTier === 'none') {
+          formationFee = await getPanelSetting('org_formation_fee', '1');
+          effectiveAmount += formationFee;
+        }
+        const itemDesc = description || plan.name;
+        items = JSON.stringify([
+          { description: itemDesc, quantity: 1, price: effectiveAmount - formationFee },
+          ...(formationFee > 0
+            ? [{ description: 'Organisation formation fee', quantity: 1, price: formationFee }]
+            : []),
+        ]);
+      } else if (String(notes || '').includes('dns_addon')) {
+        effectiveAmount = await getPanelSetting('org_dns_addon_price', '3');
+        items = JSON.stringify([
+          { description: 'DNS Management Add-on (monthly)', quantity: 1, price: effectiveAmount },
+        ]);
+      } else {
+        ctx.set.status = 400;
+        return { error: ctx.t('orders.unrecognizedOrderType', 'Unrecognized order type') };
       }
 
       const isFree = effectiveAmount === 0;
@@ -1881,6 +1910,16 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
     prefix + '/organisations/:id/servers',
     async (ctx: AuthenticatedHandlerContext) => {
       const orgId = Number(ctx.params['id']);
+      const requester = ctx.user;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: ctx.t('common.forbidden') };
+      }
+      const membership = await getMembership(requester.id, orgId);
+      if (!membership) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
       return withRedisCache(`organisations:servers:${orgId}:v4`, 5, async () => {
         const nodeRepo = AppDataSource.getRepository(require('../models/node.entity').Node);
         const cfgRepo = AppDataSource.getRepository(require('../models/serverConfig.entity').ServerConfig);
@@ -1949,10 +1988,33 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
     prefix + '/organisations/:id/nodes',
     async (ctx: AuthenticatedHandlerContext) => {
       const orgId = Number(ctx.params['id']);
+      const requester = ctx.user;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: ctx.t('common.forbidden') };
+      }
+      const membership = await getMembership(requester.id, orgId);
+      if (!membership) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
       return withRedisCache(`organisations:nodes:${orgId}:v1`, 30, async () => {
         const repo = AppDataSource.getRepository(require('../models/node.entity').Node);
         const nodes = await repo.find({ where: { organisation: { id: orgId } } });
-        return nodes;
+        // never expose credentials (wings token, proxmox secrets) to org members
+        return (nodes || []).map(n => ({
+          id: n.id,
+          nodeId: n.nodeId,
+          name: n.name,
+          provider: n.provider,
+          nodeType: n.nodeType,
+          url: n.url,
+          fqdn: n.fqdn,
+          defaultIp: n.defaultIp,
+          ipv6Subnet: n.ipv6Subnet,
+          portRangeStart: n.portRangeStart,
+          portRangeEnd: n.portRangeEnd,
+        }));
       });
     },
     {
