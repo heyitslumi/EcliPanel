@@ -1,4 +1,4 @@
-import { optionalAuth } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 import { safeFetch } from '../utils/ssrf';
 import { AppDataSource } from '../config/typeorm';
 import { Node } from '../models/node.entity';
@@ -74,8 +74,9 @@ export function proxyRoutes(app: any, prefix: string) {
     } catch { upstream = null; }
     if (!upstream) { ctx.set.status = 403; return { error: 'Host not allowed' }; }
     const ct = upstream.headers.get('content-type') || 'application/octet-stream';
-    return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400' } });
-  }, { beforeHandle: [optionalAuth], detail: { tags: ['Proxy'], summary: 'Generic external URL proxy' } });
+    // Prevent response smuggling — only forward safe content types for untrusted origins
+    return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' } });
+  }, { beforeHandle: [authenticate], detail: { tags: ['Proxy'], summary: 'Generic external URL proxy' } });
 
   const SITES: Record<string, string> = { chunkbase: 'https://www.chunkbase.com', mcseedmap: 'https://mcseedmap.net' };
   const AD = /ads\.adthrive\.com|pagead2\.googlesyndication\.com|doubleclick\.net|googletagmanager\.com|google-analytics\.com|googletagservices\.com|adnxs\.com|rubiconproject\.com|criteo\.com|amazon-adsystem\.com|pubmatic\.com|openx\.net|moatads\.com|scorecardresearch\.com|quantserve\.com|outbrain\.com|taboola\.com|yandex\.ru\/ads/i;
