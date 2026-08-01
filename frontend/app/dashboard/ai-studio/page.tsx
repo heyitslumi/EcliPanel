@@ -206,7 +206,7 @@ export default function AIStudioPage() {
       const payloadMessages: { role: string; content: string }[] = []
       payloadMessages.push({
         role: "system",
-        content: "You are an expert assistant in the EcliPanel server management platform. Help users manage game servers, applications, configurations, and infrastructure. Be concise, specific, and actionable. Use code blocks for configs and commands."
+        content: "You are an expert assistant in the EcliPanel server management platform. Help users manage servers, applications, configurations, and infrastructure. Be concise, specific, and actionable. Use code blocks for configs and commands."
       })
       if (activeTool.systemPrompt) {
         payloadMessages.push({ role: "system", content: activeTool.systemPrompt })

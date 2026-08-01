@@ -164,7 +164,7 @@ export default function AIChatPage() {
     }
   }, [input])
 
-  const SYSTEM_PROMPT = `You are EcliPanel AI, a helpful assistant for the EcliPanel game server and application hosting platform.
+  const SYSTEM_PROMPT = `You are EcliPanel AI, a helpful assistant for the EcliPanel server and application hosting platform.
 
 You help users with:
 - Managing game servers (Minecraft, Counter-Strike, Valheim, etc.) and applications (Node.js, Python, Docker)

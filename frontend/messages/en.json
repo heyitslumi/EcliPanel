@@ -421,14 +421,14 @@
     "feedback": {
       "eyebrow": "Feedback",
       "heading": "Average rating from people who run real servers.",
-      "description": "Trusted by hosting teams and game server operators, EcliPanel earns top marks for fast deployment and reliable control.",
+      "description": "Trusted by hosting teams and server operators, EcliPanel earns top marks for fast deployment and reliable control.",
       "averageLabel": "Average rating",
       "reviewCount": "{count}+ reviews",
       "quoteLabel": "What users say",
       "quote": "Stable hosting, fast deployment, and an interface that just works.",
       "quoteSource": "Trusted by server operators worldwide.",
       "panelCardTitle": "Host confidently",
-      "panelCardHeadline": "Built for game servers and distributed workloads.",
+      "panelCardHeadline": "Built for servers and distributed workloads.",
       "panelCardDescription": "Keep your team in control with metrics, autoscaling, and secure access from one panel.",
       "panelStat1": "95% uptime-ready architecture",
       "panelStat2": "Real-time feedback from production users",
@@ -4219,7 +4219,7 @@
   "serversPage": {
     "header": {
       "title": "Servers",
-      "description": "Manage your game servers"
+      "description": "Manage your servers"
     },
     "status": {
       "online": "Online",
@@ -5823,7 +5823,7 @@
       "title": "Organisations",
       "description": "Team workspaces for sharing servers and nodes"
     },
-    "description": "Organisations let you collaborate with team members on game servers, infrastructure nodes, and DNS. Each org gets its own resources and billing.",
+    "description": "Organisations let you collaborate with team members on servers, infrastructure nodes, and DNS. Each org gets its own resources and billing.",
     "actions": {
       "newOrganisation": "New Organisation",
       "viaBilling": "$1 via Billing"
@@ -5849,7 +5849,7 @@
     },
     "whatIs": {
       "title": "What is an organisation?",
-      "description": "An organisation is a team workspace where members can collaborate on game servers, infrastructure nodes, and DNS together. Each org gets its own resources and billing."
+      "description": "An organisation is a team workspace where members can collaborate on servers, infrastructure nodes, and DNS together. Each org gets its own resources and billing."
     },
     "fields": {
       "nameLabel": "Organisation name",
@@ -6256,13 +6256,13 @@
       "codeAssistant": {
         "name": "Code Assistant",
         "description": "Generate, debug, and optimize server configurations",
-        "systemPrompt": "You are a Code Assistant for the EcliPanel game server management platform. Help users generate, debug, and optimize server configuration files (server.properties, spigot.yml, paper.yml, bukkit.yml, startup scripts, Docker compose files, .env files, nginx configs, etc). When providing code, always include the full file path as a comment at the top. Explain what each setting does. Suggest security hardening where applicable. Output complete, ready-to-use config blocks. Consider the user's game server type (Minecraft, Valheim, CS2, etc) and adapt configs accordingly.",
+        "systemPrompt": "You are a Code Assistant for the EcliPanel server management platform. Help users generate, debug, and optimize server configuration files (server.properties, spigot.yml, paper.yml, bukkit.yml, startup scripts, Docker compose files, .env files, nginx configs, etc). When providing code, always include the full file path as a comment at the top. Explain what each setting does. Suggest security hardening where applicable. Output complete, ready-to-use config blocks. Consider the user's server type (Minecraft, Valheim, CS2, etc) and adapt configs accordingly.",
         "placeholder": "Describe what you need — e.g. 'Optimize my paper.yml for 50 players'"
       },
       "logAnalyzer": {
         "name": "Log Analyzer",
         "description": "Analyze server logs and identify issues automatically",
-        "systemPrompt": "You are a Log Analyzer for game servers on EcliPanel. The user will paste server logs. Systematically identify: errors (crash logs, stack traces), warnings (deprecated API calls, mod conflicts), performance issues (TPS drops, GC pauses, tick lag), plugin/mod conflicts, and security concerns. For each issue found: 1) Quote the relevant log line, 2) Explain what it means, 3) Provide a specific fix with exact config values or commands. Prioritize critical issues first. If the log contains a full crash report, analyze the stack trace and identify the root cause mod/plugin.",
+        "systemPrompt": "You are a Log Analyzer for servers on EcliPanel. The user will paste server logs. Systematically identify: errors (crash logs, stack traces), warnings (deprecated API calls, mod conflicts), performance issues (TPS drops, GC pauses, tick lag), plugin/mod conflicts, and security concerns. For each issue found: 1) Quote the relevant log line, 2) Explain what it means, 3) Provide a specific fix with exact config values or commands. Prioritize critical issues first. If the log contains a full crash report, analyze the stack trace and identify the root cause mod/plugin.",
         "placeholder": "Paste your server log or describe the error…"
       },
       "imageGenerator": {
@@ -6272,13 +6272,13 @@
       "configWizard": {
         "name": "Config Wizard",
         "description": "Auto-generate optimal server configurations",
-        "systemPrompt": "You are a Config Wizard for game servers on EcliPanel. Based on the user's requirements (player count, server type, mods/plugins, hardware specs like RAM and CPU), generate complete, optimized configuration files. For each config: 1) State the file path, 2) Explain key decisions made, 3) Output the full ready-to-use config. Adapt JVM flags, garbage collection settings, and startup parameters to the specified hardware. Consider server type specific optimizations (Paper/Airplane/Pufferfish for performance, Forge/Fabric for modded). Include comments explaining each significant setting.",
+        "systemPrompt": "You are a Config Wizard for servers on EcliPanel. Based on the user's requirements (player count, server type, mods/plugins, hardware specs like RAM and CPU), generate complete, optimized configuration files. For each config: 1) State the file path, 2) Explain key decisions made, 3) Output the full ready-to-use config. Adapt JVM flags, garbage collection settings, and startup parameters to the specified hardware. Consider server type specific optimizations (Paper/Airplane/Pufferfish for performance, Forge/Fabric for modded). Include comments explaining each significant setting.",
         "placeholder": "e.g. 'Generate optimized JVM flags for 8GB RAM, Paper 1.21, 100 players'"
       },
       "performanceAdvisor": {
         "name": "Performance Advisor",
         "description": "AI-powered performance optimization suggestions",
-        "systemPrompt": "You are a Performance Advisor for game servers on EcliPanel. Analyze the user's described setup and provide specific optimization suggestions across all layers: JVM/startup flags (GC tuning, memory allocation), server config (view-distance, simulation-distance, entity-activation-range, tick-rates), plugin optimization (identify laggy plugins, suggest alternatives), database tuning (if MySQL/Redis involved), and OS-level tuning where applicable. Be specific with exact config values and file paths. Explain the performance impact of each change. Prioritize by impact — highest gain changes first.",
+        "systemPrompt": "You are a Performance Advisor for servers on EcliPanel. Analyze the user's described setup and provide specific optimization suggestions across all layers: JVM/startup flags (GC tuning, memory allocation), server config (view-distance, simulation-distance, entity-activation-range, tick-rates), plugin optimization (identify laggy plugins, suggest alternatives), database tuning (if MySQL/Redis involved), and OS-level tuning where applicable. Be specific with exact config values and file paths. Explain the performance impact of each change. Prioritize by impact — highest gain changes first.",
         "placeholder": "Describe your server setup and performance issues…"
       },
       "analyticsAi": {

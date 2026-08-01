@@ -817,6 +817,7 @@ export const NAVIGATION: NavSection[] = [
         label: "AI Chat",
         href: "/dashboard/ai-chat",
         icon: MessageSquare,
+        requiredTier: "paid",
         feature: "ai",
       },
     ],

@@ -420,14 +420,14 @@
     "feedback": {
       "eyebrow": "反馈",
       "heading": "来自运行真实服务器的用户的平均评分。",
-      "description": "受到主机团队和游戏服务器运营者的信赖，EcliPanel 以快速部署和可靠控制获得最高评价。",
+      "description": "受到主机团队和服务器运营者的信赖，EcliPanel 以快速部署和可靠控制获得最高评价。",
       "averageLabel": "平均评分",
       "reviewCount": "{count}+ 条评价",
       "quoteLabel": "用户评价",
       "quote": "稳定主机、快速部署、好用界面。",
       "quoteSource": "受到全球服务器运营者的信赖。",
       "panelCardTitle": "安心托管",
-      "panelCardHeadline": "专为游戏服务器和分布式工作负载打造。",
+      "panelCardHeadline": "专为服务器和分布式工作负载打造。",
       "panelCardDescription": "通过一个面板的指标监控、自动扩展和安全访问，让您的团队掌控一切。",
       "panelStat1": "95% 正常运行时间就绪架构",
       "panelStat2": "来自生产环境用户的实时反馈",
@@ -4190,7 +4190,7 @@
   "serversPage": {
     "header": {
       "title": "服务器",
-      "description": "管理您的游戏服务器"
+      "description": "管理您的服务器"
     },
     "status": {
       "online": "在线",
@@ -5855,7 +5855,7 @@
     },
     "whatIs": {
       "title": "什么是组织？",
-      "description": "组织是一个团队工作区，成员可以在其中协作管理游戏服务器、基础设施节点和 DNS。每个组织拥有自己的资源和账单。"
+      "description": "组织是一个团队工作区，成员可以在其中协作管理服务器、基础设施节点和 DNS。每个组织拥有自己的资源和账单。"
     }
   },
   "organisationsDetailPage": {
@@ -6170,13 +6170,13 @@
       "codeAssistant": {
         "name": "Code Assistant",
         "description": "Generate, debug, and optimize server configurations",
-        "systemPrompt": "You are a Code Assistant for the EcliPanel game server management platform. Help users generate, debug, and optimize server configuration files (server.properties, spigot.yml, paper.yml, bukkit.yml, startup scripts, Docker compose files, .env files, nginx configs, etc). When providing code, always include the full file path as a comment at the top. Explain what each setting does. Suggest security hardening where applicable. Output complete, ready-to-use config blocks. Consider the user's game server type (Minecraft, Valheim, CS2, etc) and adapt configs accordingly.",
+        "systemPrompt": "You are a Code Assistant for the EcliPanel server management platform. Help users generate, debug, and optimize server configuration files (server.properties, spigot.yml, paper.yml, bukkit.yml, startup scripts, Docker compose files, .env files, nginx configs, etc). When providing code, always include the full file path as a comment at the top. Explain what each setting does. Suggest security hardening where applicable. Output complete, ready-to-use config blocks. Consider the user's server type (Minecraft, Valheim, CS2, etc) and adapt configs accordingly.",
         "placeholder": "Describe what you need — e.g. 'Optimize my paper.yml for 50 players'"
       },
       "logAnalyzer": {
         "name": "Log Analyzer",
         "description": "Analyze server logs and identify issues automatically",
-        "systemPrompt": "You are a Log Analyzer for game servers on EcliPanel. The user will paste server logs. Systematically identify: errors (crash logs, stack traces), warnings (deprecated API calls, mod conflicts), performance issues (TPS drops, GC pauses, tick lag), plugin/mod conflicts, and security concerns. For each issue found: 1) Quote the relevant log line, 2) Explain what it means, 3) Provide a specific fix with exact config values or commands. Prioritize critical issues first. If the log contains a full crash report, analyze the stack trace and identify the root cause mod/plugin.",
+        "systemPrompt": "You are a Log Analyzer for servers on EcliPanel. The user will paste server logs. Systematically identify: errors (crash logs, stack traces), warnings (deprecated API calls, mod conflicts), performance issues (TPS drops, GC pauses, tick lag), plugin/mod conflicts, and security concerns. For each issue found: 1) Quote the relevant log line, 2) Explain what it means, 3) Provide a specific fix with exact config values or commands. Prioritize critical issues first. If the log contains a full crash report, analyze the stack trace and identify the root cause mod/plugin.",
         "placeholder": "Paste your server log or describe the error…"
       },
       "imageGenerator": {
@@ -6186,13 +6186,13 @@
       "configWizard": {
         "name": "Config Wizard",
         "description": "Auto-generate optimal server configurations",
-        "systemPrompt": "You are a Config Wizard for game servers on EcliPanel. Based on the user's requirements (player count, server type, mods/plugins, hardware specs like RAM and CPU), generate complete, optimized configuration files. For each config: 1) State the file path, 2) Explain key decisions made, 3) Output the full ready-to-use config. Adapt JVM flags, garbage collection settings, and startup parameters to the specified hardware. Consider server type specific optimizations (Paper/Airplane/Pufferfish for performance, Forge/Fabric for modded). Include comments explaining each significant setting.",
+        "systemPrompt": "You are a Config Wizard for servers on EcliPanel. Based on the user's requirements (player count, server type, mods/plugins, hardware specs like RAM and CPU), generate complete, optimized configuration files. For each config: 1) State the file path, 2) Explain key decisions made, 3) Output the full ready-to-use config. Adapt JVM flags, garbage collection settings, and startup parameters to the specified hardware. Consider server type specific optimizations (Paper/Airplane/Pufferfish for performance, Forge/Fabric for modded). Include comments explaining each significant setting.",
         "placeholder": "e.g. 'Generate optimized JVM flags for 8GB RAM, Paper 1.21, 100 players'"
       },
       "performanceAdvisor": {
         "name": "Performance Advisor",
         "description": "AI 驱动的性能优化建议",
-        "systemPrompt": "You are a Performance Advisor for game servers on EcliPanel. Analyze the user's described setup and provide specific optimization suggestions across all layers: JVM/startup flags (GC tuning, memory allocation), server config (view-distance, simulation-distance, entity-activation-range, tick-rates), plugin optimization (identify laggy plugins, suggest alternatives), database tuning (if MySQL/Redis involved), and OS-level tuning where applicable. Be specific with exact config values and file paths. Explain the performance impact of each change. Prioritize by impact — highest gain changes first.",
+        "systemPrompt": "You are a Performance Advisor for servers on EcliPanel. Analyze the user's described setup and provide specific optimization suggestions across all layers: JVM/startup flags (GC tuning, memory allocation), server config (view-distance, simulation-distance, entity-activation-range, tick-rates), plugin optimization (identify laggy plugins, suggest alternatives), database tuning (if MySQL/Redis involved), and OS-level tuning where applicable. Be specific with exact config values and file paths. Explain the performance impact of each change. Prioritize by impact — highest gain changes first.",
         "placeholder": "Describe your server setup and performance issues…"
       },
       "analyticsAi": {
