@@ -557,7 +557,8 @@
     "mailboxDeleteFailed": "मेलबॉक्स संदेश हटाने में विफल",
     "mailboxReplyFailed": "जवाब भेजने में विफल",
     "mailboxSendFailed": "ईमेल भेजने में विफल",
-    "mailboxPurgeRunning": "मेलबॉक्स सफाई पहले से चल रही है"
+    "mailboxPurgeRunning": "मेलबॉक्स सफाई पहले से चल रही है",
+    "roleChangeRequiresRoot": "केवल रूट एडमिन ही खाता भूमिकाएं बदल सकते हैं"
   },
   "system": {
     "jwtUnavailable": "jwt अनुपलब्ध",

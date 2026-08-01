@@ -451,7 +451,7 @@ async function attemptAutoSuspendServer(
         await cfgRepo.update({ uuid: serverId }, updateData);
       }
 
-      await svc.powerServer(serverId, 'kill').catch(() => {});
+      await svc.powerServer(serverId, 'kill').catch(() => { });
       await svc.syncServer(serverId, {});
 
       const adminNotification = await sendAntiAbuseAdminNotification({
@@ -1024,9 +1024,9 @@ async function runStage1Triage(model: AIModel, params: AntiAbuseParams): Promise
     shouldEscalate: Boolean(parsed?.shouldEscalate ?? false),
     redFlags: Array.isArray(parsed?.redFlags)
       ? parsed.redFlags
-          .map((f: any) => sanitizeAntiAbuseText(f, 200))
-          .filter(Boolean)
-          .slice(0, 10)
+        .map((f: any) => sanitizeAntiAbuseText(f, 200))
+        .filter(Boolean)
+        .slice(0, 10)
       : [],
     triageNotes: sanitizeAntiAbuseText(parsed?.triageNotes || '', 400),
   };
@@ -1066,22 +1066,22 @@ async function runStage2DeepAnalysis(
     attackVector: sanitizeAntiAbuseText(parsed?.attackVector || '', 300),
     affectedSystems: Array.isArray(parsed?.affectedSystems)
       ? parsed.affectedSystems
-          .map((s: any) => sanitizeAntiAbuseText(s, 100))
-          .filter(Boolean)
-          .slice(0, 10)
+        .map((s: any) => sanitizeAntiAbuseText(s, 100))
+        .filter(Boolean)
+        .slice(0, 10)
       : [],
     historicalPattern: sanitizeAntiAbuseText(parsed?.historicalPattern || 'unknown', 40),
     technicalFindings: Array.isArray(parsed?.technicalFindings)
       ? parsed.technicalFindings
-          .map((f: any) => sanitizeAntiAbuseText(f, 300))
-          .filter(Boolean)
-          .slice(0, 8)
+        .map((f: any) => sanitizeAntiAbuseText(f, 300))
+        .filter(Boolean)
+        .slice(0, 8)
       : [],
     mitigationOptions: Array.isArray(parsed?.mitigationOptions)
       ? parsed.mitigationOptions
-          .map((o: any) => sanitizeAntiAbuseText(o, 200))
-          .filter(Boolean)
-          .slice(0, 5)
+        .map((o: any) => sanitizeAntiAbuseText(o, 200))
+        .filter(Boolean)
+        .slice(0, 5)
       : [],
   };
 }
@@ -1136,9 +1136,9 @@ async function runStage3Decision(
     summary: sanitizeAntiAbuseText(parsed?.summary || '', 800),
     signals: Array.isArray(parsed?.signals)
       ? parsed.signals
-          .map((s: any) => sanitizeAntiAbuseText(s, 180))
-          .filter(Boolean)
-          .slice(0, 10)
+        .map((s: any) => sanitizeAntiAbuseText(s, 180))
+        .filter(Boolean)
+        .slice(0, 10)
       : [],
     autoActionThreshold: finalRiskScore >= 80 && confidence >= 0.75,
     reasoning: sanitizeAntiAbuseText(parsed?.reasoning || '', 400),
@@ -1410,7 +1410,7 @@ export async function adminRoutes(app: any, prefix = '') {
             where: { formId: In(applicationFormIds), status: 'pending' },
           });
         }
-      } catch {}
+      } catch { }
 
       const cfgRepo = AppDataSource.getRepository(ServerConfig);
       const configCount = await cfgRepo.count();
@@ -1458,9 +1458,9 @@ export async function adminRoutes(app: any, prefix = '') {
       const avgTicketResponseMsLast30 =
         responseDurationsLast30.length > 0
           ? Math.round(
-              responseDurationsLast30.reduce((acc, v) => acc + v, 0) /
-                responseDurationsLast30.length
-            )
+            responseDurationsLast30.reduce((acc, v) => acc + v, 0) /
+            responseDurationsLast30.length
+          )
           : null;
 
       const allTickets = await ticketRepo.find({ take: 2000 });
@@ -1469,8 +1469,8 @@ export async function adminRoutes(app: any, prefix = '') {
       const avgTicketResponseMsGlobal =
         responseDurationsAll.length > 0
           ? Math.round(
-              responseDurationsAll.reduce((acc, v) => acc + v, 0) / responseDurationsAll.length
-            )
+            responseDurationsAll.reduce((acc, v) => acc + v, 0) / responseDurationsAll.length
+          )
           : null;
 
       return {
@@ -1925,7 +1925,7 @@ export async function adminRoutes(app: any, prefix = '') {
         if (abuseForm) {
           abuseReports = await submissionRepo.count({ where: { formId: abuseForm.id } });
         }
-      } catch {}
+      } catch { }
 
       const dayKeys = utcDayKeys(rangeStart, days);
       const registrationDaily = new Map<string, number>();
@@ -2027,12 +2027,12 @@ export async function adminRoutes(app: any, prefix = '') {
         if (r.status !== 'fulfilled') continue;
         for (const server of r.value) {
           totalServers += 1;
-            const bucket = classifyServerStatus((server as any)?.state || (server as any)?.status);
-            if (bucket === 'online') serversOnline += 1;
-            else if (bucket === 'transitioning') serversTransitioning += 1;
-            else serversOffline += 1;
-          }
+          const bucket = classifyServerStatus((server as any)?.state || (server as any)?.status);
+          if (bucket === 'online') serversOnline += 1;
+          else if (bucket === 'transitioning') serversTransitioning += 1;
+          else serversOffline += 1;
         }
+      }
 
       const growthPct = (current: number, previous: number) => {
         if (previous <= 0) return current > 0 ? 100 : 0;
@@ -2372,12 +2372,12 @@ export async function adminRoutes(app: any, prefix = '') {
       const userIds = users.map(u => u.id);
       const passkeyCounts = userIds.length
         ? await passkeyRepo
-            .createQueryBuilder('p')
-            .select('p.userId', 'userId')
-            .addSelect('COUNT(*)', 'count')
-            .where('p.userId IN (:...ids)', { ids: userIds })
-            .groupBy('p.userId')
-            .getRawMany()
+          .createQueryBuilder('p')
+          .select('p.userId', 'userId')
+          .addSelect('COUNT(*)', 'count')
+          .where('p.userId IN (:...ids)', { ids: userIds })
+          .groupBy('p.userId')
+          .getRawMany()
         : [];
 
       const countMap: Record<number, number> = {};
@@ -2588,7 +2588,7 @@ export async function adminRoutes(app: any, prefix = '') {
       let origin = '';
       try {
         origin = new URL(String((ctx as any)?.request?.url || '')).origin;
-      } catch {}
+      } catch { }
       const base = process.env.BACKEND_URL || process.env.APP_URL || origin || '';
       const sharePath = `/api/public/export-shares/${shareToken}`;
       const shareUrl = `${base}${sharePath}`;
@@ -2639,7 +2639,7 @@ export async function adminRoutes(app: any, prefix = '') {
       }
 
       if (job.resultPath) {
-        try { fs.unlinkSync(job.resultPath); } catch {}
+        try { fs.unlinkSync(job.resultPath); } catch { }
       }
       await repo.delete(job.id);
 
@@ -2837,7 +2837,14 @@ export async function adminRoutes(app: any, prefix = '') {
       setOptionalTextField('billingCountry', billingCountry);
       setOptionalTextField('avatarUrl', avatarUrl);
 
-      if (role !== undefined) user.role = role;
+      if (role !== undefined) {
+        const actor = ctx.user as User | null;
+        if (actor?.role !== '*' && actor?.role !== 'rootAdmin') {
+          ctx.set.status = 403;
+          return { error: ctx.t('admin.roleChangeRequiresRoot') };
+        }
+        user.role = role;
+      }
       if (portalType !== undefined) user.portalType = portalType;
       const wasSuspendedBefore = user.suspended === true;
       if (suspended !== undefined) user.suspended = suspended;
@@ -3002,9 +3009,9 @@ export async function adminRoutes(app: any, prefix = '') {
       if (badges !== undefined) {
         const normalizedBadges = Array.isArray(badges)
           ? badges
-              .map((badge: any) => String(badge || '').trim())
-              .filter((badge: string) => badge.length > 0)
-              .slice(0, 128)
+            .map((badge: any) => String(badge || '').trim())
+            .filter((badge: string) => badge.length > 0)
+            .slice(0, 128)
           : [];
 
         const currentSettings =
@@ -3043,7 +3050,7 @@ export async function adminRoutes(app: any, prefix = '') {
       }
       try {
         await redisDel('public:contributors:v2');
-      } catch {}
+      } catch { }
       return { success: true };
     },
     {
@@ -3208,7 +3215,7 @@ export async function adminRoutes(app: any, prefix = '') {
         const eduPlan = body.planId
           ? await planRepo2.findOneBy({ id: Number(body.planId) })
           : await planRepo2.findOneBy({ type: 'educational', isDefault: true }) ||
-            await planRepo2.findOneBy({ type: 'educational' });
+          await planRepo2.findOneBy({ type: 'educational' });
         if (eduPlan) {
           const planLimits: Record<string, any> = {};
           if (eduPlan.memory != null) planLimits.memory = Number(eduPlan.memory);
@@ -3847,7 +3854,7 @@ export async function adminRoutes(app: any, prefix = '') {
           if (filepath) {
             try {
               await fs.promises.unlink(filepath);
-            } catch {}
+            } catch { }
           }
           rec[field] = null;
         }
@@ -4227,12 +4234,12 @@ export async function adminRoutes(app: any, prefix = '') {
       const orgIds = orgs.map((o: any) => o.id);
       const memberCounts = orgIds.length
         ? await orgMemberRepo
-            .createQueryBuilder('m')
-            .select('m.organisationId', 'orgId')
-            .addSelect('COUNT(*)', 'count')
-            .where('m.organisationId IN (:...ids)', { ids: orgIds })
-            .groupBy('m.organisationId')
-            .getRawMany()
+          .createQueryBuilder('m')
+          .select('m.organisationId', 'orgId')
+          .addSelect('COUNT(*)', 'count')
+          .where('m.organisationId IN (:...ids)', { ids: orgIds })
+          .groupBy('m.organisationId')
+          .getRawMany()
         : [];
 
       const countMap: Record<number, number> = {};
@@ -4705,9 +4712,9 @@ export async function adminRoutes(app: any, prefix = '') {
             detectionType: String(meta.detectionType || '').trim(),
             enforcementAction: String(
               meta.enforcementAction ||
-                meta.aiAssessment?.recommendedAction ||
-                meta.aiAssessment?.finalAction ||
-                ''
+              meta.aiAssessment?.recommendedAction ||
+              meta.aiAssessment?.finalAction ||
+              ''
             ).trim(),
             suspendAttempted: !!meta.suspendAttempted,
             suspendSuccess: !!meta.suspendSuccess,
@@ -4837,7 +4844,7 @@ export async function adminRoutes(app: any, prefix = '') {
                   );
                 }
                 return { success: true, data: retryRes.data, synced: true };
-              } catch {}
+              } catch { }
             }
             ctx.set.status = 404;
             return { error: ctx.t('admin.server_not_found_on_node_after_sync_attempt') };
@@ -4887,7 +4894,7 @@ export async function adminRoutes(app: any, prefix = '') {
         cfg.processConfig && typeof cfg.processConfig === 'object' ? cfg.processConfig : {};
       const startup =
         (currentProcessConfig as any).startup &&
-        typeof (currentProcessConfig as any).startup === 'object'
+          typeof (currentProcessConfig as any).startup === 'object'
           ? (currentProcessConfig as any).startup
           : {};
 
@@ -4910,7 +4917,7 @@ export async function adminRoutes(app: any, prefix = '') {
       try {
         const base = (node as any).backendWingsUrl || node.url;
         const svc = new WingsApiService(base, node.token);
-        await svc.syncServer(serverId, {}).catch(() => {});
+        await svc.syncServer(serverId, {}).catch(() => { });
         return { success: true, processConfig: cfg.processConfig };
       } catch (e: any) {
         const status = e?.response?.status || 502;
@@ -5054,7 +5061,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (node) {
         const base = (node as any).backendWingsUrl || node.url;
         const svc = new WingsApiService(base, node.token);
-        await svc.syncServer(serverId, {}).catch(() => {});
+        await svc.syncServer(serverId, {}).catch(() => { });
       }
       return { success: true, server: cfg };
     },
@@ -5141,7 +5148,7 @@ export async function adminRoutes(app: any, prefix = '') {
           await svc.serverRequest(serverId, '', 'delete');
           await removeServerConfig(serverId);
           return { success: true };
-        } catch {}
+        } catch { }
       }
       ctx.set.status = 404;
       return { error: ctx.t('server.notFoundOnNode') };
@@ -5251,7 +5258,7 @@ export async function adminRoutes(app: any, prefix = '') {
 
       const base = (node as any).backendWingsUrl || node.url;
       const svc = new WingsApiService(base, node.token);
-      await svc.syncServer(serverId, { allocations: alloc }).catch(() => {});
+      await svc.syncServer(serverId, { allocations: alloc }).catch(() => { });
 
       await createActivityLog({
         userId: ctx.user?.id ?? 0,
@@ -5329,7 +5336,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (node) {
         const base = (node as any).backendWingsUrl || node.url;
         const svc = new WingsApiService(base, node.token);
-        await svc.syncServer(serverId, { allocations: alloc }).catch(() => {});
+        await svc.syncServer(serverId, { allocations: alloc }).catch(() => { });
       }
 
       await createActivityLog({
@@ -5767,7 +5774,7 @@ export async function adminRoutes(app: any, prefix = '') {
             updateData.dmcaDeletionAt = dmcaDeletionAt;
           }
           await cfgRepo.update({ uuid: serverId }, updateData);
-          await svc.powerServer(serverId, 'kill').catch(() => {});
+          await svc.powerServer(serverId, 'kill').catch(() => { });
           await svc.syncServer(serverId, {});
 
           let notice: {
@@ -5825,7 +5832,7 @@ export async function adminRoutes(app: any, prefix = '') {
             emailReason: notice.reason || null,
             emailRecipient: notice.recipient || null,
           };
-        } catch {}
+        } catch { }
       }
       ctx.set.status = 404;
       return { error: ctx.t('server.notFoundOnNode') };
@@ -5892,7 +5899,7 @@ export async function adminRoutes(app: any, prefix = '') {
           }
           void auditLog({ userId: ctx.user?.id, action: 'admin:server:unsuspend', targetId: serverId, targetType: 'server', ipAddress: ctx.ip });
           return { success: true };
-        } catch {}
+        } catch { }
       }
       ctx.set.status = 404;
       return { error: ctx.t('server.notFoundOnNode') };
@@ -5951,7 +5958,7 @@ export async function adminRoutes(app: any, prefix = '') {
           await svc.syncServer(serverId, { build: { cpu_limit: cpuLimitPercent } });
           found = true;
           break;
-        } catch {}
+        } catch { }
       }
 
       if (!found) {
@@ -5974,10 +5981,10 @@ export async function adminRoutes(app: any, prefix = '') {
               await svc.getServer(serverId);
               await svc.syncServer(serverId, { build: { cpu_limit: restoreCpu } });
               break;
-            } catch {}
+            } catch { }
           }
           await cfgRepo.update({ uuid: serverId }, { cpu: restoreCpu as any });
-        } catch {}
+        } catch { }
         antiAbuseThrottleState.delete(serverId);
       }, durationSeconds * 1000);
 
@@ -6178,15 +6185,15 @@ export async function adminRoutes(app: any, prefix = '') {
           serverName: sanitizeAntiAbuseText(meta.serverName || '', 240) || null,
           suspectedServerIds: Array.isArray(meta.suspectedServerIds)
             ? meta.suspectedServerIds
-                .map((v: any) => sanitizeAntiAbuseText(v, 120))
-                .filter(Boolean)
-                .slice(0, 20)
+              .map((v: any) => sanitizeAntiAbuseText(v, 120))
+              .filter(Boolean)
+              .slice(0, 20)
             : [],
           suspectedServerNames: Array.isArray(meta.suspectedServerNames)
             ? meta.suspectedServerNames
-                .map((v: any) => sanitizeAntiAbuseText(v, 240))
-                .filter(Boolean)
-                .slice(0, 20)
+              .map((v: any) => sanitizeAntiAbuseText(v, 240))
+              .filter(Boolean)
+              .slice(0, 20)
             : [],
           detectionType: sanitizeAntiAbuseText(meta.detectionType || '', 120) || 'unknown',
           enforcementAction: sanitizeAntiAbuseText(meta.enforcementAction || '', 60) || 'unknown',
@@ -6574,15 +6581,15 @@ export async function adminRoutes(app: any, prefix = '') {
       const strikeCount = Number(body.strikeCount);
       const suspectedServerIds = Array.isArray(body.suspectedServerIds)
         ? body.suspectedServerIds
-            .map((v: any) => sanitizeAntiAbuseText(v, 120))
-            .filter(Boolean)
-            .slice(0, 20)
+          .map((v: any) => sanitizeAntiAbuseText(v, 120))
+          .filter(Boolean)
+          .slice(0, 20)
         : [];
       const suspectedServerNames = Array.isArray(body.suspectedServerNames)
         ? body.suspectedServerNames
-            .map((v: any) => sanitizeAntiAbuseText(v, 240))
-            .filter(Boolean)
-            .slice(0, 20)
+          .map((v: any) => sanitizeAntiAbuseText(v, 240))
+          .filter(Boolean)
+          .slice(0, 20)
         : [];
       let suspendAttempted = !!body.suspendAttempted;
       let suspendSuccess = !!body.suspendSuccess;
@@ -6981,7 +6988,7 @@ export async function adminRoutes(app: any, prefix = '') {
               servers.push({ ...s, nodeName: n.name, nodeId: n.id });
             }
           }
-        } catch {}
+        } catch { }
       }
 
       try {
@@ -7046,12 +7053,12 @@ export async function adminRoutes(app: any, prefix = '') {
       out.orgs = orgs;
       out.org = primaryOrg
         ? {
-            id: primaryOrg.id,
-            name: primaryOrg.name,
-            handle: primaryOrg.handle,
-            portalTier: primaryOrg.portalTier,
-            avatarUrl: primaryOrg.avatarUrl,
-          }
+          id: primaryOrg.id,
+          name: primaryOrg.name,
+          handle: primaryOrg.handle,
+          portalTier: primaryOrg.portalTier,
+          avatarUrl: primaryOrg.avatarUrl,
+        }
         : null;
       out.orgRole = primaryOrg?.orgRole || null;
       out.aiModels = aiLinks.map((l: any) => ({ id: l.id, model: l.model, limits: l.limits }));
@@ -7115,7 +7122,7 @@ export async function adminRoutes(app: any, prefix = '') {
       await userRepo.save(user);
       try {
         await redisDel('public:contributors:v2');
-      } catch {}
+      } catch { }
       return { success: true, contributor: buildContributorSummary(user) };
     },
     {
@@ -7200,9 +7207,9 @@ export async function adminRoutes(app: any, prefix = '') {
       const documents = Array.isArray(currentDocs)
         ? { admin: currentDocs, agreed: [] }
         : {
-            agreed: Array.isArray(currentDocs?.agreed) ? currentDocs.agreed : [],
-            admin: Array.isArray(currentDocs?.admin) ? currentDocs.admin : [],
-          };
+          agreed: Array.isArray(currentDocs?.agreed) ? currentDocs.agreed : [],
+          admin: Array.isArray(currentDocs?.admin) ? currentDocs.admin : [],
+        };
 
       const newDoc = {
         id: crypto.randomUUID(),
@@ -7322,7 +7329,7 @@ export async function adminRoutes(app: any, prefix = '') {
               servers.push({ ...s, nodeName: n.name, nodeId: n.id });
             }
           }
-        } catch {}
+        } catch { }
       }
 
       try {
@@ -7370,12 +7377,12 @@ export async function adminRoutes(app: any, prefix = '') {
       out.orgs = organisations;
       out.org = primaryOrg
         ? {
-            id: primaryOrg.id,
-            name: primaryOrg.name,
-            handle: primaryOrg.handle,
-            portalTier: primaryOrg.portalTier,
-            avatarUrl: primaryOrg.avatarUrl,
-          }
+          id: primaryOrg.id,
+          name: primaryOrg.name,
+          handle: primaryOrg.handle,
+          portalTier: primaryOrg.portalTier,
+          avatarUrl: primaryOrg.avatarUrl,
+        }
         : null;
       out.orgRole = primaryOrg?.orgRole || null;
 
@@ -7590,10 +7597,10 @@ export async function adminRoutes(app: any, prefix = '') {
       } finally {
         try {
           await fsp.rm(dataExportDir, { recursive: true, force: true });
-        } catch {}
+        } catch { }
         try {
           await fsp.unlink(archivePath);
-        } catch {}
+        } catch { }
       }
 
       return {
@@ -7880,7 +7887,7 @@ export async function adminRoutes(app: any, prefix = '') {
   app.get(
     prefix + '/admin/audit/:uuid',
     async ctx => {
-      const adminErr = requireAdminPermission(ctx, 'logs:read');
+      const adminErr = requireAdminPermission(ctx, 'admin:audit');
       if (adminErr !== true) return adminErr;
       const uuid = String(ctx.params.uuid).trim();
       if (!uuid) { ctx.set.status = 400; return { error: ctx.t('admin.server_uuid_is_required') }; }
@@ -7908,7 +7915,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (userIds.length) {
         const users = await AppDataSource.getRepository(User).createQueryBuilder('u')
           .select(['u.id', 'u.firstName', 'u.lastName', 'u.email']).where('u.id IN (:...ids)', { ids: userIds }).getMany();
-        users.forEach(u => { userMap[u.id] = { username: [`${u.firstName||''}`.trim(),`${u.lastName||''}`.trim()].filter(Boolean).join(' ')||u.email||`#${u.id}`, email: u.email }; });
+        users.forEach(u => { userMap[u.id] = { username: [`${u.firstName || ''}`.trim(), `${u.lastName || ''}`.trim()].filter(Boolean).join(' ') || u.email || `#${u.id}`, email: u.email }; });
       }
 
       const logs = entries.map(e => ({
@@ -7929,14 +7936,16 @@ export async function adminRoutes(app: any, prefix = '') {
         subTotal = await sqb.getCount();
         subEntries = await sqb.skip((p - 1) * perNum).take(perNum).getMany();
       }
-      const subLogs = subEntries.map(s => { let parsed:any={}; try{parsed=JSON.parse(s.content||'{}');}catch{} return { id:`abuse-${s.id}`, timestamp:s.createdAt, userId:s.userId||0, username:s.userId?`User #${s.userId}`:'System', email:null, action:`antiabuse:${parsed.detectionType||s.status||'incident'}`, targetId:uuid, targetType:'antiabuse', ipAddress:s.ipAddress||null, metadata:parsed, source:'antiabuse' }; });
-      const all = [...logs, ...subLogs].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const subLogs = subEntries.map(s => { let parsed: any = {}; try { parsed = JSON.parse(s.content || '{}'); } catch { } return { id: `abuse-${s.id}`, timestamp: s.createdAt, userId: s.userId || 0, username: s.userId ? `User #${s.userId}` : 'System', email: null, action: `antiabuse:${parsed.detectionType || s.status || 'incident'}`, targetId: uuid, targetType: 'antiabuse', ipAddress: s.ipAddress || null, metadata: parsed, source: 'antiabuse' }; });
+      const all = [...logs, ...subLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       return { logs: all, total: total + subTotal, page: p, per: perNum };
     },
-    { beforeHandle: [authenticate, authorize('logs:read')],
+    {
+      beforeHandle: [authenticate, authorize('admin:audit')],
       response: { 200: t.Object({ logs: t.Array(t.Any()), total: t.Number(), page: t.Number(), per: t.Number() }), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }) },
-      detail: { summary: 'Get audit logs for a server UUID', tags: ['Admin'] } }
+      detail: { summary: 'Get audit logs for a server UUID', tags: ['Admin'] }
+    }
   );
 
   app.post(
@@ -8224,7 +8233,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (map['portalDescriptions']) {
         try {
           portalDescriptions = JSON.parse(map['portalDescriptions']);
-        } catch {}
+        } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
       return {
@@ -8292,7 +8301,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (map['portalDescriptions']) {
         try {
           portalDescriptions = JSON.parse(map['portalDescriptions']);
-        } catch {}
+        } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
       return {
@@ -8482,7 +8491,7 @@ export async function adminRoutes(app: any, prefix = '') {
       if (map['portalDescriptions']) {
         try {
           portalDescriptions = JSON.parse(map['portalDescriptions']);
-        } catch {}
+        } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
       return {
@@ -8831,7 +8840,7 @@ export async function adminRoutes(app: any, prefix = '') {
               { description: description || plan.name, quantity: 1, price: Number(amount ?? plan.price ?? 0) }
             ]);
           }
-        } catch {}
+        } catch { }
       }
 
       let effectiveAmount = amount != null ? Number(amount) : 0;
@@ -8855,7 +8864,7 @@ export async function adminRoutes(app: any, prefix = '') {
               effectiveTaxAmount = tax.taxAmount;
             }
           }
-        } catch {}
+        } catch { }
       }
 
       const effectivePlanId = planId ? Number(planId) : undefined;
@@ -8881,52 +8890,52 @@ export async function adminRoutes(app: any, prefix = '') {
       if (isFreeOrder) {
         // Only cancel previous personal orders if the new order is also personal (not org-scoped)
         if (!(order as any).orgId) {
-        const prevActive = (await orderRepo.find({
-          where: { userId: Number(userId), status: 'active' },
-        })).filter(o => !o.orgId);
-        if (prevActive.length > 0) {
-          for (const prev of prevActive) {
-            prev.status = 'cancelled';
-            prev.notes = prev.notes
-              ? `${prev.notes}; Replaced by order #${order.id} on ${new Date().toISOString()}`
-              : `Replaced by order #${order.id} on ${new Date().toISOString()}`;
-          }
-          await orderRepo.save(prevActive);
+          const prevActive = (await orderRepo.find({
+            where: { userId: Number(userId), status: 'active' },
+          })).filter(o => !o.orgId);
+          if (prevActive.length > 0) {
+            for (const prev of prevActive) {
+              prev.status = 'cancelled';
+              prev.notes = prev.notes
+                ? `${prev.notes}; Replaced by order #${order.id} on ${new Date().toISOString()}`
+                : `Replaced by order #${order.id} on ${new Date().toISOString()}`;
+            }
+            await orderRepo.save(prevActive);
 
-          const couponRepoAdmin = AppDataSource.getRepository(Coupon);
-          const couponUseRepoAdmin = AppDataSource.getRepository(CouponUse);
-          for (const prev of prevActive) {
-            if (prev.couponId) {
-              const coupon = await couponRepoAdmin.findOneBy({ id: Number(prev.couponId) });
-              if (coupon) {
-                coupon.currentUsesTotal = Math.max(0, coupon.currentUsesTotal - 1);
-                await couponRepoAdmin.save(coupon);
+            const couponRepoAdmin = AppDataSource.getRepository(Coupon);
+            const couponUseRepoAdmin = AppDataSource.getRepository(CouponUse);
+            for (const prev of prevActive) {
+              if (prev.couponId) {
+                const coupon = await couponRepoAdmin.findOneBy({ id: Number(prev.couponId) });
+                if (coupon) {
+                  coupon.currentUsesTotal = Math.max(0, coupon.currentUsesTotal - 1);
+                  await couponRepoAdmin.save(coupon);
+                }
+                await couponUseRepoAdmin.delete({
+                  couponId: prev.couponId,
+                  userId: prev.userId,
+                });
               }
-              await couponUseRepoAdmin.delete({
-                couponId: prev.couponId,
-                userId: prev.userId,
-              });
             }
           }
-        }
         } // end if (!order.orgId)
-        }
+      }
 
-        await orderRepo.save(order);
+      await orderRepo.save(order);
 
-        if (effectivePlanId) {
-          try {
-            const planRepo3 = AppDataSource.getRepository(Plan);
-            const plan = await planRepo3.findOneBy({ id: effectivePlanId });
-            if (plan) {
-              await activateOrderPlan(order, plan);
-            }
-          } catch (_e) {}
-          return { success: true, order, autoActivated: true };
-        }
+      if (effectivePlanId) {
+        try {
+          const planRepo3 = AppDataSource.getRepository(Plan);
+          const plan = await planRepo3.findOneBy({ id: effectivePlanId });
+          if (plan) {
+            await activateOrderPlan(order, plan);
+          }
+        } catch (_e) { }
+        return { success: true, order, autoActivated: true };
+      }
 
-        await orderRepo.save(order);
-        return { success: true, order };
+      await orderRepo.save(order);
+      return { success: true, order };
     },
     {
       beforeHandle: [authenticate, authorize('admin:access')],
@@ -8997,7 +9006,7 @@ export async function adminRoutes(app: any, prefix = '') {
           if (plan) {
             await activateOrderPlan(order, plan);
           }
-        } catch (_e) {}
+        } catch (_e) { }
       }
 
       return { success: true, order };
@@ -9616,7 +9625,7 @@ export async function adminRoutes(app: any, prefix = '') {
             autoTaxRate = tax.taxRate;
             autoTaxAmount = tax.taxAmount;
           }
-        } catch {}
+        } catch { }
         const order = orderRepo.create({
           userId: user.id,
           description: `${chosen.name} (auto-assigned)`,
@@ -9693,9 +9702,9 @@ export async function adminRoutes(app: any, prefix = '') {
 
       const where = search
         ? [
-            { title: Like(`%${search}%`) },
-            { serverId: Like(`%${search}%`) },
-          ]
+          { title: Like(`%${search}%`) },
+          { serverId: Like(`%${search}%`) },
+        ]
         : {};
 
       const [projects, total] = await eloProjectRepo().findAndCount({
@@ -10462,167 +10471,167 @@ export async function adminRoutes(app: any, prefix = '') {
   };
 
   const sendFromCompanyMailbox = async (
-      ctx: AdminRouteContext,
-      loaded: { entry: { localPart: string }; account: MailboxAccount },
-      msg: MailMessage | null,
-      bodyFields: Record<string, unknown>
-    ) => {
-      const { entry, account } = loaded;
-      const { to, cc, bcc, subject, body, html, priority, template } = bodyFields;
-      const toAddress = String(to || msg?.fromAddress || '').trim();
-      if (!toAddress) {
-        ctx.set.status = 400;
-        return { error: ctx.t('validation.recipientEmailRequired') };
+    ctx: AdminRouteContext,
+    loaded: { entry: { localPart: string }; account: MailboxAccount },
+    msg: MailMessage | null,
+    bodyFields: Record<string, unknown>
+  ) => {
+    const { entry, account } = loaded;
+    const { to, cc, bcc, subject, body, html, priority, template } = bodyFields;
+    const toAddress = String(to || msg?.fromAddress || '').trim();
+    if (!toAddress) {
+      ctx.set.status = 400;
+      return { error: ctx.t('validation.recipientEmailRequired') };
+    }
+    const ccValue = typeof cc === 'string' ? String(cc).trim() : '';
+    const bccValue = typeof bcc === 'string' ? String(bcc).trim() : '';
+    const messageText = String(body || '').trim();
+    const messageHtml = typeof html === 'string' ? html : undefined;
+    if (!messageText && !messageHtml) {
+      ctx.set.status = 400;
+      return { error: ctx.t('validation.messageBodyRequired') };
+    }
+    const subjectLine = String(subject || '').trim() ||
+      (msg?.subject ? `Re: ${String(msg.subject).replace(/^re:\s*/i, '')}` : '');
+
+    const PRIORITY_HEADERS: Record<string, { x: string; importance: string }> = {
+      low: { x: '5', importance: 'Low' },
+      normal: { x: '3', importance: 'Normal' },
+      high: { x: '1', importance: 'High' },
+    };
+    const prio = PRIORITY_HEADERS[String(priority || 'normal').toLowerCase()] || PRIORITY_HEADERS.normal;
+
+    const deptLabel = DEPARTMENT_NAMES[entry.localPart] ||
+      (entry.localPart.charAt(0).toUpperCase() + entry.localPart.slice(1));
+    const fromName = `EclipseSystems ${deptLabel}`;
+
+    let finalHtml: string | undefined = messageHtml;
+    let finalText: string = messageText || (messageHtml ? 'See HTML content' : '');
+    if (String(template || '').trim() && String(template).trim() !== 'plain') {
+      finalHtml = await renderEmailTemplate(String(template).trim(), {
+        message: messageText,
+        messageHtml,
+        details: `${fromName} <${account.email}>`,
+      }).catch(() => messageHtml || '');
+      finalText = messageText;
+    }
+
+    try {
+      const result = await sendMail({
+        from: { name: fromName, address: account.email },
+        to: toAddress,
+        replyTo: account.email,
+        cc: ccValue || undefined,
+        bcc: bccValue || undefined,
+        subject: subjectLine,
+        text: finalText || (finalHtml ? 'See HTML content' : ''),
+        html: finalHtml,
+        inReplyTo: msg?.messageId || undefined,
+        references: msg?.messageId || undefined,
+        headers: prio.x !== '3' ? { 'X-Priority': prio.x, Importance: prio.importance } : undefined,
+        smtp: {
+          host: account.smtpHost || '',
+          port: Number(account.smtpPort ?? 587),
+          secure: account.smtpSecure !== false,
+          user: account.email,
+          pass: account.password || '',
+        },
+      });
+
+      const messageRepo = AppDataSource.getRepository(MailMessage);
+      await messageRepo.save(messageRepo.create({
+        userId: account.userId,
+        fromAddress: account.email,
+        toAddress,
+        messageId: typeof result?.messageId === 'string' ? result.messageId : undefined,
+        subject: subjectLine,
+        body: finalText,
+        html: finalHtml,
+        read: true,
+        folder: 'Sent',
+        replied: false,
+        receivedAt: new Date(),
+      }));
+      if (msg && !msg.replied) {
+        msg.replied = true;
+        await messageRepo.save(msg);
       }
-      const ccValue = typeof cc === 'string' ? String(cc).trim() : '';
-      const bccValue = typeof bcc === 'string' ? String(bcc).trim() : '';
+      await createActivityLog({
+        userId: ctx.user?.id,
+        action: msg ? 'admin:mailbox:reply' : 'admin:mailbox:send',
+        targetId: account.email,
+        targetType: 'mailbox',
+        metadata: { to: toAddress },
+      });
+      return { success: true };
+    } catch (err: any) {
+      ctx.set.status = 500;
+      return { error: ctx.t('admin.mailboxSendFailed'), details: String(err?.message || err) };
+    }
+  };
+
+  app.post(
+    prefix + '/admin/company-mailboxes/:address/send',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      return sendFromCompanyMailbox(ctx, loaded, null, (ctx.body || {}) as Record<string, unknown>);
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Send a new email from a company mailbox', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  app.post(
+    prefix + '/admin/company-mailboxes/:address/preview',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const { entry, account } = loaded;
+      const { subject, body, html, template } = (ctx.body || {}) as Record<string, unknown>;
       const messageText = String(body || '').trim();
       const messageHtml = typeof html === 'string' ? html : undefined;
-      if (!messageText && !messageHtml) {
-        ctx.set.status = 400;
-        return { error: ctx.t('validation.messageBodyRequired') };
-      }
-      const subjectLine = String(subject || '').trim() ||
-        (msg?.subject ? `Re: ${String(msg.subject).replace(/^re:\s*/i, '')}` : '');
-
-      const PRIORITY_HEADERS: Record<string, { x: string; importance: string }> = {
-        low: { x: '5', importance: 'Low' },
-        normal: { x: '3', importance: 'Normal' },
-        high: { x: '1', importance: 'High' },
-      };
-      const prio = PRIORITY_HEADERS[String(priority || 'normal').toLowerCase()] || PRIORITY_HEADERS.normal;
+      const subjectLine = String(subject || '').trim();
 
       const deptLabel = DEPARTMENT_NAMES[entry.localPart] ||
         (entry.localPart.charAt(0).toUpperCase() + entry.localPart.slice(1));
       const fromName = `EclipseSystems ${deptLabel}`;
 
-      let finalHtml: string | undefined = messageHtml;
-      let finalText: string = messageText || (messageHtml ? 'See HTML content' : '');
+      let outHtml = messageHtml || `<pre>${messageText.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`;
       if (String(template || '').trim() && String(template).trim() !== 'plain') {
-        finalHtml = await renderEmailTemplate(String(template).trim(), {
+        outHtml = await renderEmailTemplate(String(template).trim(), {
           message: messageText,
           messageHtml,
           details: `${fromName} <${account.email}>`,
-        }).catch(() => messageHtml || '');
-        finalText = messageText;
+        }).catch(() => outHtml);
       }
 
-      try {
-        const result = await sendMail({
-          from: { name: fromName, address: account.email },
-          to: toAddress,
-          replyTo: account.email,
-          cc: ccValue || undefined,
-          bcc: bccValue || undefined,
-          subject: subjectLine,
-          text: finalText || (finalHtml ? 'See HTML content' : ''),
-          html: finalHtml,
-          inReplyTo: msg?.messageId || undefined,
-          references: msg?.messageId || undefined,
-          headers: prio.x !== '3' ? { 'X-Priority': prio.x, Importance: prio.importance } : undefined,
-          smtp: {
-            host: account.smtpHost || '',
-            port: Number(account.smtpPort ?? 587),
-            secure: account.smtpSecure !== false,
-            user: account.email,
-            pass: account.password || '',
-          },
-        });
+      return { html: outHtml, from: `${fromName} <${account.email}>`, subject: subjectLine };
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Preview a company mailbox email render', tags: ['Admin', 'Mailbox'] },
+    }
+  );
 
-        const messageRepo = AppDataSource.getRepository(MailMessage);
-        await messageRepo.save(messageRepo.create({
-          userId: account.userId,
-          fromAddress: account.email,
-          toAddress,
-          messageId: typeof result?.messageId === 'string' ? result.messageId : undefined,
-          subject: subjectLine,
-          body: finalText,
-          html: finalHtml,
-          read: true,
-          folder: 'Sent',
-          replied: false,
-          receivedAt: new Date(),
-        }));
-        if (msg && !msg.replied) {
-          msg.replied = true;
-          await messageRepo.save(msg);
-        }
-        await createActivityLog({
-          userId: ctx.user?.id,
-          action: msg ? 'admin:mailbox:reply' : 'admin:mailbox:send',
-          targetId: account.email,
-          targetType: 'mailbox',
-          metadata: { to: toAddress },
-        });
-        return { success: true };
-      } catch (err: any) {
-        ctx.set.status = 500;
-        return { error: ctx.t('admin.mailboxSendFailed'), details: String(err?.message || err) };
-      }
-    };
-
-    app.post(
-      prefix + '/admin/company-mailboxes/:address/send',
-      async (ctx: AdminRouteContext) => {
-        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
-        if ('error' in loaded) return loaded;
-        return sendFromCompanyMailbox(ctx, loaded, null, (ctx.body || {}) as Record<string, unknown>);
-      },
-      {
-        beforeHandle: authenticate,
-        response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
-        detail: { summary: 'Send a new email from a company mailbox', tags: ['Admin', 'Mailbox'] },
-      }
-    );
-
-    app.post(
-      prefix + '/admin/company-mailboxes/:address/preview',
-      async (ctx: AdminRouteContext) => {
-        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
-        if ('error' in loaded) return loaded;
-        const { entry, account } = loaded;
-        const { subject, body, html, template } = (ctx.body || {}) as Record<string, unknown>;
-        const messageText = String(body || '').trim();
-        const messageHtml = typeof html === 'string' ? html : undefined;
-        const subjectLine = String(subject || '').trim();
-
-        const deptLabel = DEPARTMENT_NAMES[entry.localPart] ||
-          (entry.localPart.charAt(0).toUpperCase() + entry.localPart.slice(1));
-        const fromName = `EclipseSystems ${deptLabel}`;
-
-        let outHtml = messageHtml || `<pre>${messageText.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`;
-        if (String(template || '').trim() && String(template).trim() !== 'plain') {
-          outHtml = await renderEmailTemplate(String(template).trim(), {
-            message: messageText,
-            messageHtml,
-            details: `${fromName} <${account.email}>`,
-          }).catch(() => outHtml);
-        }
-
-        return { html: outHtml, from: `${fromName} <${account.email}>`, subject: subjectLine };
-      },
-      {
-        beforeHandle: authenticate,
-        response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
-        detail: { summary: 'Preview a company mailbox email render', tags: ['Admin', 'Mailbox'] },
-      }
-    );
-
-    app.post(
-      prefix + '/admin/company-mailboxes/:address/messages/:id/reply',
-      async (ctx: AdminRouteContext) => {
-        const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
-        if ('error' in loaded) return loaded;
-        const msg = await loadCompanyMessage(ctx, loaded);
-        if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
-        return sendFromCompanyMailbox(ctx, loaded, msg, (ctx.body || {}) as Record<string, unknown>);
-      },
-      {
-        beforeHandle: authenticate,
-        response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
-        detail: { summary: 'Reply to a company mailbox message from the panel', tags: ['Admin', 'Mailbox'] },
-      }
-    );
+  app.post(
+    prefix + '/admin/company-mailboxes/:address/messages/:id/reply',
+    async (ctx: AdminRouteContext) => {
+      const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
+      if ('error' in loaded) return loaded;
+      const msg = await loadCompanyMessage(ctx, loaded);
+      if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
+      return sendFromCompanyMailbox(ctx, loaded, msg, (ctx.body || {}) as Record<string, unknown>);
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      detail: { summary: 'Reply to a company mailbox message from the panel', tags: ['Admin', 'Mailbox'] },
+    }
+  );
 
   app.delete(
     prefix + '/admin/company-mailboxes/:address/messages/:id',
@@ -10731,7 +10740,7 @@ export async function adminRoutes(app: any, prefix = '') {
               title: 'Mailbox purge failed',
               body: `Purge of messages sent by ${from} failed: ${String(err?.message || err).slice(0, 300)}`,
               url: '/dashboard/admin?tab=company-mailboxes',
-            }).catch(() => {});
+            }).catch(() => { });
           }
         } finally {
           purgeInFlight = false;

@@ -557,7 +557,8 @@
     "mailboxDeleteFailed": "Failed to delete mailbox message",
     "mailboxReplyFailed": "Failed to send reply",
     "mailboxSendFailed": "Failed to send email",
-    "mailboxPurgeRunning": "A mailbox purge is already running"
+    "mailboxPurgeRunning": "A mailbox purge is already running",
+    "roleChangeRequiresRoot": "Only root admins can change account roles"
   },
   "system": {
     "jwtUnavailable": "jwt unavailable",

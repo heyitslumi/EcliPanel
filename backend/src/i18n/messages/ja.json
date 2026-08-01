@@ -557,7 +557,8 @@
     "mailboxDeleteFailed": "メールボックスのメッセージの削除に失敗しました",
     "mailboxReplyFailed": "返信の送信に失敗しました",
     "mailboxSendFailed": "メールの送信に失敗しました",
-    "mailboxPurgeRunning": "メールボックスの削除処理が実行中です"
+    "mailboxPurgeRunning": "メールボックスの削除処理が実行中です",
+    "roleChangeRequiresRoot": "アカウントのロールを変更できるのはルート管理者のみです"
   },
   "system": {
     "jwtUnavailable": "JWTが利用できません",

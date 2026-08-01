@@ -557,7 +557,8 @@
     "mailboxDeleteFailed": "Не удалось удалить сообщение ящика",
     "mailboxReplyFailed": "Не удалось отправить ответ",
     "mailboxSendFailed": "Не удалось отправить письмо",
-    "mailboxPurgeRunning": "Очистка почтовых ящиков уже выполняется"
+    "mailboxPurgeRunning": "Очистка почтовых ящиков уже выполняется",
+    "roleChangeRequiresRoot": "Изменять роли учётных записей могут только root-администраторы"
   },
   "system": {
     "jwtUnavailable": "JWT недоступен",

@@ -1011,7 +1011,7 @@ export default function AdminPanel() {
     { value: 'payments', label: t('tabs.payments'), category: 'billing', permissions: ['admin:payment:manage'] },
     { value: 'soc', label: 'SOC', category: 'security', permissions: ['soc:read'] },
     { value: 'fraud', label: t('tabs.fraud'), category: 'security', permissions: ['admin:fraud'] },
-    { value: 'audit', label: t('tabs.audit') || 'Audit', category: 'security', permissions: ['logs:read'] },
+    { value: 'audit', label: t('tabs.audit') || 'Audit', category: 'security', permissions: ['admin:audit'] },
     { value: 'logs', label: t('tabs.logs'), category: 'security', permissions: ['logs:read'] },
     { value: 'announcements', label: t('tabs.announcements'), category: 'communication', permissions: ['admin:announcements'] },
     { value: 'tickets', label: t('tabs.tickets'), category: 'communication', feature: 'ticketing', permissions: ['tickets:read', 'tickets:ban', 'tickets:delete', 'admin:ticket:staff'] },

@@ -431,10 +431,43 @@ export async function couponRoutes(app: any, prefix = '') {
       order.amount = Math.max(0, Math.round((Number(order.amount) - discountAmount) * 100) / 100);
 
       if (order.amount === 0) {
-        order.status = 'payment_sent';
+        order.status = 'active';
         order.notes = order.notes
           ? `${order.notes}; Auto-paid by coupon ${coupon.code}`
           : `Auto-paid by coupon ${coupon.code}`;
+        const isQueuedForRenewal = (order.notes || '').includes('queue_for_renewal');
+        if (!isQueuedForRenewal) {
+          const prevActive = (await orderRepo.find({
+            where: { userId: user.id, status: 'active' },
+          })).filter(o => !(o.notes || '').includes('dns_addon') && !(o.notes || '').includes('org_order') && !o.orgId);
+
+          for (const prev of prevActive) {
+            prev.status = 'cancelled';
+            prev.notes = prev.notes
+              ? `${prev.notes}; Replaced by order #${order.id} on ${new Date().toISOString()}`
+              : `Replaced by order #${order.id} on ${new Date().toISOString()}`;
+            if (prev.couponId) {
+              const prevCoupon = await couponRepo.findOneBy({ id: Number(prev.couponId) });
+              if (prevCoupon) {
+                prevCoupon.currentUsesTotal = Math.max(0, prevCoupon.currentUsesTotal - 1);
+                await couponRepo.save(prevCoupon);
+              }
+              await couponUseRepo.delete({ couponId: prev.couponId, userId: prev.userId });
+            }
+          }
+          if (prevActive.length > 0) await orderRepo.save(prevActive);
+
+          if (order.planId != null) {
+            try {
+              const planRepo = AppDataSource.getRepository(require('../models/plan.entity').Plan);
+              const plan = await planRepo.findOneBy({ id: Number(order.planId) });
+              if (plan) {
+                const { activateOrderPlan } = require('./orderHandler');
+                await activateOrderPlan(order, plan);
+              }
+            } catch (_e) {}
+          }
+        }
       }
 
       coupon.currentUsesTotal += 1;

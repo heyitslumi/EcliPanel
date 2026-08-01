@@ -1032,6 +1032,10 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           ctx.set.status = 400;
           return { error: ctx.t('organisation.freeTierNotAllowed') };
         }
+        if (!hasPermissionSync(ctx, 'org:write') && !hasPermissionSync(ctx, 'admin:access')) {
+          ctx.set.status = 403;
+          return { error: ctx.t('common.forbidden') };
+        }
         org.portalTier = portalTier;
       }
       await orgRepo.save(org);

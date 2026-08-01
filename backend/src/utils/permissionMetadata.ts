@@ -106,6 +106,12 @@ export const PERMISSION_METADATA: PermissionDefinition[] = [
     admin: true,
   },
   { value: 'logs:read', category: 'Logs', admin: true },
+  {
+    value: 'admin:audit',
+    category: 'Logs',
+    description: 'Read sensitive audit logs (server audit trails, anti-abuse incidents, mailbox activity)',
+    admin: true,
+  },
   { value: 'idverification:read', category: 'KYC', admin: true },
   { value: 'idverification:write', category: 'KYC', admin: true },
   {

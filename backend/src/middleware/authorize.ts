@@ -200,7 +200,7 @@ export function authorize(required: string) {
             const subPermNeeded = prefix === 'servers' ? suffix : prefixToSubPerm[prefix];
             if (subPermNeeded && sub.permissions.includes(subPermNeeded)) return;
 
-            if (sub.permissions.includes('read') && ['console', 'files', 'backups', 'startup', 'settings', 'databases', 'schedules', 'activity', 'stats'].includes(subPermNeeded)) return;
+            if (sub.permissions.includes('read') && ['console', 'activity', 'stats'].includes(subPermNeeded)) return;
             if (sub.permissions.includes('write') && ['files', 'backups', 'startup', 'settings', 'databases', 'schedules'].includes(subPermNeeded)) return;
           }
         }

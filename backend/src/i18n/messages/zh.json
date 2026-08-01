@@ -557,7 +557,8 @@
     "mailboxDeleteFailed": "删除邮箱消息失败",
     "mailboxReplyFailed": "发送回复失败",
     "mailboxSendFailed": "发送邮件失败",
-    "mailboxPurgeRunning": "邮箱清除操作正在进行中"
+    "mailboxPurgeRunning": "邮箱清除操作正在进行中",
+    "roleChangeRequiresRoot": "只有根管理员可以更改账户角色"
   },
   "system": {
     "jwtUnavailable": "JWT不可用",

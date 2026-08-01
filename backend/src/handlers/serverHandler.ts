@@ -7312,12 +7312,49 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
     }
   );
 
-  // ─── v2 Proxmox-specific routes ──────────────────────────────────────────────
+  const v2ServerAccess = async (
+    ctx: AuthenticatedHandlerContext,
+    id: string,
+    needPower: boolean
+  ): Promise<{ cfg?: ServerConfig; error?: string }> => {
+    const cfg = await cfgRepo().findOneBy({ uuid: id });
+    if (!cfg) {
+      ctx.set.status = 404;
+      return { error: ctx.t('server.notFound') };
+    }
+    const user = ctx.user;
+    const isAdmin =
+      hasPermissionSync(ctx, 'admin:access') || hasPermissionSync(ctx, 'servers:list');
+    if (isAdmin) return { cfg };
+    const owned = cfg.userId === user?.id;
+    let hasAccess = owned;
+    if (!hasAccess) {
+      const sub = await AppDataSource.getRepository(ServerSubuser).findOneBy({
+        serverUuid: id,
+        userId: user?.id,
+        accepted: true,
+      });
+      hasAccess = !!sub && (!needPower || sub.permissions.includes('*') || sub.permissions.includes('power'));
+    }
+    if (!hasAccess && cfg.orgId) {
+      const m = await orgMemberRepo().findOne({
+        where: { userId: user?.id, organisationId: cfg.orgId },
+      });
+      hasAccess = !!(m && (m.orgRole === 'admin' || m.orgRole === 'owner'));
+    }
+    if (!hasAccess) {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+    return { cfg };
+  };
 
   app.get(
     prefix + '/servers/v2/:id',
     async (ctx: AuthenticatedHandlerContext) => {
       const { id } = (ctx.params ?? {}) as Record<string, string>;
+      const acc = await v2ServerAccess(ctx, id, false);
+      if (acc.error) return { error: acc.error };
       try {
         const svc = await serviceFor(id);
         const res = await svc.getServer(id);
@@ -7333,6 +7370,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         200: t.Any(),
         400: t.Object({ error: t.String() }),
         401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
         500: t.Object({ error: t.String() }),
       },
       detail: { summary: 'Get Proxmox server info', tags: ['Servers'] },
@@ -7343,6 +7382,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
     prefix + '/servers/v2/:id/power',
     async (ctx: AuthenticatedHandlerContext) => {
       const { id } = (ctx.params ?? {}) as Record<string, string>;
+      const acc = await v2ServerAccess(ctx, id, true);
+      if (acc.error) return { error: acc.error };
       const { action } = ctx.body as Record<string, unknown>;
       try {
         const svc = await serviceFor(id);
@@ -7359,6 +7400,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         200: t.Any(),
         400: t.Object({ error: t.String() }),
         401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
         502: t.Object({ error: t.String() }),
       },
       detail: { summary: 'Perform power action on Proxmox server', tags: ['Servers'] },
@@ -7369,6 +7412,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
     prefix + '/servers/v2/:id/stats',
     async (ctx: AuthenticatedHandlerContext) => {
       const { id } = (ctx.params ?? {}) as Record<string, string>;
+      const acc = await v2ServerAccess(ctx, id, false);
+      if (acc.error) return { error: acc.error };
       try {
         const svc = await serviceFor(id);
         const stats = await svc.getStats(id);
@@ -7388,6 +7433,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         200: t.Any(),
         400: t.Object({ error: t.String() }),
         401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
       },
       detail: { summary: 'Get Proxmox server stats', tags: ['Servers'] },
     }
@@ -7397,6 +7444,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
     prefix + '/servers/v2/:id/configuration',
     async (ctx: AuthenticatedHandlerContext) => {
       const { id } = (ctx.params ?? {}) as Record<string, string>;
+      const acc = await v2ServerAccess(ctx, id, false);
+      if (acc.error) return { error: acc.error };
       try {
         const svc = await serviceFor(id);
         const res = await svc.getServer(id);
@@ -7412,6 +7461,8 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         200: t.Any(),
         400: t.Object({ error: t.String() }),
         401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
         500: t.Object({ error: t.String() }),
       },
       detail: { summary: 'Get Proxmox server configuration', tags: ['Servers'] },
