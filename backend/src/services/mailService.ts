@@ -183,6 +183,8 @@ export async function sendMail(
     options.envelope = {
       from: fromAddress,
       to: options.to as any,
+      ...(options.cc ? { cc: options.cc as any } : {}),
+      ...(options.bcc ? { bcc: options.bcc as any } : {}),
     };
   }
 
