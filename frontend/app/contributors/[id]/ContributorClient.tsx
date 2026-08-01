@@ -123,10 +123,10 @@ export function ContributorClient() {
   );
 
   useEffect(() => {
-    if (!loading && !contributor) {
+    if (!loading && !contributor && !error) {
       router.replace("/not-found");
     }
-  }, [loading, contributor, router]);
+  }, [loading, contributor, error, router]);
 
   if (loading) {
     return (

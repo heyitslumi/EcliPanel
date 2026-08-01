@@ -9,7 +9,7 @@ const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_B
 let title = `Contributor — EclipseSystems`, description = "";
 let ogImage = `${siteUrl}/contributors/${id}/og.png`;
 try {
-  const res = await fetch(`${backendUrl}/api/public/contributors`);
+  const res = await fetch(`${backendUrl}/public/contributors`);
   if (res.ok) {
     const data = await res.json();
     const list = Array.isArray(data?.contributors) ? data.contributors : [];

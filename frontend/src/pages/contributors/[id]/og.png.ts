@@ -27,7 +27,7 @@ function compactDate(value?: string): string {
 
 async function fetchContributor(id: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/public/contributors`, {
+    const res = await fetch(`${BACKEND_URL}/public/contributors`, {
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ params }) => {
     ["Pull Requests", Number(contributor.pullRequests) || 0],
     ["Merged PRs", Number(contributor.mergedPullRequests) || 0],
   ];
-  const chartData = (Array.isArray(contributor.recentCommits) ? contributor.recentCommits : []).slice(-40);
+  const chartData = (Array.isArray(contributor.commitHistory) ? contributor.commitHistory : []).slice(-40);
   const chartW = 1100;
   const chartH = 110;
   const maxCount = Math.max(...chartData.map((c: any) => Number(c.count) || 0), 1);
