@@ -239,7 +239,9 @@ export function authorize(required: string) {
       }
     }
 
-    if (required === 'apikeys:create') return;
+    if (required === 'apikeys:create') {
+      // Require 'apikeys:create' permission — fall through to the hasPermission check below.
+    }
     if (required === 'apikeys:delete') {
       try {
         const keyId = ctx.params?.id || ctx.params?.keyId;
