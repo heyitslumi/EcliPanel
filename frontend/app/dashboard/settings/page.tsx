@@ -1832,7 +1832,7 @@ export default function SettingsPage() {
                       value={currentPassword}
                       onChange={setCurrentPassword}
                       icon={Lock}
-                      hint={t("profile.emailStepUpHint")}
+                      hint={t("security.emailStepUpHint")}
                     />
                   )}
                 </div>
