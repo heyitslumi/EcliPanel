@@ -88,6 +88,7 @@ import {
 } from '../utils/suspensionNotice';
 import { isValidIpv6, isIpv6InSubnet, parseIpv6, formatIpv6 } from '../utils/ipv6';
 import { createActivityLog } from './logHandler';
+import { createNotification } from '../utils/notificationHelper';
 import { escapeHtml, markdownToHtml } from '../utils/markdown';
 import { requestServerSunsetNoticeForUser } from '../services/serverSunsetPolicyService';
 import { httpRequest } from '../utils/http';
@@ -7891,6 +7892,10 @@ export async function adminRoutes(app: any, prefix = '') {
       const fullSearch = ctx.query.full === '1' || ctx.query.full === 'true';
       let where = '(l.targetId = :uuid AND l.targetType = :type)';
       const params: any = { uuid, type: 'server' };
+      // Company-mailbox activity is keyed by the mailbox address, so searching
+      // by address surfaces those logs too.
+      where += ' OR (l.targetType = :mboxType AND l.targetId = :uuid)';
+      params.mboxType = 'mailbox';
       if (fullSearch) { where += ' OR l.metadata LIKE :ms'; params.ms = `%"${uuid}"%`; }
       const qb = logRepo.createQueryBuilder('l')
         .where(where, params)
@@ -10178,6 +10183,49 @@ export async function adminRoutes(app: any, prefix = '') {
     return { entry, account };
   };
 
+  // In-flight guard so concurrent purge requests don't stack jobs.
+  // ponytail: process-local only; a per-DB lock would be needed if this ever
+  // runs on multiple backend instances.
+  let purgeInFlight = false;
+
+  async function runPurgeAll(from: string) {
+    // fromAddress is stored as the display text (e.g. `"DMARC Aggregate Report"
+    // <dmarcreport@microsoft.com>`), so match the bare address as a substring.
+    const likeFrom = '%' + from.replace(/[\\%_]/g, m => '\\' + m) + '%';
+    const messageRepo = AppDataSource.getRepository(MailMessage);
+    const accounts = await AppDataSource.getRepository(MailboxAccount).find({ where: { enabled: true } });
+
+    const jobs: { account: MailboxAccount; msg: MailMessage }[] = [];
+    for (const account of accounts) {
+      const targets = await messageRepo
+        .createQueryBuilder('message')
+        .where('message.userId = :userId', { userId: account.userId })
+        .andWhere('LOWER(message.fromAddress) LIKE LOWER(:from)', { from: likeFrom })
+        .orderBy('message.receivedAt', 'ASC')
+        .getMany();
+      for (const msg of targets) jobs.push({ account, msg });
+    }
+
+    let deleted = 0;
+    let failed = 0;
+    let ix = 0;
+    const worker = async () => {
+      while (ix < jobs.length) {
+        const { account, msg } = jobs[ix++];
+        const removed = await deleteMessageFromMailbox(account, msg, msg.folder, true).catch(() => false);
+        if (removed) {
+          await messageRepo.remove(msg);
+          deleted++;
+        } else {
+          failed++;
+        }
+      }
+    };
+    // A few parallel IMAP sessions keep big purges from taking forever.
+    await Promise.all(Array.from({ length: Math.min(5, Math.max(1, jobs.length)) }, worker));
+    return { deleted, failed, mailboxes: accounts.length };
+  }
+
   app.get(
     prefix + '/admin/company-mailboxes',
     async (ctx: AdminRouteContext) => {
@@ -10312,6 +10360,13 @@ export async function adminRoutes(app: any, prefix = '') {
         return { error: ctx.t('admin.mailboxRotationFailed'), details: String(result.error || 'unknown') };
       }
 
+      await createActivityLog({
+        userId: ctx.user?.id,
+        action: 'admin:mailbox:rotate',
+        targetId: account.email,
+        targetType: 'mailbox',
+      });
+
       return {
         success: true,
         localPart: entry.localPart,
@@ -10362,10 +10417,18 @@ export async function adminRoutes(app: any, prefix = '') {
     async (ctx: AdminRouteContext) => {
       const loaded = await loadCompanyAccount(ctx, String((ctx.params as any).address));
       if ('error' in loaded) return loaded;
+      const { account } = loaded;
       const msg = await loadCompanyMessage(ctx, loaded);
       if (!msg) return { error: ctx.t('admin.mailboxMessageNotFound') };
       msg.read = Boolean((ctx.body as Record<string, unknown> | undefined)?.read);
       await AppDataSource.getRepository(MailMessage).save(msg);
+      await createActivityLog({
+        userId: ctx.user?.id,
+        action: 'admin:mailbox:read',
+        targetId: account.email,
+        targetType: 'mailbox',
+        metadata: { messageId: msg.id, read: msg.read },
+      });
       return { success: true };
     },
     {
@@ -10472,6 +10535,13 @@ export async function adminRoutes(app: any, prefix = '') {
           msg.replied = true;
           await messageRepo.save(msg);
         }
+        await createActivityLog({
+          userId: ctx.user?.id,
+          action: msg ? 'admin:mailbox:reply' : 'admin:mailbox:send',
+          targetId: account.email,
+          targetType: 'mailbox',
+          metadata: { to: toAddress },
+        });
         return { success: true };
       } catch (err: any) {
         ctx.set.status = 500;
@@ -10556,20 +10626,113 @@ export async function adminRoutes(app: any, prefix = '') {
         if (removed) {
           await AppDataSource.getRepository(MailMessage).remove(msg);
         }
-        return removed
-          ? { success: true }
-          : (ctx.set.status = 500, { error: ctx.t('admin.mailboxDeleteFailed') });
+        if (!removed) {
+          ctx.set.status = 500;
+          return { error: ctx.t('admin.mailboxDeleteFailed') };
+        }
+        await createActivityLog({
+          userId: ctx.user?.id,
+          action: 'admin:mailbox:delete',
+          targetId: account.email,
+          targetType: 'mailbox',
+          metadata: { messageId: msg.id, folder: 'Trash', permanent: true },
+        });
+        return { success: true };
       }
 
       const moved = await deleteMessageFromMailbox(account, msg, 'INBOX');
-      return moved
-        ? { success: true }
-        : (ctx.set.status = 500, { error: ctx.t('admin.mailboxDeleteFailed') });
+      if (!moved) {
+        ctx.set.status = 500;
+        return { error: ctx.t('admin.mailboxDeleteFailed') };
+      }
+      await createActivityLog({
+        userId: ctx.user?.id,
+        action: 'admin:mailbox:delete',
+        targetId: account.email,
+        targetType: 'mailbox',
+        metadata: { messageId: msg.id, folder: 'INBOX', permanent: false },
+      });
+      return { success: true };
     },
     {
       beforeHandle: authenticate,
       response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
       detail: { summary: 'Delete a company mailbox message', tags: ['Admin', 'Mailbox'] },
+    }
+  );
+
+  app.post(
+    prefix + '/admin/company-mailboxes/purge-from',
+    async (ctx: AdminRouteContext) => {
+      if (ctx.user?.role !== 'rootAdmin' && ctx.user?.role !== '*') {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      const from = String((ctx.body as Record<string, unknown> | undefined)?.from || '').trim();
+      if (!from) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.recipientEmailRequired') };
+      }
+
+      if (purgeInFlight) {
+        ctx.set.status = 409;
+        return { error: ctx.t('admin.mailboxPurgeRunning') };
+      }
+
+      // Big purges (thousands of messages) take minutes: run in the background
+      // and notify the admin on completion.
+      purgeInFlight = true;
+      const adminId = ctx.user?.id;
+
+      void (async () => {
+        try {
+          const result = await runPurgeAll(from);
+          await createActivityLog({
+            userId: adminId,
+            action: 'admin:mailbox:purge',
+            targetId: from,
+            targetType: 'mailbox',
+            metadata: {
+              from,
+              deleted: result.deleted,
+              failed: result.failed,
+              mailboxes: result.mailboxes,
+              background: true,
+            },
+          });
+          if (adminId) {
+            await createNotification({
+              userId: adminId,
+              type: 'mailbox',
+              title: 'Mailbox purge complete',
+              body: `Purged ${result.deleted} message(s) sent by ${from} across ${result.mailboxes} mailboxes${result.failed ? `, ${result.failed} failed` : ''}.`,
+              url: '/dashboard/admin?tab=company-mailboxes',
+            });
+          }
+        } catch (err: any) {
+          console.error('[adminHandler] mailbox purge failed', err?.message || err);
+          if (adminId) {
+            await createNotification({
+              userId: adminId,
+              type: 'mailbox',
+              title: 'Mailbox purge failed',
+              body: `Purge of messages sent by ${from} failed: ${String(err?.message || err).slice(0, 300)}`,
+              url: '/dashboard/admin?tab=company-mailboxes',
+            }).catch(() => {});
+          }
+        } finally {
+          purgeInFlight = false;
+        }
+      })();
+
+      return { success: true, queued: true };
+    },
+    {
+      beforeHandle: authenticate,
+      body: t.Object({ from: t.String({ minLength: 1 }) }),
+      response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 409: t.Object({ error: t.String() }) },
+      detail: { summary: 'Queue a purge of all messages sent by a given address from all mailboxes', tags: ['Admin', 'Mailbox'] },
     }
   );
 }

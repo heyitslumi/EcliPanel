@@ -556,7 +556,8 @@
     "mailboxMessageNotFound": "邮箱消息未找到",
     "mailboxDeleteFailed": "删除邮箱消息失败",
     "mailboxReplyFailed": "发送回复失败",
-    "mailboxSendFailed": "发送邮件失败"
+    "mailboxSendFailed": "发送邮件失败",
+    "mailboxPurgeRunning": "邮箱清除操作正在进行中"
   },
   "system": {
     "jwtUnavailable": "JWT不可用",

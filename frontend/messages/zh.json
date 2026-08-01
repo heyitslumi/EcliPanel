@@ -4184,7 +4184,9 @@
       "updatedProfile": "更新了个人资料设置",
       "fraudScanStarted": "欺诈扫描已启动",
       "fraudScanCompleted": "欺诈扫描已完成",
-      "fraudScanError": "欺诈扫描失败"
+      "fraudScanError": "欺诈扫描失败",
+      "loginPasskey": "使用通行密钥登录",
+      "login2fa": "使用两步验证登录"
     }
   },
   "serversPage": {
@@ -6959,6 +6961,15 @@
       "notification": "品牌通知"
     },
     "compose": "写邮件",
-    "composeTitle": "从 {mailbox} 写邮件"
+    "composeTitle": "从 {mailbox} 写邮件",
+    "purgeTitle": "按发件人清除邮件:",
+    "purgePlaceholder": "sender@example.com",
+    "purge": "清除",
+    "purgeConfirm": "从所有邮箱删除 {from} 发送的所有邮件？此操作无法撤销。",
+    "purgeDone": "已从所有邮箱清除 {deleted} 封邮件，{failed} 封失败。",
+    "purgeFailed": "清除失败: {reason}",
+    "purgeToggle": "清除垃圾邮件",
+    "purgeHide": "隐藏",
+    "purgeQueued": "清除已在后台开始。完成后您将收到通知。"
   }
 }

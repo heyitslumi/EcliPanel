@@ -556,7 +556,8 @@
     "mailboxMessageNotFound": "मेलबॉक्स संदेश नहीं मिला",
     "mailboxDeleteFailed": "मेलबॉक्स संदेश हटाने में विफल",
     "mailboxReplyFailed": "जवाब भेजने में विफल",
-    "mailboxSendFailed": "ईमेल भेजने में विफल"
+    "mailboxSendFailed": "ईमेल भेजने में विफल",
+    "mailboxPurgeRunning": "मेलबॉक्स सफाई पहले से चल रही है"
   },
   "system": {
     "jwtUnavailable": "jwt अनुपलब्ध",

@@ -174,7 +174,12 @@ export default function CompanyMailboxesTab() {
   const [previewHtml, setPreviewHtml] = useState("")
   const [previewMeta, setPreviewMeta] = useState<{ from: string; subject: string } | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
+  const [purgeAddress, setPurgeAddress] = useState("")
+  const [purging, setPurging] = useState(false)
+  const [purgeOpen, setPurgeOpen] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+
+  const isRootAdmin = !!user && (user.role === "rootAdmin" || user.role === "*")
 
   const hasMailboxPerm = useCallback(
     (localPart: string) => !!user && hasPermission(user, `admin:mailbox:${localPart}`),
@@ -398,6 +403,28 @@ export default function CompanyMailboxesTab() {
     }
   }
 
+  const purgeMessages = async () => {
+    if (!purgeAddress.trim()) return
+    const from = purgeAddress.trim()
+    if (!confirm(t("purgeConfirm", { from }))) return
+    setPurging(true)
+    try {
+      const data = await apiFetch(API_ENDPOINTS.adminCompanyMailboxPurge, {
+        method: "POST",
+        body: JSON.stringify({ from }),
+      })
+      if (data?.success) {
+        setPurgeAddress("")
+        setPurgeOpen(false)
+        alert(t("purgeQueued"))
+      }
+    } catch (e: any) {
+      alert(t("purgeFailed", { reason: e.message }))
+    } finally {
+      setPurging(false)
+    }
+  }
+
   const copyText = async (label: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -504,8 +531,57 @@ export default function CompanyMailboxesTab() {
                 {rotating ? <Loader2 className="h-3 w-3 rounded-full animate-spin" /> : <KeyRound className="h-3 w-3" />}
                 {t("rotatePassword")}
               </button>
+              {isRootAdmin && (
+                <button
+                  onClick={() => setPurgeOpen(o => !o)}
+                  className={`flex items-center gap-1.5 border px-2.5 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
+                    purgeOpen
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                  }`}
+                  data-telemetry="admin:mailboxes:purge-toggle"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {t("purgeToggle")}
+                </button>
+              )}
             </div>
           </div>
+
+          {isRootAdmin && purgeOpen && (
+            <div className="flex flex-wrap items-center gap-2 border border-destructive/20 bg-destructive/5 p-2.5">
+              <span className="text-[11px] font-medium text-destructive">
+                {t("purgeTitle")}
+              </span>
+              <input
+                value={purgeAddress}
+                onChange={e => setPurgeAddress(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") purgeMessages() }}
+                placeholder={t("purgePlaceholder")}
+                className="w-52 border border-border/60 bg-background/40 px-2 py-1.5 text-[11px] text-foreground outline-none focus:border-destructive/40 placeholder:text-muted-foreground/50"
+              />
+              <button
+                onClick={purgeMessages}
+                disabled={purging || !purgeAddress.trim()}
+                className="flex items-center gap-1.5 border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 active:scale-95 transition-all disabled:opacity-50"
+                data-telemetry="admin:mailboxes:purge-from"
+              >
+                {purging ? (
+                  <Loader2 className="h-3 w-3 rounded-full animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                {t("purge")}
+              </button>
+              <button
+                onClick={() => setPurgeOpen(false)}
+                className="ml-auto text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t("purgeHide")}
+              >
+                {t("purgeHide")}
+              </button>
+            </div>
+          )}
 
           {/* Folder + filter tabs */}
           <div className="flex flex-wrap items-center justify-between gap-2">

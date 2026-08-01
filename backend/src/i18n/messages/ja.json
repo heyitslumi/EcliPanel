@@ -556,7 +556,8 @@
     "mailboxMessageNotFound": "メールボックスのメッセージが見つかりません",
     "mailboxDeleteFailed": "メールボックスのメッセージの削除に失敗しました",
     "mailboxReplyFailed": "返信の送信に失敗しました",
-    "mailboxSendFailed": "メールの送信に失敗しました"
+    "mailboxSendFailed": "メールの送信に失敗しました",
+    "mailboxPurgeRunning": "メールボックスの削除処理が実行中です"
   },
   "system": {
     "jwtUnavailable": "JWTが利用できません",

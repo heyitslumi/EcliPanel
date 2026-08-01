@@ -3917,7 +3917,9 @@
       "updatedProfile": "プロフィール設定を更新しました",
       "fraudScanStarted": "不正スキャンが開始されました",
       "fraudScanCompleted": "不正スキャンが完了しました",
-      "fraudScanError": "不正スキャンに失敗しました"
+      "fraudScanError": "不正スキャンに失敗しました",
+      "loginPasskey": "パスキーでログインしました",
+      "login2fa": "二要素認証でログインしました"
     }
   },
   "serversPage": {
@@ -6960,6 +6962,15 @@
       "notification": "ブランド通知"
     },
     "compose": "新規作成",
-    "composeTitle": "{mailbox} から作成"
+    "composeTitle": "{mailbox} から作成",
+    "purgeTitle": "送信元を指定してメッセージを削除:",
+    "purgePlaceholder": "sender@example.com",
+    "purge": "削除",
+    "purgeConfirm": "{from} から送信されたすべてのメッセージを全メールボックスから削除しますか？元に戻せません。",
+    "purgeDone": "全メールボックスから {deleted} 件を削除しました（{failed} 件失敗）。",
+    "purgeFailed": "削除に失敗: {reason}",
+    "purgeToggle": "スパムを削除",
+    "purgeHide": "非表示",
+    "purgeQueued": "削除処理をバックグラウンドで開始しました。完了すると通知されます。"
   }
 }

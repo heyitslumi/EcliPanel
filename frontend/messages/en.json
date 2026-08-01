@@ -4213,7 +4213,9 @@
       "updatedProfile": "Updated profile settings",
       "fraudScanStarted": "Fraud scan started",
       "fraudScanCompleted": "Fraud scan completed",
-      "fraudScanError": "Fraud scan failed"
+      "fraudScanError": "Fraud scan failed",
+      "loginPasskey": "Logged in with passkey",
+      "login2fa": "Logged in with two-factor authentication"
     }
   },
   "serversPage": {
@@ -7044,6 +7046,15 @@
       "notification": "Branded notification"
     },
     "compose": "Compose",
-    "composeTitle": "Compose from {mailbox}"
+    "composeTitle": "Compose from {mailbox}",
+    "purgeTitle": "Purge messages sent by:",
+    "purgePlaceholder": "sender@example.com",
+    "purge": "Purge",
+    "purgeConfirm": "Delete ALL messages sent by {from} from ALL mailboxes? This cannot be undone.",
+    "purgeDone": "Purged {deleted} message(s) across all mailboxes, {failed} failed.",
+    "purgeFailed": "Purge failed: {reason}",
+    "purgeToggle": "Purge spam",
+    "purgeHide": "Hide",
+    "purgeQueued": "Purge started in the background. You'll get a notification when it finishes."
   }
 }

@@ -1526,6 +1526,19 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
         }
         await cancelPendingAutoSunsetDeletionRequest(user);
         await userRepo.save(user);
+        try {
+          const logRepo = AppDataSource.getRepository(UserLog);
+          await logRepo.save(
+            logRepo.create({
+              userId: user.id,
+              action: 'login_passkey',
+              ipAddress: ctx.ip,
+              timestamp: new Date(),
+            })
+          );
+        } catch (err) {
+          ctx.log?.warn?.({ err }, 'failed to log passkey login event');
+        }
         const token = app.pqJwt?.signPqJwt
           ? app.pqJwt.signPqJwt({ userId: user.id, sessionId })
           : app.jwt.sign({ userId: user.id, sessionId });

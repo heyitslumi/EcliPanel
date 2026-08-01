@@ -433,6 +433,7 @@ export const API_ENDPOINTS = {
   adminCompanyMailboxes: "/api/admin/company-mailboxes",
   adminCompanyMailboxMessages: "/api/admin/company-mailboxes/:address/messages",
   adminCompanyMailboxRotate: "/api/admin/company-mailboxes/:address/rotate-password",
+  adminCompanyMailboxPurge: "/api/admin/company-mailboxes/purge-from",
   adminCompanyMailboxPreview: "/api/admin/company-mailboxes/:address/preview",
   adminLogs: "/api/admin/logs",
   adminSlowQueries: "/api/admin/slow-queries",

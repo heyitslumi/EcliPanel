@@ -268,6 +268,8 @@ export default function AccountActivity() {
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Set<string | number>>(new Set())
   const actionLabels: Record<string, string> = {
+    "login_passkey": t("actionLabels.loginPasskey"),
+    "login_2fa": t("actionLabels.login2fa"),
     "server:power:start": t("actionLabels.startedServer"),
     "server:power:stop": t("actionLabels.stoppedServer"),
     "server:power:restart": t("actionLabels.restartedServer"),

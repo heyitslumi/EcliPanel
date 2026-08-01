@@ -3917,7 +3917,9 @@
       "updatedProfile": "प्रोफ़ाइल सेटिंग्स अपडेट की",
       "fraudScanStarted": "धोखाधड़ी स्कैन शुरू",
       "fraudScanCompleted": "धोखाधड़ी स्कैन पूर्ण",
-      "fraudScanError": "धोखाधड़ी स्कैन विफल"
+      "fraudScanError": "धोखाधड़ी स्कैन विफल",
+      "loginPasskey": "पासकी से लॉगिन किया",
+      "login2fa": "दो-चरणीय प्रमाणीकरण से लॉगिन किया"
     }
   },
   "serversPage": {
@@ -6960,6 +6962,15 @@
       "notification": "ब्रांडेड अधिसूचना"
     },
     "compose": "लिखें",
-    "composeTitle": "{mailbox} से लिखें"
+    "composeTitle": "{mailbox} से लिखें",
+    "purgeTitle": "इसके द्वारा भेजे गए सभी संदेश हटाएं:",
+    "purgePlaceholder": "sender@example.com",
+    "purge": "हटाएं",
+    "purgeConfirm": "क्या {from} द्वारा भेजे गए सभी संदेश सभी मेलबॉक्स से हटाएं? इसे पूर्ववत नहीं किया जा सकता।",
+    "purgeDone": "सभी मेलबॉक्स से {deleted} संदेश हटाए गए, {failed} विफल रहे।",
+    "purgeFailed": "हटाना विफल: {reason}",
+    "purgeToggle": "स्पैम हटाएं",
+    "purgeHide": "छिपाएं",
+    "purgeQueued": "सफाई पृष्ठभूमि में शुरू हो गई है। पूरी होने पर आपको सूचना मिलेगी।"
   }
 }

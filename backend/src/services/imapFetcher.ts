@@ -287,21 +287,22 @@ function createImapSession(
 export async function deleteMessageFromMailbox(
   account: MailboxAccount,
   message: MailMessage,
-  folder: string = 'INBOX'
+  folder: string = 'INBOX',
+  permanent = false
 ): Promise<boolean> {
   if (!DOVECOT_MASTER_USER || !DOVECOT_MASTER_PASS) {
     console.warn('[imapFetcher] deleteMessage: master credentials not set');
     return false;
   }
 
-  const isTrash = String(folder).toUpperCase() === 'TRASH';
+  const isTrash = permanent || String(folder).toUpperCase() === 'TRASH';
 
   return new Promise<boolean>((resolve, reject) => {
     const { imap, finish } = createImapSession(account, resolve, reject);
 
     imap.once('ready', async () => {
       try {
-        await openBox(imap, isTrash ? 'Trash' : 'INBOX');
+        await openBox(imap, String(folder || 'INBOX'));
 
         const messageId = getRemoteMessageId(message);
         const tryUid =

@@ -3979,7 +3979,9 @@
       "updatedProfile": "Обновлены данные профиля",
       "fraudScanStarted": "Сканирование на мошенничество запущено",
       "fraudScanCompleted": "Сканирование на мошенничество завершено",
-      "fraudScanError": "Сканирование на мошенничество не удалось"
+      "fraudScanError": "Сканирование на мошенничество не удалось",
+      "loginPasskey": "Вход с помощью passkey",
+      "login2fa": "Вход с двухфакторной аутентификацией"
     }
   },
   "serversPage": {
@@ -7016,6 +7018,15 @@
       "notification": "Брендированное уведомление"
     },
     "compose": "Написать",
-    "composeTitle": "Новое письмо от {mailbox}"
+    "composeTitle": "Новое письмо от {mailbox}",
+    "purgeTitle": "Удалить сообщения от:",
+    "purgePlaceholder": "sender@example.com",
+    "purge": "Удалить",
+    "purgeConfirm": "Удалить ВСЕ сообщения от {from} из ВСЕХ почтовых ящиков? Действие необратимо.",
+    "purgeDone": "Удалено из всех ящиков: {deleted}, ошибок: {failed}.",
+    "purgeFailed": "Не удалось очистить: {reason}",
+    "purgeToggle": "Удалить спам",
+    "purgeHide": "Скрыть",
+    "purgeQueued": "Очистка запущена в фоне. Вы получите уведомление по завершении."
   }
 }

@@ -556,7 +556,8 @@
     "mailboxMessageNotFound": "Сообщение ящика не найдено",
     "mailboxDeleteFailed": "Не удалось удалить сообщение ящика",
     "mailboxReplyFailed": "Не удалось отправить ответ",
-    "mailboxSendFailed": "Не удалось отправить письмо"
+    "mailboxSendFailed": "Не удалось отправить письмо",
+    "mailboxPurgeRunning": "Очистка почтовых ящиков уже выполняется"
   },
   "system": {
     "jwtUnavailable": "JWT недоступен",

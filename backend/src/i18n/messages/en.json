@@ -556,7 +556,8 @@
     "mailboxMessageNotFound": "Mailbox message not found",
     "mailboxDeleteFailed": "Failed to delete mailbox message",
     "mailboxReplyFailed": "Failed to send reply",
-    "mailboxSendFailed": "Failed to send email"
+    "mailboxSendFailed": "Failed to send email",
+    "mailboxPurgeRunning": "A mailbox purge is already running"
   },
   "system": {
     "jwtUnavailable": "jwt unavailable",

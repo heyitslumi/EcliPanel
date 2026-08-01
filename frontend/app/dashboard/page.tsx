@@ -58,6 +58,8 @@ function guessActivityType(action: string): string {
 }
 
 const actionLabels: Record<string, string> = {
+  "login_passkey": "Logged in with passkey",
+  "login_2fa": "Logged in with two-factor authentication",
   "server:power:start": "Started server",
   "server:power:stop": "Stopped server",
   "server:power:restart": "Restarted server",
