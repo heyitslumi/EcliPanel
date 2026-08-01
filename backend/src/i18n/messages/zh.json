@@ -707,7 +707,10 @@
     "no_file_provided": "未提供文件",
     "invalid_image_type_allowed_png_jpeg_webp_gif": "图片类型无效。允许的类型：PNG、JPEG、WebP、GIF",
     "no_file_provided_1": "未提供文件",
-    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "图片类型无效。允许的类型：PNG、JPEG、WebP、GIF"
+    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "图片类型无效。允许的类型：PNG、JPEG、WebP、GIF",
+    "messageNotFound": "找不到消息",
+    "messageSeen": "消息已被对方阅读，无法再编辑",
+    "invalidEmoji": "无效的表情符号"
   },
   "sshKey": {
     "notFound": "SSH密钥未找到",

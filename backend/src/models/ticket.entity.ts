@@ -63,6 +63,7 @@ export class Ticket {
     collation: 'utf8mb4_unicode_ci',
   })
   messages?: Array<{
+    id?: string;
     sender: 'user' | 'staff' | 'system';
     message: string;
     created: Date;
@@ -75,6 +76,9 @@ export class Ticket {
     userAvatar?: string;
     avatarUrl?: string;
     attachments?: string[];
+    edited?: boolean;
+    seen?: boolean;
+    reactions?: Record<string, number[]>;
   }>;
 
   @CreateDateColumn()

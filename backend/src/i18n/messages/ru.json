@@ -733,7 +733,10 @@
     "no_file_provided": "No file provided",
     "invalid_image_type_allowed_png_jpeg_webp_gif": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF",
     "no_file_provided_1": "No file provided",
-    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF"
+    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF",
+    "messageNotFound": "Сообщение не найдено",
+    "messageSeen": "Сообщение уже прочитано другой стороной и больше не может быть изменено",
+    "invalidEmoji": "Некорректный эмодзи"
   },
   "sshKey": {
     "notFound": "SSH-ключ не найден",

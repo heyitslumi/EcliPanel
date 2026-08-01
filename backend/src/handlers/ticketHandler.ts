@@ -38,6 +38,9 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
   const endpointCooldowns: Map<string, number> = new Map();
   function nowTs() { return Date.now(); }
 
+  let msgSeq = 0;
+  const makeMsgId = () => `m_${Date.now().toString(36)}_${(++msgSeq).toString(36)}`;
+
   const ALLOWED_PRIORITIES = ['urgent', 'high', 'medium', 'low'];
   const ALLOWED_DEPARTMENTS = ['Technical Support', 'Billing', 'Sales', 'Security'];
 
@@ -488,8 +491,8 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
 
       if (dir.spam) {
         const safe = sanitizeForDb(reply || 'Marked as spam by AI.');
-        ticket.messages.push({ sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
-        ticket.messages.push({ sender: 'system', message: _t('ticket.aiSpamMarked'), created: ts });
+        ticket.messages.push({ id: makeMsgId(), sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
+        ticket.messages.push({ id: makeMsgId(), sender: 'system', message: _t('ticket.aiSpamMarked'), created: ts });
         ticket.adminReply = safe;
         Object.assign(ticket, { aiTouched: true, aiMarkedSpam: true, aiDisabled: true, priority: 'low' });
         await repo.save(ticket);
@@ -499,8 +502,8 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
 
       if (dir.close) {
         const safe = sanitizeForDb(reply || 'Closed by AI. Human verification required.');
-        ticket.messages.push({ sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
-        ticket.messages.push({ sender: 'system', message: _t('ticket.aiClosedForVerification'), created: ts });
+        ticket.messages.push({ id: makeMsgId(), sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
+        ticket.messages.push({ id: makeMsgId(), sender: 'system', message: _t('ticket.aiClosedForVerification'), created: ts });
         ticket.adminReply = safe;
         Object.assign(ticket, { aiTouched: true, aiClosed: true, aiDisabled: true, status: 'closed' });
         await repo.save(ticket);
@@ -531,7 +534,7 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
       }
 
       const safe = sanitizeForDb(reply);
-      ticket.messages.push({ sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
+      ticket.messages.push({ id: makeMsgId(), sender: 'staff', message: safe, created: ts, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
       ticket.adminReply = safe;
 
       const appliedEntries = Object.entries(changes.applied);
@@ -542,6 +545,7 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
         if (dir.escalate) parts.push('escalated to human staff');
         if (dir.confidence === 'low') parts.push('low confidence reply');
         ticket.messages.push({
+          id: makeMsgId(),
           sender: 'system',
           message: `System: AI ${parts.join('; ')}.`,
           created: ts,
@@ -550,6 +554,7 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
 
       if (dir.internalNote) {
         ticket.messages.push({
+          id: makeMsgId(),
           sender: 'system',
           message: `AI Internal Note: ${dir.internalNote}`,
           created: ts,
@@ -1244,6 +1249,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
       status: 'opened',
       department: typeof department === 'string' ? department : null,
       messages: [{
+        id: makeMsgId(),
         sender: 'user',
         message: safeMessage,
         created: now,
@@ -1271,7 +1277,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
                 const now = new Date();
                 const note = sanitizeForDb('This ticket appears to be outside free-plan support. If you need urgent or high-priority support please upgrade your plan at /dashboard/billing or contact sales at contact@ecli.app. The ticket has been closed.');
                 if (!Array.isArray(saved.messages)) saved.messages = [];
-                saved.messages.push({ sender: 'staff', message: note, created: now, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
+                saved.messages.push({ id: makeMsgId(), sender: 'staff', message: note, created: now, ai: true, staffName: 'EcliAI', staffDisplayName: 'EcliAI' });
                 saved.adminReply = note;
                 Object.assign(saved, { aiTouched: true, aiClosed: true, aiDisabled: true, status: 'closed' });
                 await repo.save(saved);
@@ -1312,6 +1318,22 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
     if (ticket.userId !== user.id && !canTicketRead) {
       ctx.set.status = 403;
       return { error: ctx.t('common.forbidden') };
+    }
+
+    normalizeTicketMessages(ticket);
+    if (Array.isArray(ticket.messages)) {
+      let changed = false;
+      const viewerIsOwner = ticket.userId === user.id;
+      for (const m of ticket.messages) {
+        if (!m.id) { m.id = makeMsgId(); changed = true; }
+        const otherPartyRead = m.sender === 'user'
+          ? (canTicketRead && !viewerIsOwner)
+          : m.sender === 'staff'
+            ? !canTicketRead
+            : false;
+        if (!m.seen && otherPartyRead) { m.seen = true; changed = true; }
+      }
+      if (changed) { await repo.save(ticket).catch(() => { }); }
     }
 
     const output: Record<string, unknown> = { ...ticket, status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) };
@@ -1430,6 +1452,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
         const staffLegalName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
         const staffName = staffDisplayName || staffLegalName || 'Support Team';
         ticket.messages.push({
+          id: makeMsgId(),
           sender,
           message: txt,
           created: now,
@@ -1442,6 +1465,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
         } as TicketMessage);
       } else {
         ticket.messages.push({
+          id: makeMsgId(),
           sender,
           message: txt,
           created: now,
@@ -1463,7 +1487,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
       const safeTxt = sanitizeForDb(rawMessage);
       const existingMessage = String(ticket.message || '').trim();
       ticket.message = existingMessage ? `${existingMessage}\n\n---\n${safeTxt}` : safeTxt;
-      ticket.messages.push({ sender: 'user', message: safeTxt, created: now });
+      ticket.messages.push({ id: makeMsgId(), sender: 'user', message: safeTxt, created: now });
       pushedSender = 'user';
       lastMessageText = rawMessage;
       if (!status) ticket.status = 'awaiting_staff_reply';
@@ -1491,6 +1515,137 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
     beforeHandle: authenticate,
     response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
     detail: { summary: 'Update ticket (admin only)', tags: ['Tickets'] }
+  });
+
+  const isStaffViewer = (ctx: TicketContext) =>
+    ctx.apiKey?.type === 'admin' ||
+    hasPermissionSync(ctx, 'tickets:write') ||
+    hasPermissionSync(ctx, 'admin:ticket:staff');
+
+  const loadTicketMessage = async (ctx: TicketContext) => {
+    const ticket = await repo.findOneBy({ id: Number(ctx.params.id) });
+    if (!ticket) {
+      ctx.set.status = 404;
+      return { error: ctx.t('ticket.notFound') };
+    }
+    normalizeTicketMessages(ticket);
+    const msgs = Array.isArray(ticket.messages) ? ticket.messages : [];
+    const msg = msgs.find((m) => String(m.id) === String(ctx.params.msgId)) || null;
+    if (!msg) {
+      ctx.set.status = 404;
+      return { error: ctx.t('ticket.messageNotFound') };
+    }
+    return { ticket, msgs, msg };
+  };
+
+  const withTicketResult = (ticket: Ticket) => ({
+    success: true,
+    ticket: { ...ticket, status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) },
+  });
+  
+  const isMessageAuthor = (msg: TicketMessage, ctx: TicketContext, ticket: Ticket) =>
+    msg.sender === 'user'
+      ? ticket.userId === ctx.user.id
+      : msg.sender === 'staff'
+        ? Number(msg.staffId) === ctx.user.id
+        : false;
+
+  app.put(prefix + '/tickets/:id/messages/:msgId', async (ctx: TicketContext) => {
+    const loaded = await loadTicketMessage(ctx);
+    if ('error' in loaded) return loaded;
+    const { ticket, msg } = loaded;
+
+    if (!isMessageAuthor(msg, ctx, ticket)) {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+
+    const { message } = (ctx.body || {}) as Record<string, unknown>;
+    if (typeof message !== 'string' || !message.trim()) {
+      ctx.set.status = 400;
+      return { error: ctx.t('validation.messageRequired') };
+    }
+    if (msg.seen) {
+      ctx.set.status = 403;
+      return { error: ctx.t('ticket.messageSeen') };
+    }
+
+    msg.message = sanitizeForDb(message.trim());
+    msg.edited = true;
+    await repo.save(ticket);
+    return withTicketResult(ticket);
+  }, {
+    beforeHandle: authenticate,
+    response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+    detail: { summary: 'Edit a ticket message', tags: ['Tickets'] }
+  });
+
+  app.delete(prefix + '/tickets/:id/messages/:msgId', async (ctx: TicketContext) => {
+    const loaded = await loadTicketMessage(ctx);
+    if ('error' in loaded) return loaded;
+    const { ticket, msgs, msg } = loaded;
+
+    if (!isMessageAuthor(msg, ctx, ticket)) {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+    if (msg.seen) {
+      ctx.set.status = 403;
+      return { error: ctx.t('ticket.messageSeen') };
+    }
+
+    msgs.splice(msgs.indexOf(msg), 1);
+    if (msgs.length === 0) {
+      ticket.message = '';
+      ticket.adminReply = null;
+    }
+    await repo.save(ticket);
+    return withTicketResult(ticket);
+  }, {
+    beforeHandle: authenticate,
+    response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+    detail: { summary: 'Delete a ticket message', tags: ['Tickets'] }
+  });
+
+  app.post(prefix + '/tickets/:id/messages/:msgId/reactions', async (ctx: TicketContext) => {
+    const loaded = await loadTicketMessage(ctx);
+    if ('error' in loaded) return loaded;
+    const { ticket, msg } = loaded;
+
+    if (ticket.userId !== ctx.user.id && !isStaffViewer(ctx)) {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+    if (msg.sender === 'system') {
+      ctx.set.status = 403;
+      return { error: ctx.t('common.forbidden') };
+    }
+
+    const { emoji } = (ctx.body || {}) as Record<string, unknown>;
+    if (typeof emoji !== 'string' || !emoji.trim()) {
+      ctx.set.status = 400;
+      return { error: ctx.t('validation.messageRequired') };
+    }
+    const clean = emoji.trim().slice(0, 16);
+    if (!/\p{Extended_Pictographic}/u.test(clean)) {
+      ctx.set.status = 400;
+      return { error: ctx.t('ticket.invalidEmoji') };
+    }
+
+    msg.reactions = msg.reactions && typeof msg.reactions === 'object' ? msg.reactions : {};
+    const users = Array.isArray(msg.reactions[clean]) ? msg.reactions[clean] : [];
+    const i = users.indexOf(ctx.user.id);
+    if (i >= 0) users.splice(i, 1);
+    else users.push(ctx.user.id);
+    if (users.length) msg.reactions[clean] = users;
+    else delete msg.reactions[clean];
+
+    await repo.save(ticket);
+    return { ...withTicketResult(ticket), reactions: msg.reactions };
+  }, {
+    beforeHandle: authenticate,
+    response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+    detail: { summary: 'Toggle an emoji reaction on a ticket message', tags: ['Tickets'] }
   });
 
   app.post(prefix + '/tickets/screenshots', async (ctx: TicketContext) => {

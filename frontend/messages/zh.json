@@ -5768,7 +5768,8 @@
     "confirm": {
       "deleteTicket": "Delete this ticket permanently?",
       "banUser": "Ban this user from support?",
-      "unbanUser": "Unban this user from support?"
+      "unbanUser": "Unban this user from support?",
+      "deleteMessage": "删除这条消息？"
     },
     "prompt": {
       "banReason": "Reason for ban (optional):"
@@ -5782,7 +5783,10 @@
       "userBanned": "User banned from support",
       "failedBan": "Failed to ban: {reason}",
       "userUnbanned": "User unbanned",
-      "failedUnban": "Failed to unban: {reason}"
+      "failedUnban": "Failed to unban: {reason}",
+      "failedEdit": "编辑消息失败：{reason}",
+      "failedDeleteMsg": "删除消息失败：{reason}",
+      "failedReact": "回应失败：{reason}"
     },
     "errors": {
       "failedLoadTicket": "加载工单失败"
@@ -5794,6 +5798,15 @@
       "closedByAi": "Ticket was closed by AI",
       "statusChanged": "Status changed to {value}",
       "adminUpdated": "Admin ticket settings updated"
+    },
+    "msg": {
+      "edit": "编辑",
+      "delete": "删除",
+      "save": "保存",
+      "cancel": "取消",
+      "edited": "已编辑",
+      "react": "回应",
+      "deleteConfirm": "删除这条消息？"
     }
   },
   "organisationsPage": {

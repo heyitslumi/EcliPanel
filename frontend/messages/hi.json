@@ -5769,7 +5769,8 @@
     "confirm": {
       "deleteTicket": "यह टिकट स्थायी रूप से हटाएं?",
       "banUser": "इस उपयोगकर्ता को सहायता से प्रतिबंधित करें?",
-      "unbanUser": "इस उपयोगकर्ता का सहायता प्रतिबंध हटाएं?"
+      "unbanUser": "इस उपयोगकर्ता का सहायता प्रतिबंध हटाएं?",
+      "deleteMessage": "यह संदेश हटाएं?"
     },
     "prompt": {
       "banReason": "प्रतिबंध का कारण (वैकल्पिक):"
@@ -5783,7 +5784,10 @@
       "userBanned": "उपयोगकर्ता सहायता से प्रतिबंधित",
       "failedBan": "प्रतिबंधित करने में विफल: {reason}",
       "userUnbanned": "उपयोगकर्ता का प्रतिबंध हटाया गया",
-      "failedUnban": "प्रतिबंध हटाने में विफल: {reason}"
+      "failedUnban": "प्रतिबंध हटाने में विफल: {reason}",
+      "failedEdit": "संदेश संपादित करने में विफल: {reason}",
+      "failedDeleteMsg": "संदेश हटाने में विफल: {reason}",
+      "failedReact": "प्रतिक्रिया देने में विफल: {reason}"
     },
     "errors": {
       "failedLoadTicket": "टिकट लोड करने में विफल"
@@ -5795,6 +5799,15 @@
       "closedByAi": "टिकट AI द्वारा बंद किया गया",
       "statusChanged": "स्थिति {value} में बदली गई",
       "adminUpdated": "एडमिन टिकट सेटिंग्स अपडेट की गईं"
+    },
+    "msg": {
+      "edit": "संपादित करें",
+      "delete": "हटाएं",
+      "save": "सहेजें",
+      "cancel": "रद्द करें",
+      "edited": "संपादित",
+      "react": "प्रतिक्रिया",
+      "deleteConfirm": "यह संदेश हटाएं?"
     }
   },
   "organisationsPage": {

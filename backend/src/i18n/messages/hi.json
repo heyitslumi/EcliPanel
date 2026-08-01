@@ -707,7 +707,10 @@
     "no_file_provided": "कोई फ़ाइल प्रदान नहीं की गई",
     "invalid_image_type_allowed_png_jpeg_webp_gif": "अमान्य छवि प्रकार। अनुमत: PNG, JPEG, WebP, GIF",
     "no_file_provided_1": "कोई फ़ाइल प्रदान नहीं की गई",
-    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "अमान्य छवि प्रकार। अनुमत: PNG, JPEG, WebP, GIF"
+    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "अमान्य छवि प्रकार। अनुमत: PNG, JPEG, WebP, GIF",
+    "messageNotFound": "संदेश नहीं मिला",
+    "messageSeen": "संदेश दूसरे पक्ष द्वारा पढ़ा जा चुका है, अब इसे संपादित नहीं किया जा सकता",
+    "invalidEmoji": "अमान्य इमोजी"
   },
   "sshKey": {
     "notFound": "SSH कुंजी नहीं मिली",

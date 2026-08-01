@@ -707,7 +707,10 @@
     "no_file_provided": "ファイルが提供されていません",
     "invalid_image_type_allowed_png_jpeg_webp_gif": "無効な画像タイプです。許可されている形式: PNG、JPEG、WebP、GIF",
     "no_file_provided_1": "ファイルが提供されていません",
-    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "無効な画像タイプです。許可されている形式: PNG、JPEG、WebP、GIF"
+    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "無効な画像タイプです。許可されている形式: PNG、JPEG、WebP、GIF",
+    "messageNotFound": "メッセージが見つかりません",
+    "messageSeen": "メッセージは相手に既読されたため、編集できません",
+    "invalidEmoji": "無効な絵文字です"
   },
   "sshKey": {
     "notFound": "SSHキーが見つかりません",

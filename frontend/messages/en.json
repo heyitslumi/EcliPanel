@@ -5777,7 +5777,8 @@
     "confirm": {
       "deleteTicket": "Delete this ticket permanently?",
       "banUser": "Ban this user from support?",
-      "unbanUser": "Unban this user from support?"
+      "unbanUser": "Unban this user from support?",
+      "deleteMessage": "Delete this message?"
     },
     "prompt": {
       "banReason": "Reason for ban (optional):"
@@ -5791,7 +5792,10 @@
       "userBanned": "User banned from support",
       "failedBan": "Failed to ban: {reason}",
       "userUnbanned": "User unbanned",
-      "failedUnban": "Failed to unban: {reason}"
+      "failedUnban": "Failed to unban: {reason}",
+      "failedEdit": "Failed to edit message: {reason}",
+      "failedDeleteMsg": "Failed to delete message: {reason}",
+      "failedReact": "Failed to react: {reason}"
     },
     "errors": {
       "failedLoadTicket": "Failed to load ticket"
@@ -5803,6 +5807,14 @@
       "closedByAi": "Ticket was closed by AI",
       "statusChanged": "Status changed to {value}",
       "adminUpdated": "Admin ticket settings updated"
+    },
+    "msg": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edited": "edited",
+      "react": "React"
     }
   },
   "organisationsPage": {

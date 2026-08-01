@@ -701,7 +701,10 @@
     "no_file_provided": "No file provided",
     "invalid_image_type_allowed_png_jpeg_webp_gif": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF",
     "no_file_provided_1": "No file provided",
-    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF"
+    "invalid_image_type_allowed_png_jpeg_webp_gif_1": "Invalid image type. Allowed: PNG, JPEG, WebP, GIF",
+    "messageNotFound": "Message not found",
+    "messageSeen": "Message has already been read by the other party and can no longer be edited",
+    "invalidEmoji": "Invalid emoji"
   },
   "sshKey": {
     "notFound": "SSH key not found",

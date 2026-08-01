@@ -5769,7 +5769,8 @@
     "confirm": {
       "deleteTicket": "このチケットを完全に削除しますか？",
       "banUser": "このユーザーをサポートから禁止しますか？",
-      "unbanUser": "このユーザーのサポート禁止を解除しますか？"
+      "unbanUser": "このユーザーのサポート禁止を解除しますか？",
+      "deleteMessage": "このメッセージを削除しますか？"
     },
     "prompt": {
       "banReason": "禁止理由（任意）："
@@ -5783,7 +5784,10 @@
       "userBanned": "ユーザーがサポートから禁止されました",
       "failedBan": "禁止失敗：{reason}",
       "userUnbanned": "ユーザーの禁止が解除されました",
-      "failedUnban": "禁止解除失敗：{reason}"
+      "failedUnban": "禁止解除失敗：{reason}",
+      "failedEdit": "メッセージの編集に失敗しました：{reason}",
+      "failedDeleteMsg": "メッセージの削除に失敗しました：{reason}",
+      "failedReact": "リアクションに失敗しました：{reason}"
     },
     "errors": {
       "failedLoadTicket": "チケットの読み込みに失敗しました"
@@ -5795,6 +5799,15 @@
       "closedByAi": "チケットがAIによってクローズされました",
       "statusChanged": "ステータスが{value}に変更されました",
       "adminUpdated": "管理者チケット設定が更新されました"
+    },
+    "msg": {
+      "edit": "編集",
+      "delete": "削除",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "edited": "編集済み",
+      "react": "リアクション",
+      "deleteConfirm": "このメッセージを削除しますか？"
     }
   },
   "organisationsPage": {

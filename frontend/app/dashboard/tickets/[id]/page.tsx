@@ -37,7 +37,13 @@ import {
   MessageSquare,
   ImageUp,
   X,
+  Pencil,
+  SmilePlus,
 } from "lucide-react"
+
+const REACT_EMOJIS = [ 
+  "👍", "👎", "❓"
+];
 
 function MarkdownContent({ content }: { content: string }) {
   return (
@@ -57,41 +63,55 @@ function getTicketUserName(ticket: any, t?: any) {
   return t ? t("common.you") : "You"
 }
 
-function buildMessages(ticket: any, t?: any) {
+function buildMessages(ticket: any, t?: any, opts?: { isOwner?: boolean; isStaff?: boolean; userId?: number }) {
   const userName = getTicketUserName(ticket, t)
   if (Array.isArray(ticket?.messages) && ticket.messages.length) {
-    return ticket.messages.map((m: any, idx: number) => ({
-      id: `msg-${idx}`,
-      sender:
-        m.sender === "staff"
-          ? (m.ai
-              ? "EcliAI"
-              : (
-                (typeof m.staffDisplayName === "string" && m.staffDisplayName.trim()) ||
-                (typeof m.staffName === "string" && m.staffName.trim()) ||
-                (typeof m.staffLegalName === "string" && m.staffLegalName.trim()) ||
-                (t ? t("common.supportTeam") : "Support Team")
-              ))
-          : m.sender === "system"
-            ? (t ? t("common.information") : "Information")
-            : userName,
-      senderRole:
+    return ticket.messages.map((m: any, idx: number) => {
+      const senderRole =
         m.sender === "staff"
           ? "staff"
           : m.sender === "system"
             ? "system"
-            : "user",
-      ai: !!m.ai,
-      content: m.message,
-      attachments: m.attachments,
-      timestamp: m.created || m.createdAt || ticket.created,
-      avatar:
-        m.sender === "staff"
-          ? (m.staffAvatar || m.avatarUrl || undefined)
-          : m.sender === "user"
-            ? (m.userAvatar || m.avatarUrl || ticket.user?.avatarUrl || ticket.userAvatar || undefined)
-            : undefined,
-    }))
+            : "user"
+      return {
+        id: m.id || `msg-${idx}`,
+        sender:
+          m.sender === "staff"
+            ? (m.ai
+                ? "EcliAI"
+                : (
+                  (typeof m.staffDisplayName === "string" && m.staffDisplayName.trim()) ||
+                  (typeof m.staffName === "string" && m.staffName.trim()) ||
+                  (typeof m.staffLegalName === "string" && m.staffLegalName.trim()) ||
+                  (t ? t("common.supportTeam") : "Support Team")
+                ))
+            : m.sender === "system"
+              ? (t ? t("common.information") : "Information")
+              : userName,
+        senderRole,
+        ai: !!m.ai,
+        content: m.message,
+        attachments: m.attachments,
+        timestamp: m.created || m.createdAt || ticket.created,
+        avatar:
+          m.sender === "staff"
+            ? (m.staffAvatar || m.avatarUrl || undefined)
+            : m.sender === "user"
+              ? (m.userAvatar || m.avatarUrl || ticket.user?.avatarUrl || ticket.userAvatar || undefined)
+              : undefined,
+        edited: !!m.edited,
+        seen: !!m.seen,
+        reactions: m.reactions && typeof m.reactions === "object" ? m.reactions : {},
+        canModify:
+          !!m.id &&
+          !m.seen &&
+          (senderRole === "user"
+            ? !!opts?.isOwner
+            : senderRole === "staff"
+              ? Number(m.staffId) === opts?.userId
+              : false),
+      }
+    })
   }
 
   const msgs: any[] = []
@@ -216,6 +236,10 @@ export default function TicketDetailPage({
   const [screenshots, setScreenshots] = useState<File[]>([])
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([])
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
+  const [editText, setEditText] = useState("")
+  const [pickerFor, setPickerFor] = useState<string | null>(null)
+  const [savingMsg, setSavingMsg] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -255,11 +279,7 @@ export default function TicketDetailPage({
         )
         if (diff.length > 0)
           setChangeNotifications((prev) => [...prev, ...diff])
-        prevTicketRef.current = data
-        setTicket(data)
-        const initMsgs = buildMessages(data, t)
-        lastMsgHashRef.current = JSON.stringify(initMsgs)
-        setMessages(initMsgs)
+        applyTicket(data)
         setReplyPriority(data?.priority || "medium")
         setAdminStatus(data?.status || "")
         setAdminPriority(data?.priority || "medium")
@@ -292,7 +312,7 @@ export default function TicketDetailPage({
           setChangeNotifications((prev) => [...prev, ...diff])
         prevTicketRef.current = data
         setTicket(data)
-        const newMsgs = buildMessages(data, t)
+        const newMsgs = buildMessages(data, t, viewerFlags(data))
         const msgHash = JSON.stringify(newMsgs)
         if (msgHash !== lastMsgHashRef.current) {
           lastMsgHashRef.current = msgHash
@@ -351,6 +371,63 @@ export default function TicketDetailPage({
     return urls
   }
 
+  const viewerFlags = (data: any) => ({
+    isOwner: data?.userId === user?.id,
+    isStaff: isAdmin || canTicketWrite,
+    userId: user?.id,
+  })
+
+  const applyTicket = (data: any) => {
+    prevTicketRef.current = data
+    setTicket(data)
+    const msgs = buildMessages(data, t, viewerFlags(data))
+    lastMsgHashRef.current = JSON.stringify(msgs)
+    setMessages(msgs)
+  }
+
+  const saveEdit = async (msg: any) => {
+    if (!editText.trim()) return
+    setSavingMsg(true)
+    try {
+      const updated = await apiFetch(
+        `${API_ENDPOINTS.tickets}/${id}/messages/${msg.id}`,
+        { method: "PUT", body: JSON.stringify({ message: editText.trim() }) }
+      )
+      applyTicket(updated?.ticket || updated)
+      setEditingMsgId(null)
+    } catch (e: any) {
+      alert(t("alerts.failedEdit", { reason: e.message }))
+      setEditingMsgId(null)
+    } finally {
+      setSavingMsg(false)
+    }
+  }
+
+  const deleteMessage = async (msg: any) => {
+    if (!confirm(t("confirm.deleteMessage"))) return
+    try {
+      const updated = await apiFetch(
+        `${API_ENDPOINTS.tickets}/${id}/messages/${msg.id}`,
+        { method: "DELETE" }
+      )
+      applyTicket(updated?.ticket || updated)
+    } catch (e: any) {
+      alert(t("alerts.failedDeleteMsg", { reason: e.message }))
+    }
+  }
+
+  const toggleReaction = async (msg: any, emoji: string) => {
+    try {
+      const updated = await apiFetch(
+        `${API_ENDPOINTS.tickets}/${id}/messages/${msg.id}/reactions`,
+        { method: "POST", body: JSON.stringify({ emoji }) }
+      )
+      applyTicket(updated?.ticket || updated)
+    } catch (e: any) {
+      alert(t("alerts.failedReact", { reason: e.message }))
+    }
+  }
+
   const handleSend = async () => {
     if (!reply.trim() || !ticket) return
     setSending(true)
@@ -384,9 +461,7 @@ export default function TicketDetailPage({
       )
       if (diff.length > 0)
         setChangeNotifications((prev) => [...prev, ...diff])
-      prevTicketRef.current = updated
-      setTicket(updated)
-      setMessages(buildMessages(updated, t))
+      applyTicket(updated)
       setReply("")
       setScreenshots([])
       setUploadedUrls([])
@@ -407,8 +482,7 @@ export default function TicketDetailPage({
           body: JSON.stringify({ status: newStatus }),
         }
       )
-      setTicket(updated)
-      setMessages(buildMessages(updated, t))
+      applyTicket(updated)
       setAdminStatus(updated.status)
     } catch (e: any) {
       alert(t("alerts.failed", { reason: e.message }))
@@ -432,8 +506,7 @@ export default function TicketDetailPage({
           }),
         }
       )
-      setTicket(updated)
-      setMessages(buildMessages(updated, t))
+      applyTicket(updated)
       setChangeNotifications((prev) => [
         ...prev,
         { icon: Info, text: t("notifications.adminUpdated") },
@@ -1135,6 +1208,11 @@ export default function TicketDetailPage({
                           <span className="text-[9px] sm:text-[10px] text-muted-foreground/60">
                             <TimeAgo date={msg.timestamp} t={t} />
                           </span>
+                          {msg.edited && (
+                            <span className="text-[9px] sm:text-[10px] italic text-muted-foreground/60">
+                              {t("msg.edited")}
+                            </span>
+                          )}
                         </div>
                       )}
                       <div
@@ -1144,27 +1222,117 @@ export default function TicketDetailPage({
                             : "rounded-tr-md border border-border bg-card text-foreground"
                         }`}
                       >
-                        <MarkdownContent content={msg.content} />
-                        {msg.attachments?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-                            {msg.attachments.map((url: string, i: number) => (
-                              <a
-                                key={i}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block"
-                               data-telemetry="link:external">
-                                <img
-                                  src={url}
-                                  alt={`Screenshot ${i + 1}`}
-                                  className="h-16 w-24 sm:h-20 sm:w-32 rounded border border-border/50 object-cover hover:border-primary/50 transition-colors"
-                                />
-                              </a>
-                            ))}
+                        {editingMsgId === msg.id ? (
+                          <div className="w-[300px] max-w-[70vw]">
+                            <textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              autoFocus
+                              rows={3}
+                              className="w-full resize-none rounded border border-border bg-background/60 px-2.5 py-2 text-[13px] sm:text-sm text-foreground outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+                            />
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <button
+                                onClick={() => saveEdit(msg)}
+                                disabled={savingMsg || !editText.trim()}
+                                className="flex items-center gap-1 rounded px-2 py-1 text-[11px] sm:text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50 active:scale-95 transition-all"
+                              >
+                                {savingMsg && <Loader2 className="h-3 w-3 rounded-full animate-spin" />}
+                                {t("msg.save")}
+                              </button>
+                              <button
+                                onClick={() => setEditingMsgId(null)}
+                                className="rounded px-2 py-1 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:bg-secondary active:scale-95 transition-all"
+                              >
+                                {t("msg.cancel")}
+                              </button>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            <MarkdownContent content={msg.content} />
+                            {msg.attachments?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
+                                {msg.attachments.map((url: string, i: number) => (
+                                  <a
+                                    key={i}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block"
+                                   data-telemetry="link:external">
+                                    <img
+                                      src={url}
+                                      alt={`Screenshot ${i + 1}`}
+                                      className="h-16 w-24 sm:h-20 sm:w-32 rounded border border-border/50 object-cover hover:border-primary/50 transition-colors"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
+
+                      {(msg.canModify || Object.keys(msg.reactions || {}).length > 0) && (
+                        <div className={`flex items-center gap-1 mt-1 flex-wrap ${isStaff ? "" : "flex-row-reverse"}`}>
+                          {Object.entries(msg.reactions || {}).map(([emoji, users]: [string, number[]]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg, emoji)}
+                              title={t("msg.react")}
+                              className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] sm:text-[11px] transition-colors active:scale-95 ${
+                                users.includes(user?.id)
+                                  ? "border-primary/40 bg-primary/10 text-primary"
+                                  : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/30"
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <span>{users.length}</span>
+                            </button>
+                          ))}
+                          {msg.canModify && (
+                            <button
+                              onClick={() => setPickerFor(pickerFor === msg.id ? null : msg.id)}
+                              title={t("msg.react")}
+                              className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 p-1 text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors active:scale-95"
+                            >
+                              <SmilePlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            </button>
+                          )}
+                          {msg.canModify && (
+                            <>
+                              <button
+                                onClick={() => { setEditingMsgId(msg.id); setEditText(msg.content) }}
+                                title={t("msg.edit")}
+                                className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 p-1 text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors active:scale-95"
+                              >
+                                <Pencil className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => deleteMessage(msg)}
+                                title={t("msg.delete")}
+                                className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 p-1 text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors active:scale-95"
+                              >
+                                <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {pickerFor === msg.id && msg.canModify && (
+                        <div className="flex flex-wrap gap-0.5 rounded-lg border border-border bg-card p-1 mt-1 max-w-[260px]">
+                          {REACT_EMOJIS.map((e) => (
+                            <button
+                              key={e}
+                              onClick={() => toggleReaction(msg, e)}
+                              className="flex h-7 w-7 items-center justify-center rounded text-base hover:bg-secondary active:scale-95 transition-all"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
