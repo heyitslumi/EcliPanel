@@ -12,6 +12,27 @@ function getFieldValue(obj: any, path: string): any {
   return current;
 }
 
+const SAFE_REGEX_MAX_PATTERN = 512;
+const SAFE_REGEX_MAX_INPUT = 4096;
+
+export function isSafeRegex(pattern: string): boolean {
+  if (typeof pattern !== 'string' || pattern.length === 0 || pattern.length > SAFE_REGEX_MAX_PATTERN) {
+    return false;
+  }
+
+  // Reject classic catastrophic (exponential/polynomial) backtracking signatures:
+  //  - Nested quantifiers: (a+)+, (a*)*, (a?)+, (a+){2,}, ([ab]*)+
+  if (/\((?:[^()\\]|\\.)*[+*?](?:[^()\\]|\\.)*\)\s*(?:\+|\*|\?|\{\d+,\})/.test(pattern)) return false;
+
+  //  - A quantified group/class followed by another quantifier: (a)+*, [a-z]*{2}, (a){1,}+
+  if (/(?:\)|\])(?:\+|\*|\?|\{\d+,\})\s*(?:\+|\*|\?|\{\d+,\})/.test(pattern)) return false;
+
+  //  - Adjacent quantifiers
+  if (/(?:\+\*|\*\+|\+\+|\*\*|\?\+|\+\?|\*\?|\?\*)/.test(pattern)) return false;
+
+  return true;
+}
+
 function evaluateCondition(condition: RuleCondition, event: any): boolean {
   const value = getFieldValue(event, condition.field);
   const expected = condition.value;
@@ -30,10 +51,16 @@ function evaluateCondition(condition: RuleCondition, event: any): boolean {
     case 'not_contains':
       return !String(value).toLowerCase().includes(String(expected).toLowerCase());
     case 'regex':
-      try { return new RegExp(String(expected), 'i').test(String(value)); }
+      try {
+        if (!isSafeRegex(String(expected))) return false;
+        return new RegExp(String(expected), 'i').test(String(value).slice(0, SAFE_REGEX_MAX_INPUT));
+      }
       catch { return false; }
     case 'not_regex':
-      try { return !new RegExp(String(expected), 'i').test(String(value)); }
+      try {
+        if (!isSafeRegex(String(expected))) return true;
+        return !new RegExp(String(expected), 'i').test(String(value).slice(0, SAFE_REGEX_MAX_INPUT));
+      }
       catch { return true; }
     case 'gt':
       return Number(value) > Number(expected);
@@ -226,4 +253,20 @@ export async function evaluateAllRules(): Promise<RuleMatch[]> {
 export function testRule(rule: Partial<DetectionRule>, sampleEvent: any): boolean {
   if (!rule.conditions) return false;
   return evaluateGroup(rule.conditions, sampleEvent);
+}
+
+export function findUnsafeRegex(conditions: any): string | null {
+  if (!conditions || typeof conditions !== 'object') return null;
+  if (Array.isArray(conditions.rules)) {
+    for (const rule of conditions.rules) {
+      const field = findUnsafeRegex(rule);
+      if (field) return field;
+    }
+    return null;
+  }
+  const condition = conditions as RuleCondition;
+  if ((condition.operator === 'regex' || condition.operator === 'not_regex') && !isSafeRegex(String(condition.value ?? ''))) {
+    return condition.field || 'regex';
+  }
+  return null;
 }
