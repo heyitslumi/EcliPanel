@@ -10195,34 +10195,46 @@ export async function adminRoutes(app: any, prefix = '') {
     const messageRepo = AppDataSource.getRepository(MailMessage);
     const accounts = await AppDataSource.getRepository(MailboxAccount).find({ where: { enabled: true } });
 
-    const jobs: { account: MailboxAccount; msg: MailMessage }[] = [];
+    let deleted = 0;
+    let failed = 0;
     for (const account of accounts) {
       const targets = await messageRepo
         .createQueryBuilder('message')
+        .select([
+          'message.id',
+          'message.folder',
+          'message.messageId',
+          'message.headers',
+          'message.imapUid',
+          'message.userId',
+        ])
         .where('message.userId = :userId', { userId: account.userId })
         .andWhere('LOWER(message.fromAddress) LIKE LOWER(:from)', { from: likeFrom })
         .orderBy('message.receivedAt', 'ASC')
         .getMany();
-      for (const msg of targets) jobs.push({ account, msg });
-    }
+      if (targets.length === 0) continue;
 
-    let deleted = 0;
-    let failed = 0;
-    let ix = 0;
-    const worker = async () => {
-      while (ix < jobs.length) {
-        const { account, msg } = jobs[ix++];
-        const removed = await deleteMessageFromMailbox(account, msg, msg.folder, true).catch(() => false);
-        if (removed) {
-          await messageRepo.remove(msg);
-          deleted++;
-        } else {
-          failed++;
+      const removed: MailMessage[] = [];
+      let ix = 0;
+      const worker = async () => {
+        while (ix < targets.length) {
+          const msg = targets[ix++];
+          const ok = await deleteMessageFromMailbox(account, msg, msg.folder, true).catch(() => false);
+          if (ok) removed.push(msg);
+          else failed++;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(5, targets.length) }, worker));
+      for (let i = 0; i < removed.length; i += 500) {
+        const batch = removed.slice(i, i + 500);
+        try {
+          await messageRepo.remove(batch);
+          deleted += batch.length;
+        } catch {
+          failed += batch.length;
         }
       }
-    };
-    // A few parallel IMAP sessions keep big purges from taking forever.
-    await Promise.all(Array.from({ length: Math.min(5, Math.max(1, jobs.length)) }, worker));
+    }
     return { deleted, failed, mailboxes: accounts.length };
   }
 
