@@ -404,25 +404,24 @@ export async function calendarRoutes(app: any, prefix = '') {
     async (ctx: any) => {
       const isPublic = ctx.query?.public === '1';
       const eventId = Number(ctx.params?.id);
+      const bookingRepo = AppDataSource.getRepository(CalendarBooking);
       if (isPublic) {
         const ev = await eventRepo().findOneBy({ id: eventId });
         if (!ev) { ctx.set.status = 404; return { error: ctx.t('calendar.event_not_found') }; }
-        const bookings = await AppDataSource.getRepository(CalendarBooking).find({
-          where: { eventId },
-          order: { createdAt: 'ASC' },
-        });
-        return { event: ev, bookings, bookingCount: bookings.length };
+        const bookingCount = await bookingRepo.count({ where: { eventId } });
+        return { event: ev, bookings: [], bookingCount };
       }
       const userId = ctx.user?.id;
       const ev = await eventRepo().findOneBy({ id: eventId, userId });
       if (!ev) { ctx.set.status = 404; return { error: ctx.t('calendar.event_not_found') }; }
-      const bookings = await AppDataSource.getRepository(CalendarBooking).find({
+      const bookings = await bookingRepo.find({
         where: { eventId },
         order: { createdAt: 'ASC' },
       });
       return { event: ev, bookings, bookingCount: bookings.length };
     },
     {
+      beforeHandle: [authenticate, calendarRollout],
       detail: { tags: ['Calendar'], summary: 'List bookings for an event' },
     }
   );
