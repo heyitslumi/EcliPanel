@@ -576,7 +576,7 @@ app.request(async (rawCtx: unknown) => {
     }
   }
 
-  const effectiveIP: string = cfIPv6 || cfIP || remoteAddr || xForwardedFor || xRealIP || 'unknown';
+  const effectiveIP: string = cfIPv6 || cfIP || xForwardedFor || xRealIP || remoteAddr || 'unknown';
 
   try {
     ctx.ip = effectiveIP;
