@@ -656,6 +656,7 @@ async fn try_connect_and_serve(
                     fatal_error.clone(),
                     update_triggered.clone(),
                     backend,
+                    token,
                     udp_direct_tokens.clone(),
                     session_alive.clone(),
                 )
@@ -718,6 +719,7 @@ async fn handle_text_message(
     fatal_error: Arc<Mutex<bool>>,
     update_triggered: Arc<Mutex<bool>>,
     backend: &str,
+    token: &str,
     udp_direct_tokens: UdpDirectTokens,
     session_alive: Arc<AtomicBool>,
 ) {
@@ -834,7 +836,7 @@ async fn handle_text_message(
                 let current = msg.get("currentVersion").and_then(|v| v.as_str()).unwrap_or("unknown");
                 if update_available {
                     warn!(%current, %latest, "update available — downloading and applying update");
-                    match apply_update(backend).await {
+                    match apply_update(backend, token).await {
                         Ok(()) => {
                             info!("update applied successfully — restarting");
                             *update_triggered.lock().await = true;
@@ -1221,7 +1223,7 @@ fn install_binary(bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
-async fn apply_update(backend: &str) -> Result<()> {
+async fn apply_update(backend: &str, token: &str) -> Result<()> {
     let _valid: reqwest::Url = backend.parse()?;
     let download_url = format!("{}/api/tunnel/server/download", backend.trim_end_matches('/'));
     info!(%download_url, "downloading updated binary");
@@ -1230,7 +1232,11 @@ async fn apply_update(backend: &str) -> Result<()> {
         .timeout(Duration::from_secs(300))
         .build()?;
 
-    let resp = client.get(&download_url).send().await?;
+    let resp = client
+        .get(&download_url)
+        .header("authorization", format!("Bearer {token}"))
+        .send()
+        .await?;
     if !resp.status().is_success() {
         return Err(anyhow::anyhow!("download failed: HTTP {}", resp.status()));
     }

@@ -86,28 +86,39 @@ export async function redisDelByPrefix(prefix: string) {
 }
 
 export async function consumeRateLimit(key: string, limit: number, windowSeconds: number) {
-  await ensureConnection();
-  const countRaw = await redisClient.incr(key);
-  const count = Number(countRaw);
+  try {
+    await ensureConnection();
+    const countRaw = await redisClient.incr(key);
+    const count = Number(countRaw);
 
-  let ttl: number;
-  if (count === 1) {
-    await redisClient.expire(key, windowSeconds);
-    ttl = windowSeconds;
-  } else {
-    const currentTtlRaw = await redisClient.ttl(key);
-    const currentTtl = Number(currentTtlRaw);
-    ttl = currentTtl > 0 ? currentTtl : windowSeconds;
+    let ttl: number;
+    if (count === 1) {
+      await redisClient.expire(key, windowSeconds);
+      ttl = windowSeconds;
+    } else {
+      const currentTtlRaw = await redisClient.ttl(key);
+      const currentTtl = Number(currentTtlRaw);
+      ttl = currentTtl > 0 ? currentTtl : windowSeconds;
+    }
+
+    return {
+      allowed: count <= limit,
+      count,
+      limit,
+      remaining: Math.max(0, limit - count),
+      retryAfterSeconds: Math.max(0, ttl),
+      resetSeconds: Math.max(0, ttl),
+    };
+  } catch {
+    return {
+      allowed: false,
+      count: limit + 1,
+      limit,
+      remaining: 0,
+      retryAfterSeconds: 60,
+      resetSeconds: 60,
+    };
   }
-
-  return {
-    allowed: count <= limit,
-    count,
-    limit,
-    remaining: Math.max(0, limit - count),
-    retryAfterSeconds: Math.max(0, ttl),
-    resetSeconds: Math.max(0, ttl),
-  };
 }
 
 export async function withRedisCache<T>(

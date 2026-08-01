@@ -250,7 +250,7 @@ async function sendVerificationEmailToUser(user: User) {
   await redisSet(`email-verify:token:${token}`, String(user.id), 86400);
   await redisSet(`email-verify:code:${user.id}`, code, 86400);
 
-  const panelUrl = process.env.PANEL_URL || 'https://panel.ecli.app';
+  const panelUrl = process.env.PANEL_URL || 'https://ecli.app';
   const verifyUrl = `${panelUrl}/verify-email?token=${token}`;
 
   try {
@@ -408,7 +408,7 @@ export async function userRoutes(app: any, prefix = '') {
         const token = crypto.randomUUID();
         await redisSet(`email-verify:token:${token}`, String(user.id), 86400);
         await redisSet(`email-verify:code:${user.id}`, code, 86400);
-        const panelUrl = process.env.PANEL_URL || 'https://panel.ecli.app';
+        const panelUrl = process.env.PANEL_URL || 'https://ecli.app';
         const verifyUrl = `${panelUrl}/verify-email?token=${token}`;
         await sendMail({
           to: user.email,
@@ -1956,6 +1956,21 @@ export async function userRoutes(app: any, prefix = '') {
           ctx.set.status = 400;
           return { error: ctx.t('validation.invalidEmailAddress') };
         }
+        // email change is account takeover if the session is stolen: non-admins
+        // must re-authenticate with their current password (admins: users:write)
+        if (!isAdmin) {
+          const submittedCurrentPassword =
+            typeof payload.currentPassword === 'string' ? payload.currentPassword : undefined;
+          if (!submittedCurrentPassword) {
+            ctx.set.status = 400;
+            return { error: ctx.t('auth.passwordRequired') };
+          }
+          const validCurrent = await comparePassword(submittedCurrentPassword, user.passwordHash);
+          if (!validCurrent) {
+            ctx.set.status = 403;
+            return { error: ctx.t('auth.passwordInvalid') };
+          }
+        }
         user.email = newEmail;
         user.emailVerified = false;
         emailChanged = true;
@@ -2165,6 +2180,10 @@ export async function userRoutes(app: any, prefix = '') {
 
       for (const key of allowed) {
         if (key === 'email') continue;
+        if (key === 'role') {
+          const actorRole = (ctx.user as any)?.role;
+          if (actorRole !== '*' && actorRole !== 'rootAdmin') continue;
+        }
         if (key in payload) (user as any)[key] = payload[key];
       }
 
@@ -2201,7 +2220,7 @@ export async function userRoutes(app: any, prefix = '') {
           48 * 3600
         );
 
-        const panelUrl = process.env.PANEL_URL || 'https://panel.ecli.app';
+        const panelUrl = process.env.PANEL_URL || 'https://ecli.app';
         const restoreUrl = `${panelUrl}/restore-email?token=${restoreToken}`;
         try {
           await sendMail({

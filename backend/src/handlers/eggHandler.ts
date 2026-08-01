@@ -378,22 +378,22 @@ export async function eggRoutes(app: any, prefix = '') {
       const body = ctx.body as any;
 
       if (body?.url) {
+        const { safeFetch } = require('../utils/ssrf');
+        let response: Response | null = null;
         try {
-          const parsedUrl = new URL(body.url as string);
-          if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-            ctx.set.status = 400;
-            return { error: ctx.t('system.urlSchemeRequired') };
-          }
+          response = await safeFetch(body.url as string);
         } catch {
+          response = null;
+        }
+        if (!response) {
           ctx.set.status = 400;
-          return { error: ctx.t('common.invalidUrl') };
+          return { error: ctx.t('system.urlSchemeRequired') };
+        }
+        if (!response.ok) {
+          ctx.set.status = 400;
+          return { error: `Failed to fetch egg from URL: HTTP ${response.status}` };
         }
         try {
-          const response = await fetch(body.url as string);
-          if (!response.ok) {
-            ctx.set.status = 400;
-            return { error: `Failed to fetch egg from URL: HTTP ${response.status}` };
-          }
           raw = (await response.json()) as Record<string, any>;
         } catch (err: any) {
           ctx.set.status = 400;

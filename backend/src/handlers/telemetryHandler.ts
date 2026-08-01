@@ -39,6 +39,21 @@ export async function telemetryIngestRoutes(app: any, prefix = '') {
   app.post(
     prefix + '/telemetry/ingest',
     async (ctx: any) => {
+      try {
+        const ip = String(ctx.ip || ctx.clientIP || 'unknown').slice(0, 100);
+        const rl = await require('../config/redis').consumeRateLimit(
+          `rate:telemetry:ip:${ip}`,
+          Number(process.env.TELEMETRY_INGEST_RATE || 60),
+          Number(process.env.TELEMETRY_INGEST_WINDOW || 60)
+        );
+        if (!rl.allowed) {
+          ctx.set.status = 429;
+          return { error: 'rate_limited' };
+        }
+      } catch {
+        ctx.set.status = 429;
+        return { error: 'rate_limited' };
+      }
       const body = ctx.body as IngestPayload;
       if (!body?.events || !Array.isArray(body.events) || body.events.length === 0) {
         ctx.set.status = 400;

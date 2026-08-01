@@ -266,6 +266,17 @@ export function tunnelRoutes(app: TunnelApp, prefix: string): void {
   app.get(
     `${prefix}/tunnel/server/download`,
     async (ctx: TunnelRequestContext) => {
+      const token = getAuthToken(ctx as unknown as Record<string, unknown>);
+      const device = token
+        ? await verifyDeviceToken(
+            { verify: (t: string) => (app.pqJwt?.verifyAnyToken ? app.pqJwt.verifyAnyToken(t) : app.jwt.verify(t)) },
+            token
+          ).catch(() => null)
+        : null;
+      if (!device || device.kind !== 'server') {
+        ctx.set.status = 401;
+        return errorResponse('unauthorized', 401);
+      }
       const binaryPath = path.resolve(
         process.cwd(),
         '..',
@@ -415,6 +426,9 @@ export function tunnelRoutes(app: TunnelApp, prefix: string): void {
     `${prefix}/tunnel/device/start`,
     async (ctx: TunnelRequestContext) => {
       await authenticate(ctx).catch(() => {});
+      if (!ctx.user) {
+        return errorResponse('unauthorized', 401);
+      }
       const body = (ctx.body as Record<string, unknown>) || {};
       const name = getStringField(body, ['name', 'name'], 'agent');
       const requestedKind = getStringField(body, ['kind', 'kind']);

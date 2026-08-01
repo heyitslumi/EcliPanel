@@ -160,11 +160,11 @@ const securityHeaders = defineMiddleware(async (_, next) => {
 
   const csp = [
     "default-src 'self' https://backend.ecli.app",
-    "script-src 'self' https://backend.ecli.app 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+    "script-src 'self' https://backend.ecli.app 'unsafe-inline' https://cdn.jsdelivr.net",
     "style-src 'self' https://backend.ecli.app 'unsafe-inline' https: https://cdn.jsdelivr.net",
     "img-src * data: blob:",
     "font-src 'self' https://backend.ecli.app data: https://fonts.gstatic.com",
-    "connect-src *",
+    "connect-src 'self' https://backend.ecli.app https://ecli.app wss://backend.ecli.app wss://ecli.app https://cdn.jsdelivr.net",
     "frame-src 'self' https://backend.ecli.app https://mail.ecli.app",
     "worker-src 'self' blob:",
     "child-src 'self' blob: https://mail.ecli.app",

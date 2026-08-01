@@ -1,13 +1,26 @@
 import { AppDataSource } from '../config/typeorm';
 import { User } from '../models/user.entity';
 import { authenticate } from '../middleware/auth';
+import { hasPermissionSync } from '../middleware/authorize';
 import { t } from 'elysia';
+
+function canManageSessions(ctx: any, userId: number): boolean {
+  const actor = ctx.user as any;
+  if (!actor) return false;
+  if (actor.id === userId) return true;
+  if (actor.role === '*' || actor.role === 'rootAdmin') return true;
+  return hasPermissionSync(ctx, 'admin:access');
+}
 
 export async function sessionRoutes(app: any, prefix = '') {
   app.post(
     prefix + '/sessions/logout',
     async (ctx: any) => {
       const { userId, sessionId } = ctx.body as { userId: number; sessionId: string };
+      if (!canManageSessions(ctx, userId)) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.insufficientPermissions', 'Forbidden') };
+      }
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ id: userId });
       if (!user || !user.sessions) {
@@ -30,6 +43,10 @@ export async function sessionRoutes(app: any, prefix = '') {
     prefix + '/sessions/logout-all',
     async (ctx: any) => {
       const { userId } = ctx.body as { userId: number };
+      if (!canManageSessions(ctx, userId)) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.insufficientPermissions', 'Forbidden') };
+      }
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ id: userId });
       if (!user) {
@@ -52,6 +69,10 @@ export async function sessionRoutes(app: any, prefix = '') {
     prefix + '/sessions/:userId',
     async (ctx: any) => {
       const userId = Number(ctx.params['userId']);
+      if (!canManageSessions(ctx, userId)) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.insufficientPermissions', 'Forbidden') };
+      }
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ id: userId });
       if (!user) {

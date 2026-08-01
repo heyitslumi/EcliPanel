@@ -82,8 +82,13 @@ download_binary() {
   local download_url="$backend/api/tunnel/$dl_path/download"
   log "downloading $bin_name from $download_url ..."
 
+  local auth_args=()
+  if [[ -n "${DEVICE_TOKEN:-}" ]]; then
+    auth_args=(-H "Authorization: Bearer $DEVICE_TOKEN")
+  fi
+
   local http_code
-  http_code=$(curl -fsSL "$download_url" -o "$bin_path.tmp" -w '%{http_code}' 2>&1) || {
+  http_code=$(curl -fsSL "${auth_args[@]}" "$download_url" -o "$bin_path.tmp" -w '%{http_code}' 2>&1) || {
     local exit_code=$?
     rm -f "$bin_path.tmp"
     if [[ "$exit_code" -eq 22 ]]; then
@@ -300,7 +305,7 @@ server_service() {
 
   ensure_cert
 
-  download_binary ecli-tunnel-server
+  DEVICE_TOKEN="$token" download_binary ecli-tunnel-server
 
   local service_file="/etc/systemd/system/eclipanel-tunnel.service"
 
