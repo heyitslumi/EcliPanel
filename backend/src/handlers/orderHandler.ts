@@ -441,14 +441,12 @@ export async function orderRoutes(app: any, prefix = '') {
               ctx.set.status = 403;
               return { error: 'Enterprise plans require admin activation. Contact sales.' };
             }
-            if (amount == null) {
-              effectiveAmount = plan.price ?? 0;
-              try {
-                const { getEffectivePrice } = require('../utils/regionalPricing');
-                const pricing = await getEffectivePrice(plan, user);
-                if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
-              } catch {}
-            }
+            effectiveAmount = plan.price ?? 0;
+            try {
+              const { getEffectivePrice } = require('../utils/regionalPricing');
+              const pricing = await getEffectivePrice(plan, user);
+              if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
+            } catch {}
             const itemDesc = description || plan.name;
             if (items) {
               try {

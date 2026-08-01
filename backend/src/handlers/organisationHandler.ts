@@ -1748,6 +1748,7 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
 
       const orderRepo2 = AppDataSource.getRepository(require('../models/order.entity').Order);
       let plan: any = null;
+      let effectiveAmount = amount;
       if (planId && !isNaN(planId)) {
         const planRepo2 = AppDataSource.getRepository(require('../models/plan.entity').Plan);
         plan = await planRepo2.findOneBy({ id: planId });
@@ -1760,14 +1761,20 @@ export async function organisationRoutes(app: OrganisationApp, prefix = '') {
           ctx.set.status = 403;
           return { error: 'Enterprise plans require admin activation' };
         }
+        effectiveAmount = plan.price ?? 0;
+        try {
+          const { getEffectivePrice } = require('../utils/regionalPricing');
+          const pricing = await getEffectivePrice(plan, user);
+          if (pricing.regionalPrice != null) effectiveAmount = pricing.regionalPrice;
+        } catch {}
       }
 
-      const isFree = amount === 0;
+      const isFree = effectiveAmount === 0;
       const order = orderRepo2.create({
         userId: user.id,
         orgId: org.id,
         planId,
-        amount,
+        amount: effectiveAmount,
         description: description || `Org #${org.id}: ${plan?.name || 'Add-on'}`,
         items,
         notes: notes ? `org_order:${org.id};${notes}` : `org_order:${org.id}`,
