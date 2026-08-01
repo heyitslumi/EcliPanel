@@ -15,6 +15,7 @@ const staticRoutes: Record<string, Loader> = {
   "/verify-email": () => import("@/app/verify-email/page"),
   "/license": () => import("@/app/license/page"),
   "/geoblock": () => import("@/app/geoblock/page"),
+  "/security": () => import("@/app/security/page"),
   "/organisations/accept": () => import("@/app/organisations/accept/page"),
 
   // Public pages

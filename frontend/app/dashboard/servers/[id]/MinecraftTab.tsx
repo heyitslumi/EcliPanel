@@ -1248,7 +1248,6 @@ export function MinecraftTab({ serverId, server, subuserEntry }: MinecraftTabPro
               </div>
               <p className="text-sm font-medium text-foreground">{t("world.noWorldData")}</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm">{t("world.noWorldDataDesc")}</p>
-              </p>
             </div>
           )}
         </div>
