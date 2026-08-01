@@ -92,11 +92,14 @@ interface AppExtensions {
 }
 
 function getSafeUploadPath(base: string, relPath: string) {
-  const normalised = path
-    .normalize(String(relPath || ''))
-    .replace(/^([/\\])+/, '')
-    .replace(/^(\.{2}(\/|\\|$))+/, '');
+  // Normalise and remove leading separators
+  let normalised = path.normalize(String(relPath || '')).replace(/^[/\\]+/, '');
+  // Reject any component that is ".." to prevent directory traversal
+  if (normalised.split(path.sep).some((segment: string) => segment === '..')) {
+    throw new Error('Invalid path');
+  }
   const fullPath = path.join(base, normalised);
+  // Ensure the resolved path stays within the base directory
   const relative = path.relative(base, fullPath);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error('Invalid path');
