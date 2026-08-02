@@ -74,8 +74,8 @@ export function proxyRoutes(app: any, prefix: string) {
     } catch { upstream = null; }
     if (!upstream) { ctx.set.status = 403; return { error: 'Host not allowed' }; }
     const ct = upstream.headers.get('content-type') || 'application/octet-stream';
-    // Prevent MIME sniffing when proxying arbitrary upstream content
-    return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' } });
+    // Stream the upstream body; route is authenticated, so cache only in the browser, not shared caches
+    return new Response(upstream.body, { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' } });
   }, { beforeHandle: [authenticate], detail: { tags: ['Proxy'], summary: 'Generic external URL proxy' } });
 
   const SITES: Record<string, string> = { chunkbase: 'https://www.chunkbase.com', mcseedmap: 'https://mcseedmap.net' };
