@@ -175,6 +175,7 @@ export function authorize(required: string) {
           const sub = await subuserRepo.findOne({ where: whereAny });
           if (sub && sub.accepted !== false && Array.isArray(sub.permissions)) {
             if (sub.permissions.includes('*')) return;
+            if (required === 'servers:read' && sub.permissions.length > 0) return;
             const prefix = required.split(':')[0];
             const suffix = required.split(':')[1];
             const prefixToSubPerm: Record<string, string> = {
@@ -197,11 +198,22 @@ export function authorize(required: string) {
             if (sub.permissions.includes('write') && ['files', 'backups', 'startup', 'settings', 'databases', 'schedules'].includes(subPermNeeded)) return;
           }
         } catch (e) {
+          console.error('[authorize] server permission lookup failed', {
+            serverUuid,
+            userId: user.id,
+            required,
+            error: (e as Error)?.message || e,
+          });
           ctx.set.status = 403;
           return { error: t('common.insufficientPermissions', 'Insufficient permissions') };
         }
 
         if (!hasPermissionSync(ctx, 'admin:access')) {
+          console.warn('[authorize] blocking access', {
+            serverUuid,
+            userId: user.id,
+            required,
+          });
           ctx.set.status = 403;
           return { error: t('common.insufficientPermissions', 'Insufficient permissions') };
         }
