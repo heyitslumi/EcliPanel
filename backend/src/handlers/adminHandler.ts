@@ -1528,7 +1528,7 @@ export async function adminRoutes(app: any, prefix = '') {
         studentRepo.count({ where: { status: 'pending' } }),
         ticketRepo.count({ where: { status: 'open' } }),
         userRepo.count({ where: { fraudFlag: true } }),
-        orderRepo.count({ where: { status: 'pending' } }),
+        orderRepo.count({ where: { status: 'payment_sent' } }),
         findingRepo.count({ where: { status: 'open' } }),
       ]);
 
