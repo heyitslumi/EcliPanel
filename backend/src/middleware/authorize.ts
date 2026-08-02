@@ -239,7 +239,6 @@ export function authorize(required: string) {
       }
     }
 
-    if (required === 'apikeys:create') return;
     if (required === 'apikeys:delete') {
       try {
         const keyId = ctx.params?.id || ctx.params?.keyId;
