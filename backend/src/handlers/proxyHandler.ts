@@ -74,7 +74,7 @@ export function proxyRoutes(app: any, prefix: string) {
     } catch { upstream = null; }
     if (!upstream) { ctx.set.status = 403; return { error: 'Host not allowed' }; }
     const ct = upstream.headers.get('content-type') || 'application/octet-stream';
-    // Prevent response smuggling — only forward safe content types for untrusted origins
+    // Prevent MIME sniffing when proxying arbitrary upstream content
     return new Response(new Uint8Array(await upstream.arrayBuffer()), { status: upstream.status, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' } });
   }, { beforeHandle: [authenticate], detail: { tags: ['Proxy'], summary: 'Generic external URL proxy' } });
 
