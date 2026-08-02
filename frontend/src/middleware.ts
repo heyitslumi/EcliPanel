@@ -155,8 +155,48 @@ function isVerifiedCrawler(request: Request): boolean {
   return SEO_BOT_PATTERNS.some((p) => ua.includes(p));
 }
 
+let _cspOriginsCache: { origins: string[]; at: number } | null = null;
+const CSP_ORIGINS_TTL_MS = 5 * 60 * 1000;
+
+async function getCspTrustedOrigins(): Promise<string[]> {
+  if (_cspOriginsCache && Date.now() - _cspOriginsCache.at < CSP_ORIGINS_TTL_MS) {
+    return _cspOriginsCache.origins;
+  }
+  if (!BACKEND_URL) return _cspOriginsCache?.origins ?? [];
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/internal-domains`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return _cspOriginsCache?.origins ?? [];
+    const data = await res.json();
+    const origins: string[] = Array.isArray(data?.origins)
+      ? data.origins.map((o: string) => String(o).toLowerCase()).filter(Boolean)
+      : [];
+    _cspOriginsCache = { origins, at: Date.now() };
+    return origins;
+  } catch {
+    return _cspOriginsCache?.origins ?? [];
+  }
+}
+
 const securityHeaders = defineMiddleware(async (_, next) => {
   const response = await next();
+
+  const trustedOrigins = await getCspTrustedOrigins();
+  const connectSources = [
+    "'self'",
+    "https://backend.ecli.app",
+    "https://ecli.app",
+    "wss://backend.ecli.app",
+    "wss://ecli.app",
+    "https://cdn.jsdelivr.net",
+  ];
+  for (const origin of trustedOrigins) {
+    connectSources.push(`https://${origin}`);
+    connectSources.push(`wss://${origin}`);
+    connectSources.push(`http://${origin}`);
+    connectSources.push(`ws://${origin}`);
+  }
 
   const csp = [
     "default-src 'self' https://backend.ecli.app",
@@ -164,7 +204,7 @@ const securityHeaders = defineMiddleware(async (_, next) => {
     "style-src 'self' https://backend.ecli.app 'unsafe-inline' https: https://cdn.jsdelivr.net",
     "img-src * data: blob:",
     "font-src 'self' https://backend.ecli.app data: https://fonts.gstatic.com",
-    "connect-src 'self' https://backend.ecli.app https://ecli.app wss://backend.ecli.app wss://ecli.app https://cdn.jsdelivr.net",
+    `connect-src ${connectSources.join(" ")}`,
     "frame-src 'self' https://backend.ecli.app https://mail.ecli.app",
     "worker-src 'self' blob:",
     "child-src 'self' blob: https://mail.ecli.app",

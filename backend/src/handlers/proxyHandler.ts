@@ -9,34 +9,54 @@ import { Not, IsNull } from 'typeorm';
 export function proxyRoutes(app: any, prefix: string) {
   app.get(prefix + '/internal-domains', async (ctx: any) => {
     const domains = new Set<string>();
+    const origins = new Set<string>();
+    const addOrigin = (host: string, port?: string) => {
+      const raw = String(host || '').trim().replace(/^https?:\/\//i, '').split('/')[0].split('?')[0];
+      if (!raw) return;
+      const hostname = raw.includes(':') && !raw.startsWith('[') && (raw.match(/:/g) || []).length === 1
+        ? raw.split(':')[0]
+        : raw;
+      domains.add(hostname);
+      origins.add(port ? `${hostname}:${port}` : raw);
+    };
     try {
       const backendUrl = process.env.BACKEND_URL || '';
-      if (backendUrl) { try { domains.add(new URL(backendUrl).hostname); } catch { } }
+      if (backendUrl) { try { addOrigin(new URL(backendUrl).hostname); } catch { } }
     } catch { }
     try {
       if (ctx.request?.headers?.get) {
         const host = (ctx.request.headers.get('host') || '').split(':')[0];
-        if (host) domains.add(host);
+        if (host) addOrigin(host);
       }
     } catch { }
     try {
-      const nodes = await AppDataSource.getRepository(Node).find({ select: { url: true, fqdn: true, proxmoxHost: true } });
+      const nodes = await AppDataSource.getRepository(Node).find({ select: { url: true, backendWingsUrl: true, fqdn: true, proxmoxHost: true } });
       for (const node of nodes) {
-        if (node.url) { try { domains.add(new URL(node.url).hostname); } catch { domains.add(node.url); } }
-        if (node.fqdn) domains.add(node.fqdn);
-        if (node.proxmoxHost) domains.add(node.proxmoxHost.split(':')[0]);
+        let nodePort: string | undefined;
+        for (const raw of [node.url, node.backendWingsUrl]) {
+          if (!raw) continue;
+          try {
+            const u = new URL(raw);
+            nodePort = u.port || undefined;
+            addOrigin(u.hostname, nodePort);
+          } catch {
+            addOrigin(raw);
+          }
+        }
+        if (node.fqdn) addOrigin(node.fqdn, nodePort);
+        if (node.proxmoxHost) addOrigin(node.proxmoxHost);
       }
     } catch { }
     try {
       const devices = await AppDataSource.getRepository(TunnelDevice).find({ select: { fqdn: true }, where: { kind: 'server', fqdn: Not(IsNull()) } });
-      for (const d of devices) { if (d.fqdn) domains.add(d.fqdn); }
+      for (const d of devices) { if (d.fqdn) addOrigin(d.fqdn); }
     } catch { }
     try {
       const allocs = await AppDataSource.getRepository(TunnelAllocation)
         .createQueryBuilder('alloc').select('DISTINCT alloc.host', 'host').where('alloc.status = :status', { status: 'active' }).getRawMany();
-      for (const a of allocs) { if (a.host) domains.add(a.host); }
+      for (const a of allocs) { if (a.host) addOrigin(a.host); }
     } catch { }
-    return { domains: Array.from(domains).sort() };
+    return { domains: Array.from(domains).sort(), origins: Array.from(origins).sort() };
   }, { detail: { tags: ['Proxy'], summary: 'List trusted internal domains' } });
 
   app.get(prefix + '/proxy/image', async (ctx: any) => {
