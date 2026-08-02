@@ -54,8 +54,7 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
       out = out.replace(/≥/g, '>=').replace(/≤/g, '<=');
       out = out.replace(/©/g, '(c)').replace(/®/g, '(r)');
       out = out.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF])/g, '?');
-      // Strip HTML tags to prevent stored XSS
-      out = Bun.escapeHTML(out.replace(/<[^>]*>/g, ''));
+      out = Bun.escapeHTML(out);
       return out;
     } catch (e) { return String(s); }
   }
