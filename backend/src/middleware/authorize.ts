@@ -130,6 +130,11 @@ export function authorize(required: string) {
       return;
     }
 
+    if (required === 'servers:create' && !hasPermissionSync(ctx, 'admin:access') && !user.dateOfBirth) {
+      ctx.set.status = 403;
+      return { error: t('validation.ageVerificationRequired', 'Age verification required') };
+    }
+
     const serverRelatedPrefixes = [
       'servers:',
       'server:',
@@ -146,12 +151,6 @@ export function authorize(required: string) {
       'databases:',
     ];
     const isServerRelated = serverRelatedPrefixes.some(prefix => required.startsWith(prefix));
-    if (isServerRelated && !hasPermissionSync(ctx, 'admin:access') && !user.dateOfBirth) {
-      ctx.set.status = 403;
-      return { error: t('validation.ageVerificationRequired', 'Age verification required') };
-    }
-
-
     if (isServerRelated && required !== 'servers:create') {
       const serverUuid =
         ctx.params?.id ||
@@ -206,6 +205,8 @@ export function authorize(required: string) {
           ctx.set.status = 403;
           return { error: t('common.insufficientPermissions', 'Insufficient permissions') };
         }
+      } else if (required === 'servers:read') {
+        return;
       }
     }
 
