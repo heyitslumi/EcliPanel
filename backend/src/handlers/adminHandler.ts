@@ -10192,10 +10192,9 @@ export async function adminRoutes(app: any, prefix = '') {
     return { entry, account };
   };
 
-  // In-flight guard so concurrent purge requests don't stack jobs.
-  // ponytail: process-local only; a per-DB lock would be needed if this ever
-  // runs on multiple backend instances.
   let purgeInFlight = false;
+  const recentCompanySync = new Map<string, number>();
+  const COMPANY_SYNC_COOLDOWN_MS = 15_000;
 
   async function runPurgeAll(from: string) {
     // fromAddress is stored as the display text (e.g. `"DMARC Aggregate Report"
@@ -10260,6 +10259,22 @@ export async function adminRoutes(app: any, prefix = '') {
       const mailboxRepo = AppDataSource.getRepository(MailboxAccount);
       const accounts = await mailboxRepo.find({ where: { enabled: true } });
 
+      const unreadCounts = new Map<number, number>();
+      if (accounts.length > 0) {
+        try {
+          const rows = await AppDataSource.getRepository(MailMessage)
+            .createQueryBuilder('m')
+            .select('m.userId', 'userId')
+            .addSelect('COUNT(*)', 'cnt')
+            .where('m.userId IN (:...ids)', { ids: accounts.map(a => a.userId) })
+            .andWhere("m.folder = 'INBOX'")
+            .andWhere('m.read = false')
+            .groupBy('m.userId')
+            .getRawMany();
+          for (const r of rows) unreadCounts.set(Number(r.userId), Number(r.cnt));
+        } catch { /* Is there anything love can do ? */ }
+      }
+
       const mailboxes = COMPANY_MAILBOXES
         .filter(e => canAccessCompanyMailbox(ctx, e))
         .map(e => {
@@ -10269,6 +10284,7 @@ export async function adminRoutes(app: any, prefix = '') {
             email: account?.email || `${e.localPart}@${domain}`,
             aliases: e.aliases.map(a => ({ address: `${a}@${domain}`, localPart: a })),
             provisioned: Boolean(account),
+            unreadCount: account ? (unreadCounts.get(account.userId) || 0) : 0,
           };
         });
 
@@ -10293,8 +10309,13 @@ export async function adminRoutes(app: any, prefix = '') {
 
       const folder = (String(ctx.query?.folder || 'INBOX') || 'INBOX').toUpperCase();
       if (isMailcowConfigured()) {
-        try { await fetchMailboxNow(account, [folder]); } catch (err: any) {
-          console.warn('[adminHandler] ondemand company mailbox fetch failed for', account.email, err?.message || err);
+        const syncKey = `${account.id}:${folder}`;
+        const lastSync = recentCompanySync.get(syncKey) || 0;
+        if (Date.now() - lastSync >= COMPANY_SYNC_COOLDOWN_MS) {
+          recentCompanySync.set(syncKey, Date.now());
+          fetchMailboxNow(account, [folder]).catch((err: any) => {
+            console.warn('[adminHandler] ondemand company mailbox sync fetch failed for', account.email, err?.message || err);
+          });
         }
       }
 
@@ -10335,6 +10356,13 @@ export async function adminRoutes(app: any, prefix = '') {
         .take(limit)
         .getMany();
 
+      let unreadCount = 0;
+      try {
+        unreadCount = await messageRepo.count({
+          where: { userId: account.userId, folder: 'INBOX', read: false },
+        });
+      } catch { /* nf */ }
+
       const items = messages.map(message => {
         const item: Record<string, unknown> = {
           id: message.id,
@@ -10359,7 +10387,7 @@ export async function adminRoutes(app: any, prefix = '') {
         return item;
       });
 
-      return { meta: { page, limit, total }, messages: items };
+      return { meta: { page, limit, total, unreadCount }, messages: items };
     },
     {
       beforeHandle: authenticate,

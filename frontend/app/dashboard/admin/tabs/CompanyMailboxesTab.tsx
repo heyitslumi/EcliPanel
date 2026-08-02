@@ -5,8 +5,32 @@ import { useTranslations } from "next-intl"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useAuth, hasPermission } from "@/hooks/useAuth"
+import { useToast } from "@/hooks/use-toast"
+import { useDebounce } from "@/hooks/useDebounce"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Toaster } from "@/components/ui/toaster"
 import {
   Mail,
   Shield,
@@ -28,6 +52,10 @@ import {
   Send,
   CheckCheck,
   ReplyAll,
+  MessageSquarePlus,
+  X,
+  Clock,
+  AtSign,
 } from "lucide-react"
 
 const COMPANY_PERMS = [
@@ -46,6 +74,7 @@ type MailboxInfo = {
   email: string
   aliases: Array<{ address: string; localPart: string }>
   provisioned: boolean
+  unreadCount?: number | null
 }
 
 type MailboxListResponse = {
@@ -82,10 +111,18 @@ type Folder = "INBOX" | "Sent" | "Trash" | "Junk"
 type Filter = "all" | "unread" | "read" | "replied" | "not-replied"
 
 const FOLDERS: Folder[] = ["INBOX", "Sent", "Trash", "Junk"]
+const FILTERS: Filter[] = ["all", "unread", "read", "replied", "not-replied"]
+
+type CacheEntry = {
+  messages: MailMessage[]
+  total: number
+  unreadCount: number | null
+  loadedAt: number
+}
 
 function MarkdownBody({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm max-w-full break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-p:my-1 prose-pre:my-2 prose-pre:bg-background/50 prose-pre:border prose-pre:border-border/50 prose-pre:text-xs prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none">
+    <div className="prose prose-sm max-w-full break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-p:my-1 prose-pre:my-2 prose-pre:bg-background/50 prose-pre:border prose-pre:border-border/50 prose-pre:text-xs prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
     </div>
   )
@@ -148,6 +185,7 @@ function markdownToHtml(md: string): string {
 export default function CompanyMailboxesTab() {
   const t = useTranslations("companyMailboxesTab")
   const { user } = useAuth()
+  const { toast } = useToast()
 
   const [mailboxes, setMailboxes] = useState<MailboxInfo[]>([])
   const [sogoUrl, setSogoUrl] = useState("")
@@ -159,8 +197,11 @@ export default function CompanyMailboxesTab() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [limit] = useState(20)
-  const [search, setSearch] = useState("")
+  const [searchInput, setSearchInput] = useState("")
+  const debouncedSearch = useDebounce(searchInput, 450)
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [selectedMessage, setSelectedMessage] = useState<MailMessage | null>(null)
   const [rotating, setRotating] = useState(false)
   const [creds, setCreds] = useState<CredsInfo | null>(null)
@@ -177,7 +218,17 @@ export default function CompanyMailboxesTab() {
   const [purgeAddress, setPurgeAddress] = useState("")
   const [purging, setPurging] = useState(false)
   const [purgeOpen, setPurgeOpen] = useState(false)
+  const [confirmState, setConfirmState] = useState<{
+    title: string
+    description?: string
+    confirmLabel: string
+    destructive: boolean
+    action: () => Promise<void> | void
+  } | null>(null)
+  const [confirmBusy, setConfirmBusy] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const cacheRef = useRef<Map<string, CacheEntry>>(new Map())
+  const currentKeyRef = useRef("")
 
   const isRootAdmin = !!user && (user.role === "rootAdmin" || user.role === "*")
 
@@ -190,21 +241,50 @@ export default function CompanyMailboxesTab() {
     setLoadingList(true)
     try {
       const data = await apiFetch(API_ENDPOINTS.adminCompanyMailboxes)
-      const list = (data?.mailboxes || [])
+      const list: MailboxInfo[] = (data?.mailboxes || [])
         .filter((m: MailboxInfo) => hasMailboxPerm(m.localPart) || m.aliases.some(a => hasMailboxPerm(a.localPart)))
       setMailboxes(list)
       setSogoUrl(data?.sogoUrl || "")
-      if (!selected && list.length > 0) setSelected(list[0].localPart)
+      setSelected(prev => (prev && list.some(m => m.localPart === prev) ? prev : (list[0]?.localPart ?? null)))
     } catch {
       setMailboxes([])
     } finally {
       setLoadingList(false)
     }
-  }, [hasMailboxPerm, selected])
+  }, [hasMailboxPerm])
+
+  const applyMessages = useCallback((result: { messages: MailMessage[]; total: number }, resetSelection: boolean) => {
+    setMessages(result.messages)
+    setTotal(result.total)
+    if (resetSelection) setSelectedMessage(null)
+  }, [])
 
   const loadMessages = useCallback(
-    async (localPart: string, f: Folder, flt: Filter, p = 1, q = "") => {
-      setLoadingMessages(true)
+    async (
+      localPart: string,
+      f: Folder,
+      flt: Filter,
+      p = 1,
+      q = "",
+      opts: { background?: boolean } = {}
+    ) => {
+      const key = `${localPart}|${f}|${flt}|${p}|${q}`
+      const cached = cacheRef.current.get(key)
+
+      if (!opts.background) {
+        currentKeyRef.current = key
+        setPage(p)
+        if (cached) {
+          applyMessages(cached, true)
+          setLoadingMessages(false)
+          void loadMessages(localPart, f, flt, p, q, { background: true })
+          return
+        }
+        setLoadingMessages(true)
+      } else {
+        setRefreshing(true)
+      }
+
       try {
         const params = new URLSearchParams({ page: String(p), limit: String(limit), folder: f })
         if (flt === "unread") params.set("unread", "true")
@@ -215,18 +295,33 @@ export default function CompanyMailboxesTab() {
         const data = await apiFetch(
           `${API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", localPart)}?${params.toString()}`
         )
-        setMessages(data?.messages || [])
-        setTotal(data?.meta?.total || 0)
-        setPage(p)
-        setSelectedMessage(null)
+
+        const result: CacheEntry = {
+          messages: data?.messages || [],
+          total: data?.meta?.total || 0,
+          unreadCount: typeof data?.meta?.unreadCount === "number" ? data.meta.unreadCount : null,
+          loadedAt: Date.now(),
+        }
+        cacheRef.current.set(key, result)
+
+        if (result.unreadCount !== null) {
+          const unread = result.unreadCount
+          setMailboxes(prev =>
+            prev.map(m => (m.localPart === localPart ? { ...m, unreadCount: unread } : m))
+          )
+        }
+        setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))
+        if (!opts.background || key === currentKeyRef.current) {
+          applyMessages(result, !opts.background)
+        }
       } catch {
-        setMessages([])
-        setTotal(0)
+        if (!opts.background) applyMessages({ messages: [], total: 0 }, true)
       } finally {
         setLoadingMessages(false)
+        setRefreshing(false)
       }
     },
-    [limit]
+    [limit, applyMessages]
   )
 
   useEffect(() => {
@@ -234,11 +329,74 @@ export default function CompanyMailboxesTab() {
   }, [loadMailboxes])
 
   useEffect(() => {
-    if (selected) loadMessages(selected, folder, filter, 1, search)
-  }, [selected, folder, filter, loadMessages])
+    if (selected) loadMessages(selected, folder, filter, 1, debouncedSearch)
+  }, [selected, folder, filter, debouncedSearch, loadMessages])
+
+  useEffect(() => {
+    if (!selected) return
+    const id = setInterval(() => {
+      if (document.hidden) return
+      void loadMessages(selected, folder, filter, page, debouncedSearch, { background: true })
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [selected, folder, filter, page, debouncedSearch, loadMessages])
+
+  const selectMailbox = (localPart: string) => {
+    setSelected(localPart)
+    setFolder("INBOX")
+    setFilter("all")
+    setPage(1)
+    setSelectedMessage(null)
+  }
+
+  const goToPage = (p: number) => {
+    if (!selected) return
+    void loadMessages(selected, folder, filter, p, debouncedSearch)
+  }
+
+  const refreshNow = () => {
+    if (!selected) return
+    void loadMessages(selected, folder, filter, page, debouncedSearch, { background: true })
+  }
+
+  const updateCurrentView = useCallback(
+    (updater: (m: MailMessage[]) => MailMessage[], totalUpdater?: (t: number) => number) => {
+      const key = currentKeyRef.current
+      const cached = cacheRef.current.get(key)
+      if (cached) {
+        cacheRef.current.set(key, {
+          ...cached,
+          messages: updater(cached.messages),
+          total: totalUpdater ? totalUpdater(cached.total) : cached.total,
+        })
+      }
+      setMessages(prev => updater(prev))
+      if (totalUpdater) setTotal(prev => totalUpdater(prev))
+    },
+    []
+  )
+
+  const runConfirm = async () => {
+    if (!confirmState) return
+    setConfirmBusy(true)
+    try {
+      await confirmState.action()
+      setConfirmState(null)
+    } finally {
+      setConfirmBusy(false)
+    }
+  }
+
+  const requestRotate = (localPart: string) => {
+    setConfirmState({
+      title: t("rotateConfirm"),
+      confirmLabel: t("rotatePassword"),
+      destructive: false,
+      action: () => rotatePassword(localPart),
+    })
+  }
 
   const rotatePassword = async (localPart: string) => {
-    if (!confirm(t("rotateConfirm"))) return
     setRotating(true)
     try {
       const data = await apiFetch(
@@ -250,8 +408,9 @@ export default function CompanyMailboxesTab() {
         password: data.password,
         sogoUrl: data.sogoUrl,
       })
+      toast({ title: t("passwordRotated") })
     } catch (e: any) {
-      alert(t("rotateFailed", { reason: e.message }))
+      toast({ title: t("rotateFailed", { reason: e?.message || "" }), variant: "destructive" })
     } finally {
       setRotating(false)
     }
@@ -259,42 +418,71 @@ export default function CompanyMailboxesTab() {
 
   const setMessageRead = async (msg: MailMessage, read: boolean) => {
     if (!selected) return
+    const prev = msg.read
+    const removing = (filter === "unread" && read) || (filter === "read" && !read)
+    updateCurrentView(
+      list => {
+        let next = list.map(m => (m.id === msg.id ? { ...m, read } : m))
+        if (removing) next = next.filter(m => m.id !== msg.id)
+        return next
+      },
+      removing ? prevTotal => Math.max(0, prevTotal - 1) : undefined
+    )
+    setSelectedMessage(s => (s && s.id === msg.id ? { ...s, read } : s))
     setActionBusy(true)
     try {
       const updated = await apiFetch(
         `${API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", selected)}/${msg.id}/read`,
         { method: "POST", body: JSON.stringify({ read }) }
       )
-      if (updated?.success) {
-        setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, read } : m)))
-        setSelectedMessage(prev => (prev && prev.id === msg.id ? { ...prev, read } : prev))
+      if (!updated?.success) throw new Error("bad response")
+      if (folder === "INBOX") {
+        setMailboxes(prev =>
+          prev.map(m => (m.localPart === selected ? { ...m, unreadCount: Math.max(0, (m.unreadCount || 0) + (read ? -1 : 1)) } : m))
+        )
       }
+      toast({ title: read ? t("markedRead") : t("markedUnread") })
     } catch (e: any) {
-      alert(t("actionFailed", { reason: e.message }))
+      updateCurrentView(list => list.map(m => (m.id === msg.id ? { ...m, read: prev } : m)))
+      setSelectedMessage(s => (s && s.id === msg.id ? { ...s, read: prev } : s))
+      toast({ title: t("actionFailed", { reason: e?.message || "" }), variant: "destructive" })
     } finally {
       setActionBusy(false)
     }
   }
 
-  const deleteMessage = async (msg: MailMessage) => {
+  const requestDelete = (msg: MailMessage) => {
+    const permanent = msg.folder === "Trash"
+    setConfirmState({
+      title: permanent ? t("deleteForeverConfirm") : t("deleteConfirm"),
+      confirmLabel: permanent ? t("deleteForever") : t("delete"),
+      destructive: true,
+      action: () => doDelete(msg, permanent),
+    })
+  }
+
+  const doDelete = async (msg: MailMessage, permanent: boolean) => {
     if (!selected) return
-    if (!confirm(msg.folder === "Trash" ? t("deleteForeverConfirm") : t("deleteConfirm"))) return
+    const prev = messages
+    updateCurrentView(
+      list => list.filter(m => m.id !== msg.id),
+      prevTotal => Math.max(0, prevTotal - 1)
+    )
+    setSelectedMessage(null)
     setActionBusy(true)
     try {
       const updated = await apiFetch(
         `${API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", selected)}/${msg.id}`,
         { method: "DELETE" }
       )
-      if (updated?.success) {
-        if (msg.folder === "Trash") {
-          setMessages(prev => prev.filter(m => m.id !== msg.id))
-        } else {
-          setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, folder: "Trash" } : m)))
-        }
-        setSelectedMessage(null)
-      }
+      if (!updated?.success) throw new Error("bad response")
+      toast({ title: permanent ? t("deletedForever") : t("movedToTrash") })
     } catch (e: any) {
-      alert(t("actionFailed", { reason: e.message }))
+      setMessages(prev)
+      const key = currentKeyRef.current
+      const cached = cacheRef.current.get(key)
+      if (cached) cacheRef.current.set(key, { ...cached, messages: prev })
+      toast({ title: t("actionFailed", { reason: e?.message || "" }), variant: "destructive" })
     } finally {
       setActionBusy(false)
     }
@@ -320,6 +508,12 @@ export default function CompanyMailboxesTab() {
     setComposeMode(true)
     setPreviewMode(false)
     setReplyForm({ to: "", cc: "", bcc: "", subject: "", body: "", priority: "normal", template: "notification" })
+  }
+
+  const closeComposer = () => {
+    setReplyTo(null)
+    setComposeMode(false)
+    setPreviewMode(false)
   }
 
   const insertMarkdown = (before: string, after: string, placeholder?: string) => {
@@ -374,39 +568,49 @@ export default function CompanyMailboxesTab() {
       const base = API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", selected)
       const endpoint = composeMode ? `${base.replace("/messages", "")}/send` : `${base}/${replyTo?.id}/reply`
       const updated = await apiFetch(endpoint, {
-          method: "POST",
-          body: JSON.stringify({
-            to: replyForm.to.trim(),
-            cc: replyForm.cc.trim(),
-            bcc: replyForm.bcc.trim(),
-            subject: replyForm.subject.trim(),
-            body: replyForm.body.trim(),
-            html: markdownToHtml(replyForm.body),
-            priority: replyForm.priority,
-            template: replyForm.template,
-          }),
-        }
-      )
+        method: "POST",
+        body: JSON.stringify({
+          to: replyForm.to.trim(),
+          cc: replyForm.cc.trim(),
+          bcc: replyForm.bcc.trim(),
+          subject: replyForm.subject.trim(),
+          body: replyForm.body.trim(),
+          html: markdownToHtml(replyForm.body),
+          priority: replyForm.priority,
+          template: replyForm.template,
+        }),
+      })
       if (updated?.success) {
+        if (replyTo) {
+          updateCurrentView(list => list.map(m => (m.id === replyTo.id ? { ...m, replied: true } : m)))
+          setSelectedMessage(s => (s && s.id === replyTo.id ? { ...s, replied: true } : s))
+        }
+        const wasReply = !!replyTo
         setReplyTo(null)
         setComposeMode(false)
-        if (replyTo) {
-          setMessages(prev => prev.map(m => (m.id === replyTo.id ? { ...m, replied: true } : m)))
-          setSelectedMessage(prev => (prev && prev.id === replyTo.id ? { ...prev, replied: true } : prev))
-        }
-        if (folder !== "Sent") loadMessages(selected, "Sent", "all", 1, "")
+        setPreviewMode(false)
+        toast({ title: wasReply ? t("replySent") : t("emailSent") })
+        void loadMessages(selected, "Sent", "all", 1, "", { background: true })
       }
     } catch (e: any) {
-      alert(t("actionFailed", { reason: e.message }))
+      toast({ title: t("actionFailed", { reason: e?.message || "" }), variant: "destructive" })
     } finally {
       setSendingReply(false)
     }
   }
 
-  const purgeMessages = async () => {
-    if (!purgeAddress.trim()) return
+  const requestPurge = () => {
     const from = purgeAddress.trim()
-    if (!confirm(t("purgeConfirm", { from }))) return
+    if (!from) return
+    setConfirmState({
+      title: t("purgeConfirm", { from }),
+      confirmLabel: t("purge"),
+      destructive: true,
+      action: () => purgeMessages(from),
+    })
+  }
+
+  const purgeMessages = async (from: string) => {
     setPurging(true)
     try {
       const data = await apiFetch(API_ENDPOINTS.adminCompanyMailboxPurge, {
@@ -416,10 +620,10 @@ export default function CompanyMailboxesTab() {
       if (data?.success) {
         setPurgeAddress("")
         setPurgeOpen(false)
-        alert(t("purgeQueued"))
+        toast({ title: t("purgeQueued") })
       }
     } catch (e: any) {
-      alert(t("purgeFailed", { reason: e.message }))
+      toast({ title: t("purgeFailed", { reason: e?.message || "" }), variant: "destructive" })
     } finally {
       setPurging(false)
     }
@@ -436,47 +640,159 @@ export default function CompanyMailboxesTab() {
   }
 
   const selectedMailbox = mailboxes.find(m => m.localPart === selected)
+  const viaAliasFor = (mb: MailboxInfo) =>
+    !hasMailboxPerm(mb.localPart) ? mb.aliases.find(a => hasMailboxPerm(a.localPart)) : null
+
+  const unreadBadge = (count?: number | null) =>
+    count && count > 0 ? (
+      <span className="flex h-4 min-w-4 items-center justify-center bg-primary/15 px-1 text-[9px] font-bold text-primary">
+        {count > 99 ? "99+" : count}
+      </span>
+    ) : null
+
+  const renderDetail = () => {
+    if (!selectedMessage) return null
+    const msg = selectedMessage
+    const htmlUrl = `${API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", selected || "")}/${msg.id}/html`
+    return (
+      <div className="flex flex-col gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">{msg.subject}</h3>
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <AtSign className="h-3 w-3" />
+              {t("from")}: {msg.fromAddress || t("unknownSender")}
+            </span>
+            {msg.toAddress && (
+              <span className="flex items-center gap-1">
+                <Send className="h-3 w-3" />
+                {t("to")}: {msg.toAddress}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatDate(msg.receivedAt)}
+            </span>
+          </div>
+        </div>
+
+        {(msg.isSpam || msg.isVirus || msg.replied) && (
+          <div className="flex flex-wrap gap-1.5">
+            {msg.isSpam && (
+              <Badge variant="outline" className="border-warning/30 bg-warning/10 text-[10px] text-warning">
+                <AlertTriangle /> {t("spam")}
+              </Badge>
+            )}
+            {msg.isVirus && (
+              <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-[10px] text-destructive">
+                <Bug /> {msg.virusName || t("virus")}
+              </Badge>
+            )}
+            {msg.replied && (
+              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-[10px] text-primary">
+                <ReplyAll /> {t("replied")}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        <div className="border border-border/60 bg-background/40 p-3">
+          {msg.html ? (
+            <div className="flex flex-col gap-2">
+              <a
+                href={htmlUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-start text-[11px] text-primary underline-offset-2 hover:underline"
+              >
+                {t("viewHtml")}
+              </a>
+              <MarkdownBody content={msg.body || t("htmlOnlyBody")} />
+            </div>
+          ) : (
+            <MarkdownBody content={msg.body || t("emptyBody")} />
+          )}
+        </div>
+
+        {!!msg.attachments?.length && (
+          <div>
+            <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <Paperclip className="h-3 w-3" />
+              {t("attachments", { count: msg.attachments.length })}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {msg.attachments.map((att, i) => (
+                <a
+                  key={`${att.url}-${i}`}
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="border border-border bg-secondary/30 px-2 py-1.5 text-[11px] text-foreground transition-colors hover:border-primary/30 hover:bg-secondary/60"
+                >
+                  {att.filename}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (loadingList) {
     return (
-      <div className="flex items-center justify-center p-10">
-        <Loader2 className="h-5 w-5 rounded-full animate-spin text-primary" />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-9 w-36" />
+          <Skeleton className="h-9 w-44" />
+        </div>
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Skeleton className="h-80 w-full" />
+          <Skeleton className="hidden h-80 w-full lg:block" />
+        </div>
       </div>
     )
   }
 
   if (mailboxes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-        <Shield className="h-8 w-8 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">{t("noAccess")}</p>
-      </div>
+      <Empty className="border border-border bg-card">
+        <EmptyMedia variant="icon">
+          <Shield />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle className="text-sm">{t("noAccess")}</EmptyTitle>
+        </EmptyHeader>
+      </Empty>
     )
   }
 
   return (
     <div className="flex flex-col gap-4">
       {/* Mailbox selector */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
         {mailboxes.map(mb => {
           const active = mb.localPart === selected
-          const viaAlias = !hasMailboxPerm(mb.localPart)
-            ? mb.aliases.find(a => hasMailboxPerm(a.localPart))
-            : null
+          const viaAlias = viaAliasFor(mb)
           return (
             <button
               key={mb.localPart}
-              onClick={() => setSelected(mb.localPart)}
-              className={`flex items-center gap-2 border px-3 py-2 text-xs font-medium transition-colors active:scale-[0.98] ${
+              onClick={() => selectMailbox(mb.localPart)}
+              data-telemetry="admin:mailboxes:select"
+              className={cn(
+                "group flex shrink-0 items-center gap-2 border px-3 py-2 text-xs font-medium transition-colors active:scale-[0.98]",
                 active
                   ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-              }`}
+              )}
             >
-              <Mail className="h-3.5 w-3.5" />
-              <span>{mb.email}</span>
+              <Mail className={cn("h-3.5 w-3.5", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+              <span className="max-w-[140px] truncate sm:max-w-none">{mb.email}</span>
+              {unreadBadge(mb.unreadCount)}
               {viaAlias && (
-                <span className="text-[9px] uppercase tracking-wider opacity-60">
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60">
                   {t("viaAlias", { alias: viaAlias.localPart })}
                 </span>
               )}
@@ -488,128 +804,110 @@ export default function CompanyMailboxesTab() {
       {selectedMailbox && (
         <>
           {/* Actions bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border border-border bg-card p-2.5 sm:p-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Mail className="h-3.5 w-3.5 text-primary" />
-              <span className="font-medium text-foreground">{selectedMailbox.email}</span>
-              {selectedMailbox.aliases.length > 0 && (
-                <span className="hidden sm:inline">
-                  {selectedMailbox.aliases.map(a => a.address).join(", ")}
-                </span>
-              )}
-              {!selectedMailbox.provisioned && (
-                <span className="text-warning">{t("notProvisioned")}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={openCompose}
-                className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 active:scale-95 transition-all"
-                data-telemetry="admin:mailboxes:compose"
-              >
-                <Send className="h-3 w-3" />
-                {t("compose")}
-              </button>
-              {sogoUrl && (
-                <a
-                  href={sogoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-secondary/70 active:scale-95 transition-all"
-                  data-telemetry="admin:mailboxes:sogo"
+          <Card>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-3">
+              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="truncate font-medium text-foreground">{selectedMailbox.email}</span>
+                {selectedMailbox.aliases.length > 0 && (
+                  <span className="hidden truncate text-[11px] sm:inline">
+                    ({selectedMailbox.aliases.map(a => a.address).join(", ")})
+                  </span>
+                )}
+                {!selectedMailbox.provisioned && (
+                  <Badge variant="secondary" className="text-[10px]">{t("notProvisioned")}</Badge>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={openCompose} data-telemetry="admin:mailboxes:compose">
+                  <Send />
+                  {t("compose")}
+                </Button>
+                {sogoUrl && (
+                  <Button size="sm" variant="outline" asChild data-telemetry="admin:mailboxes:sogo">
+                    <a href={sogoUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink />
+                      {t("openSogo")}
+                    </a>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => requestRotate(selectedMailbox.localPart)}
+                  disabled={rotating}
+                  data-telemetry="admin:mailboxes:rotate"
                 >
-                  <ExternalLink className="h-3 w-3" />
-                  {t("openSogo")}
-                </a>
-              )}
-              <button
-                onClick={() => rotatePassword(selectedMailbox.localPart)}
-                disabled={rotating}
-                className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50"
-                data-telemetry="admin:mailboxes:rotate"
-              >
-                {rotating ? <Loader2 className="h-3 w-3 rounded-full animate-spin" /> : <KeyRound className="h-3 w-3" />}
-                {t("rotatePassword")}
-              </button>
-              {isRootAdmin && (
-                <button
-                  onClick={() => setPurgeOpen(o => !o)}
-                  className={`flex items-center gap-1.5 border px-2.5 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
-                    purgeOpen
-                      ? "border-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
-                  }`}
-                  data-telemetry="admin:mailboxes:purge-toggle"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  {t("purgeToggle")}
-                </button>
-              )}
-            </div>
-          </div>
+                  {rotating ? <Loader2 className="animate-spin" /> : <KeyRound />}
+                  {t("rotatePassword")}
+                </Button>
+                {isRootAdmin && (
+                  <Button
+                    size="sm"
+                    variant={purgeOpen ? "destructive" : "outline"}
+                    onClick={() => setPurgeOpen(o => !o)}
+                    data-telemetry="admin:mailboxes:purge-toggle"
+                  >
+                    <Trash2 />
+                    {t("purgeToggle")}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {isRootAdmin && purgeOpen && (
-            <div className="flex flex-wrap items-center gap-2 border border-destructive/20 bg-destructive/5 p-2.5">
-              <span className="text-[11px] font-medium text-destructive">
-                {t("purgeTitle")}
-              </span>
-              <input
-                value={purgeAddress}
-                onChange={e => setPurgeAddress(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") purgeMessages() }}
-                placeholder={t("purgePlaceholder")}
-                className="w-52 border border-border/60 bg-background/40 px-2 py-1.5 text-[11px] text-foreground outline-none focus:border-destructive/40 placeholder:text-muted-foreground/50"
-              />
-              <button
-                onClick={purgeMessages}
-                disabled={purging || !purgeAddress.trim()}
-                className="flex items-center gap-1.5 border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 active:scale-95 transition-all disabled:opacity-50"
-                data-telemetry="admin:mailboxes:purge-from"
-              >
-                {purging ? (
-                  <Loader2 className="h-3 w-3 rounded-full animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
-                )}
-                {t("purge")}
-              </button>
-              <button
-                onClick={() => setPurgeOpen(false)}
-                className="ml-auto text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={t("purgeHide")}
-              >
-                {t("purgeHide")}
-              </button>
-            </div>
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="flex flex-wrap items-center gap-2 p-2.5">
+                <span className="text-[11px] font-medium text-destructive">{t("purgeTitle")}</span>
+                <Input
+                  value={purgeAddress}
+                  onChange={e => setPurgeAddress(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") requestPurge() }}
+                  placeholder={t("purgePlaceholder")}
+                  className="h-8 w-52 text-xs"
+                />
+                <Button size="sm" variant="destructive" onClick={requestPurge} disabled={purging || !purgeAddress.trim()}>
+                  {purging ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                  {t("purge")}
+                </Button>
+                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setPurgeOpen(false)}>
+                  {t("purgeHide")}
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
           {/* Folder + filter tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5">
               {FOLDERS.map(f => (
                 <button
                   key={f}
-                  onClick={() => setFolder(f)}
-                  className={`border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  onClick={() => { setFolder(f); setSelectedMessage(null) }}
+                  className={cn(
+                    "flex items-center gap-1.5 border px-3 py-1.5 text-[11px] font-medium transition-colors",
                     folder === f
                       ? "border-primary/40 bg-primary/10 text-primary"
                       : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  )}
                 >
                   {t(`folder.${f}`)}
+                  {f === "INBOX" && unreadBadge(selectedMailbox.unreadCount)}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1">
-              {(["all", "unread", "read", "replied", "not-replied"] as Filter[]).map(f => (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {FILTERS.map(f => (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
-                  className={`border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                  onClick={() => { setFilter(f); setSelectedMessage(null) }}
+                  className={cn(
+                    "border px-2.5 py-1.5 text-[11px] font-medium transition-colors",
                     filter === f
                       ? "border-primary/40 bg-primary/10 text-primary"
                       : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  )}
                 >
                   {t(`filter.${f}`)}
                 </button>
@@ -617,80 +915,108 @@ export default function CompanyMailboxesTab() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
             {/* Message list */}
-            <div className="border border-border bg-card min-h-[300px] flex flex-col">
-              <div className="flex items-center gap-2 border-b border-border p-2.5">
-                <div className="flex flex-1 items-center gap-1.5 border border-border/60 bg-background/60 px-2 py-1">
-                  <Search className="h-3 w-3 text-muted-foreground" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") loadMessages(selectedMailbox.localPart, folder, filter, 1, search) }}
+            <Card className="flex min-h-[360px] flex-col overflow-hidden lg:h-[calc(100vh-340px)]">
+              <div className="flex items-center gap-2 border-b border-border/60 p-2.5">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
                     placeholder={t("searchPlaceholder")}
-                    className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
+                    className="h-8 pl-8 pr-8 text-xs"
                   />
+                  {searchInput && (
+                    <button
+                      onClick={() => setSearchInput("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      aria-label={t("clearSearch")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => loadMessages(selectedMailbox.localPart, folder, filter, 1, search)}
-                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={refreshNow}
+                  disabled={refreshing}
                   title={t("refresh")}
+                  data-telemetry="admin:mailboxes:refresh"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </button>
+                  <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+                </Button>
               </div>
 
-              <div className="flex-1 overflow-y-auto max-h-[60vh]">
+              <div className="flex-1 overflow-y-auto max-h-[50vh] lg:max-h-none">
                 {loadingMessages ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-4 w-4 rounded-full animate-spin text-primary" />
+                  <div className="space-y-1 p-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="flex flex-col gap-1.5 p-2.5">
+                        <Skeleton className="h-3 w-2/5" />
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2 w-1/4" />
+                      </div>
+                    ))}
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center gap-2 p-8 text-muted-foreground">
-                    <Inbox className="h-6 w-6 opacity-40" />
-                    <p className="text-xs">{t("noMessages")}</p>
-                  </div>
+                  <Empty className="h-full border-0">
+                    <EmptyMedia variant="icon">
+                      <Inbox />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle className="text-sm">{t("noMessages")}</EmptyTitle>
+                      <EmptyDescription>{t("noMessagesHint")}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   messages.map(msg => (
                     <button
                       key={msg.id}
                       onClick={() => setSelectedMessage(msg)}
-                      className={`w-full text-left border-b border-border/50 px-3 py-2.5 transition-colors ${
-                        selectedMessage?.id === msg.id
-                          ? "bg-primary/10"
-                          : msg.read
-                            ? "bg-card hover:bg-secondary/40"
-                            : "bg-primary/5 hover:bg-secondary/40"
-                      }`}
+                      data-telemetry="admin:mailboxes:open-message"
+                      className={cn(
+                        "group flex w-full items-start gap-2.5 border-b border-border/50 px-3 py-2.5 text-left transition-colors",
+                        selectedMessage?.id === msg.id ? "bg-primary/10" : "hover:bg-secondary/40"
+                      )}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-xs truncate ${msg.read ? "font-normal text-foreground" : "font-semibold text-foreground"}`}>
-                          {msg.fromAddress || t("unknownSender")}
-                        </p>
-                        <span className="text-[10px] text-muted-foreground/70 shrink-0">{formatDate(msg.receivedAt)}</span>
-                      </div>
-                      <p className="text-[11px] font-medium text-foreground truncate mt-0.5">{msg.subject}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {msg.isSpam && (
-                          <span className="flex items-center gap-0.5 text-[9px] text-warning">
-                            <AlertTriangle className="h-2.5 w-2.5" /> {t("spam")}
-                          </span>
+                      <span
+                        className={cn(
+                          "mt-1.5 h-2 w-2 shrink-0",
+                          msg.read ? "bg-transparent" : "bg-primary"
                         )}
-                        {msg.isVirus && (
-                          <span className="flex items-center gap-0.5 text-[9px] text-destructive">
-                            <Bug className="h-2.5 w-2.5" /> {t("virus")}
-                          </span>
-                        )}
-                        {msg.replied && (
-                          <span className="flex items-center gap-0.5 text-[9px] text-primary">
-                            <ReplyAll className="h-2.5 w-2.5" /> {t("replied")}
-                          </span>
-                        )}
-                        {!!msg.attachments?.length && (
-                          <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
-                            <Paperclip className="h-2.5 w-2.5" /> {msg.attachments.length}
-                          </span>
-                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn("truncate text-xs", msg.read ? "font-normal text-foreground" : "font-semibold text-foreground")}>
+                            {msg.fromAddress || t("unknownSender")}
+                          </p>
+                          <span className="shrink-0 text-[10px] text-muted-foreground/70">{formatDate(msg.receivedAt)}</span>
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] font-medium text-foreground">{msg.subject}</p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          {msg.isSpam && (
+                            <span className="flex items-center gap-0.5 text-[9px] text-warning">
+                              <AlertTriangle className="h-2.5 w-2.5" /> {t("spam")}
+                            </span>
+                          )}
+                          {msg.isVirus && (
+                            <span className="flex items-center gap-0.5 text-[9px] text-destructive">
+                              <Bug className="h-2.5 w-2.5" /> {t("virus")}
+                            </span>
+                          )}
+                          {msg.replied && (
+                            <span className="flex items-center gap-0.5 text-[9px] text-primary">
+                              <ReplyAll className="h-2.5 w-2.5" /> {t("replied")}
+                            </span>
+                          )}
+                          {!!msg.attachments?.length && (
+                            <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
+                              <Paperclip className="h-2.5 w-2.5" /> {msg.attachments.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))
@@ -698,372 +1024,378 @@ export default function CompanyMailboxesTab() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between border-t border-border p-2 text-[11px] text-muted-foreground">
-                <span>{t("total", { count: total })}</span>
+              <div className="flex items-center justify-between gap-2 border-t border-border/60 p-2 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  {refreshing && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {t("total", { count: total })}
+                </span>
+                <span className="hidden sm:inline">
+                  {lastUpdated ? t("lastUpdated", { time: lastUpdated }) : ""}
+                </span>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => loadMessages(selectedMailbox.localPart, folder, filter, Math.max(1, page - 1), search)}
-                    disabled={page <= 1}
-                    className="p-1 hover:bg-secondary/60 disabled:opacity-30 transition-colors"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                  </button>
-                  <span>{page}</span>
-                  <button
-                    onClick={() => loadMessages(selectedMailbox.localPart, folder, filter, page + 1, search)}
-                    disabled={page * limit >= total}
-                    className="p-1 hover:bg-secondary/60 disabled:opacity-30 transition-colors"
-                  >
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => goToPage(Math.max(1, page - 1))} disabled={page <= 1} title={t("prevPage")}>
+                    <ArrowLeft />
+                  </Button>
+                  <span className="min-w-[2ch] text-center tabular-nums">{page}</span>
+                  <Button size="icon-sm" variant="ghost" onClick={() => goToPage(page + 1)} disabled={page * limit >= total} title={t("nextPage")}>
+                    <ArrowRight />
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            {/* Message detail */}
-            <div className="border border-border bg-card min-h-[300px]">
+            {/* Desktop detail pane */}
+            <Card className="hidden min-h-[360px] flex-col overflow-hidden lg:flex lg:h-[calc(100vh-340px)]">
               {selectedMessage ? (
-                <div className="p-3 sm:p-4">
-                  <h3 className="text-sm font-semibold text-foreground">{selectedMessage.subject}</h3>
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                    <span>
-                      {t("from")}: {selectedMessage.fromAddress || t("unknownSender")}
-                    </span>
-                    {selectedMessage.toAddress && <span>{t("to")}: {selectedMessage.toAddress}</span>}
-                    <span>{formatDate(selectedMessage.receivedAt)}</span>
-                  </div>
-                  {(selectedMessage.isSpam || selectedMessage.isVirus || selectedMessage.replied) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {selectedMessage.isSpam && (
-                        <span className="flex items-center gap-1 text-[10px] text-warning border border-warning/30 bg-warning/10 px-1.5 py-0.5">
-                          <AlertTriangle className="h-3 w-3" /> {t("spam")}
-                        </span>
-                      )}
-                      {selectedMessage.isVirus && (
-                        <span className="flex items-center gap-1 text-[10px] text-destructive border border-destructive/30 bg-destructive/10 px-1.5 py-0.5">
-                          <Bug className="h-3 w-3" /> {selectedMessage.virusName || t("virus")}
-                        </span>
-                      )}
-                      {selectedMessage.replied && (
-                        <span className="flex items-center gap-1 text-[10px] text-primary border border-primary/30 bg-primary/10 px-1.5 py-0.5">
-                          <ReplyAll className="h-3 w-3" /> {t("replied")}
-                        </span>
-                      )}
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 p-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">{selectedMessage.subject}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{selectedMessage.fromAddress || t("unknownSender")}</p>
                     </div>
-                  )}
-
-                  <div className="mt-3 border border-border/60 bg-background/40 p-3 max-h-[50vh] overflow-y-auto">
-                    {selectedMessage.html ? (
-                      <div className="flex flex-col gap-2">
-                        <a
-                          href={`${API_ENDPOINTS.adminCompanyMailboxMessages.replace(":address", selected)}/${selectedMessage.id}/html`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="self-start text-[11px] text-primary underline-offset-2 hover:underline"
-                        >
-                          {t("viewHtml")}
-                        </a>
-                        <MarkdownBody content={selectedMessage.body || t("htmlOnlyBody")} />
-                      </div>
-                    ) : (
-                      <MarkdownBody content={selectedMessage.body || t("emptyBody")} />
-                    )}
-                  </div>
-
-                  {!!selectedMessage.attachments?.length && (
-                    <div className="mt-3">
-                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                        <Paperclip className="h-3 w-3" />
-                        {t("attachments", { count: selectedMessage.attachments.length })}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedMessage.attachments.map((att, i) => (
-                          <a
-                            key={`${att.url}-${i}`}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="border border-border bg-secondary/30 px-2 py-1.5 text-[11px] text-foreground hover:border-primary/30 hover:bg-secondary/60 transition-colors"
-                          >
-                            {att.filename}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-                    {folder !== "Trash" && (
-                      <>
-                        <button
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {folder !== "Trash" && (
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
                           onClick={() => openReply(selectedMessage)}
-                          className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 active:scale-95 transition-all"
+                          title={t("reply")}
+                          data-telemetry="admin:mailboxes:reply"
                         >
-                          <Reply className="h-3 w-3" />
-                          {t("reply")}
-                        </button>
-                        <button
-                          onClick={() => setMessageRead(selectedMessage, !selectedMessage.read)}
-                          disabled={actionBusy}
-                          className="flex items-center gap-1.5 border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-secondary/70 active:scale-95 transition-all disabled:opacity-50"
-                        >
-                          <CheckCheck className="h-3 w-3" />
-                          {selectedMessage.read ? t("markUnread") : t("markRead")}
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => deleteMessage(selectedMessage)}
-                      disabled={actionBusy}
-                      className="flex items-center gap-1.5 border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      {selectedMessage.folder === "Trash" ? t("deleteForever") : t("delete")}
-                    </button>
+                          <Reply />
+                        </Button>
+                      )}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => setMessageRead(selectedMessage, !selectedMessage.read)}
+                        disabled={actionBusy}
+                        title={selectedMessage.read ? t("markUnread") : t("markRead")}
+                        data-telemetry="admin:mailboxes:read-toggle"
+                      >
+                        <CheckCheck />
+                      </Button>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => requestDelete(selectedMessage)}
+                        disabled={actionBusy}
+                        title={selectedMessage.folder === "Trash" ? t("deleteForever") : t("delete")}
+                        data-telemetry="admin:mailboxes:delete"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex-1 overflow-y-auto p-4">{renderDetail()}</div>
+                </>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
-                  <Inbox className="h-6 w-6 opacity-40" />
-                  <p className="text-xs">{t("selectMessage")}</p>
+                <div className="flex flex-1 items-center justify-center">
+                  <Empty className="border-0">
+                    <EmptyMedia variant="icon">
+                      <Inbox />
+                    </EmptyMedia>
+                    <EmptyHeader>
+                      <EmptyTitle className="text-sm">{t("selectMessage")}</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </>
       )}
 
+      {/* Mobile message detail (bottom sheet) */}
+      {selectedMessage && (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setSelectedMessage(null)} />
+          <div className="absolute inset-x-0 bottom-0 top-12 flex flex-col overflow-hidden border-t border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between gap-2 border-b border-border/60 p-2.5">
+              <Button size="sm" variant="ghost" onClick={() => setSelectedMessage(null)}>
+                <ArrowLeft />
+                {t("backToMessages")}
+              </Button>
+              <div className="flex items-center gap-1.5">
+                {folder !== "Trash" && (
+                  <Button size="icon-sm" variant="ghost" onClick={() => openReply(selectedMessage)} title={t("reply")} data-telemetry="admin:mailboxes:reply-mobile">
+                    <Reply />
+                  </Button>
+                )}
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => setMessageRead(selectedMessage, !selectedMessage.read)}
+                  disabled={actionBusy}
+                  title={selectedMessage.read ? t("markUnread") : t("markRead")}
+                  data-telemetry="admin:mailboxes:read-toggle-mobile"
+                >
+                  <CheckCheck />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => requestDelete(selectedMessage)}
+                  disabled={actionBusy}
+                  title={selectedMessage.folder === "Trash" ? t("deleteForever") : t("delete")}
+                  data-telemetry="admin:mailboxes:delete-mobile"
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">{renderDetail()}</div>
+          </div>
+        </div>
+      )}
+
       {/* Reply/compose modal */}
-      {(replyTo || composeMode) && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => { setReplyTo(null); setComposeMode(false) }} />
-          <div className="relative w-full max-w-xl border border-border bg-card p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Reply className="h-4 w-4 text-primary" />
+      <Dialog open={!!(replyTo || composeMode)} onOpenChange={open => { if (!open) closeComposer() }}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              {composeMode ? <MessageSquarePlus className="h-4 w-4 text-primary" /> : <Reply className="h-4 w-4 text-primary" />}
               {composeMode
                 ? t("composeTitle", { mailbox: selectedMailbox?.email || "" })
                 : t("replyTitle", { mailbox: selectedMailbox?.email || "" })}
-            </h3>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("from")}</label>
-                <input
-                  value={selectedMailbox?.email || ""}
-                  readOnly
-                  className="flex-1 border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs text-muted-foreground outline-none"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("to")}</label>
-                <input
-                  value={replyForm.to}
-                  onChange={e => setReplyForm(prev => ({ ...prev, to: e.target.value }))}
-                  className="flex-1 border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("cc")}</label>
-                <input
-                  value={replyForm.cc}
-                  onChange={e => setReplyForm(prev => ({ ...prev, cc: e.target.value }))}
-                  placeholder={t("optionalField")}
-                  className="flex-1 border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("bcc")}</label>
-                <input
-                  value={replyForm.bcc}
-                  onChange={e => setReplyForm(prev => ({ ...prev, bcc: e.target.value }))}
-                  placeholder={t("optionalField")}
-                  className="flex-1 border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("subject")}</label>
-                <input
-                  value={replyForm.subject}
-                  onChange={e => setReplyForm(prev => ({ ...prev, subject: e.target.value }))}
-                  className="flex-1 border border-border/60 bg-background/40 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40"
-                />
-                <select
-                  value={replyForm.priority}
-                  onChange={e => setReplyForm(prev => ({ ...prev, priority: e.target.value }))}
-                  className="border border-border/60 bg-background/40 px-2 py-1.5 text-xs text-foreground outline-none cursor-pointer"
-                >
-                  <option value="low">{t("priority.low")}</option>
-                  <option value="normal">{t("priority.normal")}</option>
-                  <option value="high">{t("priority.high")}</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="w-12 shrink-0 text-[11px] text-muted-foreground">{t("template")}</label>
-                <select
-                  value={replyForm.template}
-                  onChange={e => setReplyForm(prev => ({ ...prev, template: e.target.value }))}
-                  className="flex-1 border border-border/60 bg-background/40 px-2 py-1.5 text-xs text-foreground outline-none cursor-pointer"
-                >
-                  <option value="plain">{t("template.plain")}</option>
-                  <option value="notification">{t("template.notification")}</option>
-                </select>
-              </div>
-
-              {/* Simple editor */}
-              <div className="border border-border/60">
-                <div className="flex items-center gap-0.5 border-b border-border/50 bg-secondary/20 px-1.5 py-1">
-                  <button
-                    onClick={() => insertMarkdown("**", "**", "bold text")}
-                    title={t("editor.bold")}
-                    className="px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    B
-                  </button>
-                  <button
-                    onClick={() => insertMarkdown("*", "*", "italic text")}
-                    title={t("editor.italic")}
-                    className="px-1.5 py-0.5 text-[11px] italic text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    I
-                  </button>
-                  <button
-                    onClick={() => insertMarkdown("~~", "~~", "strikethrough")}
-                    title={t("editor.strike")}
-                    className="px-1.5 py-0.5 text-[11px] line-through text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    S
-                  </button>
-                  <button
-                    onClick={() => insertMarkdown("[", "](https://)", "link text")}
-                    title={t("editor.link")}
-                    className="px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    🔗
-                  </button>
-                  <button
-                    onClick={() => insertMarkdown("`", "`", "code")}
-                    title={t("editor.code")}
-                    className="px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    {"</>"}
-                  </button>
-                  <button
-                    onClick={() => insertMarkdown("\n- ", "", "list item")}
-                    title={t("editor.list")}
-                    className="px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    ••
-                  </button>
-                  <span className="flex-1" />
-                  <button
-                    onClick={togglePreview}
-                    disabled={loadingPreview}
-                    className={`px-2 py-0.5 text-[10px] font-medium border transition-colors ${
-                      previewMode
-                        ? "border-primary/40 bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:bg-secondary"
-                    } disabled:opacity-50`}
-                  >
-                    {loadingPreview ? t("editor.loading") : (previewMode ? t("editor.edit") : t("editor.preview"))}
-                  </button>
-                </div>
-                {previewMode ? (
-                  <div className="max-h-[45vh] overflow-y-auto">
-                    {previewMeta && (
-                      <div className="border-b border-border/50 bg-secondary/20 px-2.5 py-1.5 text-[10px] text-muted-foreground space-y-0.5">
-                        <p>{t("from")}: {previewMeta.from}</p>
-                        {previewMeta.subject && <p>{t("subject")}: {previewMeta.subject}</p>}
-                      </div>
-                    )}
-                    <iframe
-                      srcDoc={previewHtml}
-                      title={t("editor.preview")}
-                      sandbox=""
-                      className="w-full h-[40vh] border-0"
-                    />
-                  </div>
-                ) : (
-                  <textarea
-                    ref={bodyRef}
-                    value={replyForm.body}
-                    onChange={e => setReplyForm(prev => ({ ...prev, body: e.target.value }))}
-                    rows={8}
-                    placeholder={t("replyPlaceholder")}
-                    className="w-full resize-none bg-background/40 px-2.5 py-2 text-xs text-foreground outline-none"
-                  />
-                )}
-              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("from")}</label>
+              <Input
+                value={selectedMailbox?.email || ""}
+                readOnly
+                className="h-8 text-xs text-muted-foreground"
+              />
             </div>
-            <div className="mt-3 flex items-center justify-end gap-1.5">
-              <button
-                onClick={() => { setReplyTo(null); setComposeMode(false) }}
-                className="border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-secondary/60 transition-colors"
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("to")}</label>
+              <Input
+                value={replyForm.to}
+                onChange={e => setReplyForm(prev => ({ ...prev, to: e.target.value }))}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("cc")}</label>
+              <Input
+                value={replyForm.cc}
+                onChange={e => setReplyForm(prev => ({ ...prev, cc: e.target.value }))}
+                placeholder={t("optionalField")}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("bcc")}</label>
+              <Input
+                value={replyForm.bcc}
+                onChange={e => setReplyForm(prev => ({ ...prev, bcc: e.target.value }))}
+                placeholder={t("optionalField")}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("subject")}</label>
+              <Input
+                value={replyForm.subject}
+                onChange={e => setReplyForm(prev => ({ ...prev, subject: e.target.value }))}
+                className="h-8 flex-1 text-xs"
+              />
+              <select
+                value={replyForm.priority}
+                onChange={e => setReplyForm(prev => ({ ...prev, priority: e.target.value }))}
+                className="h-8 cursor-pointer border border-input bg-background px-2 text-xs text-foreground outline-none"
               >
-                {t("cancel")}
-              </button>
-              <button
-                onClick={sendReply}
-                disabled={sendingReply || !replyForm.body.trim() || !replyForm.to.trim()}
-                className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50"
+                <option value="low">{t("priority.low")}</option>
+                <option value="normal">{t("priority.normal")}</option>
+                <option value="high">{t("priority.high")}</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="w-14 shrink-0 text-[11px] text-muted-foreground">{t("template")}</label>
+              <select
+                value={replyForm.template}
+                onChange={e => setReplyForm(prev => ({ ...prev, template: e.target.value }))}
+                className="h-8 flex-1 cursor-pointer border border-input bg-background px-2 text-xs text-foreground outline-none"
               >
-                {sendingReply ? <Loader2 className="h-3 w-3 rounded-full animate-spin" /> : <Send className="h-3 w-3" />}
-                {t("send")}
-              </button>
+                <option value="plain">{t("template.plain")}</option>
+                <option value="notification">{t("template.notification")}</option>
+              </select>
+            </div>
+
+            {/* Simple editor */}
+            <div className="overflow-hidden border border-input">
+              <div className="flex items-center gap-0.5 border-b border-border/50 bg-secondary/20 px-1.5 py-1">
+                <button
+                  onClick={() => insertMarkdown("**", "**", "bold text")}
+                  title={t("editor.bold")}
+                  className="px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  B
+                </button>
+                <button
+                  onClick={() => insertMarkdown("*", "*", "italic text")}
+                  title={t("editor.italic")}
+                  className="px-1.5 py-0.5 text-[11px] italic text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  I
+                </button>
+                <button
+                  onClick={() => insertMarkdown("~~", "~~", "strikethrough")}
+                  title={t("editor.strike")}
+                  className="px-1.5 py-0.5 text-[11px] line-through text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  S
+                </button>
+                <button
+                  onClick={() => insertMarkdown("[", "](https://)", "link text")}
+                  title={t("editor.link")}
+                  className="px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  🔗
+                </button>
+                <button
+                  onClick={() => insertMarkdown("`", "`", "code")}
+                  title={t("editor.code")}
+                  className="px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  {"</>"}
+                </button>
+                <button
+                  onClick={() => insertMarkdown("\n- ", "", "list item")}
+                  title={t("editor.list")}
+                  className="px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  ••
+                </button>
+                <span className="flex-1" />
+                <button
+                  onClick={togglePreview}
+                  disabled={loadingPreview}
+                  className={cn(
+                    "border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-50",
+                    previewMode
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                  {loadingPreview ? t("editor.loading") : (previewMode ? t("editor.edit") : t("editor.preview"))}
+                </button>
+              </div>
+              {previewMode ? (
+                <div className="max-h-[45vh] overflow-y-auto">
+                  {previewMeta && (
+                    <div className="space-y-0.5 border-b border-border/50 bg-secondary/20 px-2.5 py-1.5 text-[10px] text-muted-foreground">
+                      <p>{t("from")}: {previewMeta.from}</p>
+                      {previewMeta.subject && <p>{t("subject")}: {previewMeta.subject}</p>}
+                    </div>
+                  )}
+                  <iframe
+                    srcDoc={previewHtml}
+                    title={t("editor.preview")}
+                    sandbox=""
+                    className="h-[40vh] w-full border-0"
+                  />
+                </div>
+              ) : (
+                <textarea
+                  ref={bodyRef}
+                  value={replyForm.body}
+                  onChange={e => setReplyForm(prev => ({ ...prev, body: e.target.value }))}
+                  rows={8}
+                  placeholder={t("replyPlaceholder")}
+                  className="w-full resize-none bg-background/40 px-2.5 py-2 text-xs text-foreground outline-none"
+                />
+              )}
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeComposer}>{t("cancel")}</Button>
+            <Button
+              onClick={sendReply}
+              disabled={sendingReply || !replyForm.body.trim() || !replyForm.to.trim()}
+              data-telemetry="admin:mailboxes:send"
+            >
+              {sendingReply ? <Loader2 className="animate-spin" /> : <Send />}
+              {t("send")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Credentials modal after rotation */}
-      {creds && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setCreds(null)} />
-          <div className="relative w-full max-w-md border border-border bg-card p-4 sm:p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+      {/* Credentials dialog after rotation */}
+      <Dialog open={!!creds} onOpenChange={open => { if (!open) setCreds(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
               <KeyRound className="h-4 w-4 text-primary" />
               {t("credsTitle")}
-            </h3>
-            <p className="mt-1 text-[11px] text-muted-foreground">{t("credsHint")}</p>
-
-            <div className="mt-3 space-y-2 text-xs">
-              <div className="flex items-center justify-between gap-2 border border-border bg-background/50 px-2.5 py-1.5">
-                <span className="text-muted-foreground">{t("email")}</span>
-                <span className="font-mono text-foreground">{creds.email}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 border border-border bg-background/50 px-2.5 py-1.5">
-                <span className="text-muted-foreground">{t("password")}</span>
-                <span className="flex items-center gap-2">
-                  <span className="font-mono text-foreground">{creds.password}</span>
-                  <button
-                    onClick={() => copyText("password", creds.password)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {copied === "password" ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                  </button>
-                </span>
-              </div>
+            </DialogTitle>
+            <DialogDescription>{t("credsHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2 border border-border bg-background/50 px-2.5 py-2">
+              <span className="text-muted-foreground">{t("email")}</span>
+              <span className="font-mono text-foreground">{creds?.email}</span>
             </div>
-
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <a
-                href={creds.sogoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" />
-                {t("openSogoLogin")}
-              </a>
-              <button
-                onClick={() => setCreds(null)}
-                className="border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-secondary/60 transition-colors"
-              >
-                {t("close")}
-              </button>
+            <div className="flex items-center justify-between gap-2 border border-border bg-background/50 px-2.5 py-2">
+              <span className="text-muted-foreground">{t("password")}</span>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-foreground">{creds?.password}</span>
+                <button
+                  onClick={() => creds && copyText("password", creds.password)}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={t("password")}
+                >
+                  {copied === "password" ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </span>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCreds(null)}>{t("close")}</Button>
+            {creds?.sogoUrl && (
+              <Button asChild data-telemetry="admin:mailboxes:sogo-login">
+                <a href={creds.sogoUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink />
+                  {t("openSogoLogin")}
+                </a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation dialog */}
+      <Dialog open={!!confirmState} onOpenChange={open => { if (!open && !confirmBusy) setConfirmState(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{confirmState?.title}</DialogTitle>
+            {confirmState?.description && (
+              <DialogDescription>{confirmState.description}</DialogDescription>
+            )}
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmState(null)} disabled={confirmBusy}>
+              {t("cancel")}
+            </Button>
+            <Button
+              variant={confirmState?.destructive ? "destructive" : "default"}
+              onClick={runConfirm}
+              disabled={confirmBusy}
+            >
+              {confirmBusy && <Loader2 className="animate-spin" />}
+              {confirmState?.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toaster is not mounted anywhere globally, so mount it here for this tab. */}
+      <Toaster />
     </div>
   )
 }
