@@ -320,15 +320,14 @@ function isAllowedCorsOrigin(origin: string | null | undefined): boolean {
     .split(',')
     .map(o => o.trim())
     .filter(Boolean);
-  if (
-    process.env.FRONTEND_URL === '*' ||
-    process.env.FRONTEND_URL === 'true' ||
-    process.env.PANEL_URL === '*' ||
-    process.env.PANEL_URL === 'true'
-  )
-    return true;
+
+  // Wildcard FRONTEND_URL / PANEL_URL is NOT allowed with credentials=true
+  // — it would let any website make credentialed cross-origin requests.
+  // Remove support for '*' and 'true' wildcard values.
+
   if (!origin || origin === 'null') return false;
-  if (rawCfg.length === 0) return true;
+  // If no origins are configured, deny all cross-origin requests
+  if (rawCfg.length === 0) return false;
 
   const normalize = (s: unknown) => {
     if (!s && s !== '') return '';
