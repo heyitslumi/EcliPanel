@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SearchableUserSelect from "@/components/SearchableUserSelect"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { apiFetch } from "@/lib/api-client"
+import { decodeEntities } from "@/lib/utils"
 import {
   Archive,
   ArchiveRestore,
@@ -292,7 +293,7 @@ export default function TicketsTab({ ctx }: { ctx: any }) {
                         <span className="font-mono text-[11px] text-muted-foreground shrink-0 mt-0.5">#{ticket.id}</span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
+                            <p className="text-sm font-medium text-foreground truncate">{decodeEntities(ticket.subject)}</p>
                             {ticket.aiTouched && <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-500/10 text-violet-600 border border-violet-500/20 shrink-0">AI</span>}
                             {ticket.archived && <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-muted-foreground border border-border shrink-0">{t("status.archived")}</span>}
                           </div>
@@ -392,7 +393,7 @@ export default function TicketsTab({ ctx }: { ctx: any }) {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[11px] text-muted-foreground">#{ticket.id}</span>
-                          <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{decodeEntities(ticket.subject)}</p>
                           {ticket.aiTouched && <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-violet-500/10 text-violet-600 shrink-0">AI</span>}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -479,7 +480,7 @@ export default function TicketsTab({ ctx }: { ctx: any }) {
                           {ticket.aiTouched && <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-500/10 text-violet-600 border border-violet-500/20">AI</span>}
                           {ticket.archived && <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-muted-foreground border border-border">{t("status.archived")}</span>}
                         </div>
-                        <p className="text-sm font-semibold text-foreground mt-0.5 line-clamp-2">{ticket.subject}</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5 line-clamp-2">{decodeEntities(ticket.subject)}</p>
                       </div>
                       <Badge variant="outline" className={`shrink-0 text-[10px] ${priorityColor[ticket.priority] || priorityColor.medium}`}>{priorityLabels[ticket.priority] || ticket.priority}</Badge>
                     </div>
@@ -586,7 +587,7 @@ export default function TicketsTab({ ctx }: { ctx: any }) {
       <DialogContent className="border-border bg-card sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            {t("dialog.replyTitle", { id: replyTicket?.id ?? "" })}: {replyTicket?.subject}
+            {t("dialog.replyTitle", { id: replyTicket?.id ?? "" })}: {decodeEntities(replyTicket?.subject)}
           </DialogTitle>
         </DialogHeader>
         {replyTicket && (

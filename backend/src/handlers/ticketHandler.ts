@@ -59,6 +59,50 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
     } catch (e) { return String(s); }
   }
 
+  function sanitizeForOutput(s: string | null | undefined): string | null | undefined {
+    if (s == null) return s;
+    try {
+      const decoded = String(s)
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) => {
+          const cp = parseInt(hex, 16);
+          return cp >= 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff) ? String.fromCodePoint(cp) : '';
+        })
+        .replace(/&#(\d+);/g, (_, dec: string) => {
+          const cp = parseInt(dec, 10);
+          return cp >= 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff) ? String.fromCodePoint(cp) : '';
+        })
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+      return Bun.escapeHTML(decoded);
+    } catch {
+      return Bun.escapeHTML(String(s));
+    }
+  }
+
+  function sanitizeTicketForOutput<T extends object>(ticket: T): T {
+    const out: Record<string, any> = { ...ticket };
+    for (const key of ['subject', 'message', 'adminReply', 'department', 'priority']) {
+      if (typeof out[key] === 'string') out[key] = sanitizeForOutput(out[key]);
+    }
+    if (Array.isArray(out.messages)) {
+      out.messages = out.messages.map((m: Record<string, any>) => {
+        if (!m || typeof m !== 'object') return m;
+        const mm: Record<string, any> = { ...m };
+        for (const key of ['message', 'staffName', 'staffDisplayName', 'staffLegalName']) {
+          if (typeof mm[key] === 'string') mm[key] = sanitizeForOutput(mm[key]);
+        }
+        if (Array.isArray(mm.attachments)) {
+          mm.attachments = mm.attachments.map((a: unknown) => (typeof a === 'string' ? sanitizeForOutput(a) : a));
+        }
+        return mm;
+      });
+    }
+    return out as T;
+  }
+
   function parseDelimitedRules(raw: string | null | undefined): Record<string, number> {
     if (!raw) return {};
     const result: Record<string, number> = {};
@@ -557,7 +601,7 @@ export async function ticketRoutes(app: TicketApp, prefix = '') {
         ticket.messages.push({
           id: makeMsgId(),
           sender: 'system',
-          message: `AI Internal Note: ${dir.internalNote}`,
+          message: `AI Internal Note: ${sanitizeForDb(String(dir.internalNote))}`,
           created: ts,
         });
       }
@@ -1151,7 +1195,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
     }
 
     return {
-      tickets: filtered.map((t) => ({
+      tickets: filtered.map((t) => sanitizeTicketForOutput({
         ...t,
         status: normalizeStatus(t.status),
         lastReply: computeLastReply(t),
@@ -1240,15 +1284,18 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
     const now = new Date();
     const safeSubject = sanitizeForDb(subject);
     const safeMessage = sanitizeForDb(message);
-    const normalizedPriority = typeof priority === 'string' && priority.trim() ? priority : 'medium';
-    const msgAttachments = Array.isArray(attachments) ? attachments.filter((a: any) => typeof a === 'string') : undefined;
+    const rawPriority = typeof priority === 'string' ? priority.trim().toLowerCase() : '';
+    const normalizedPriority = ALLOWED_PRIORITIES.includes(rawPriority) ? rawPriority : 'medium';
+    const msgAttachments = Array.isArray(attachments)
+      ? attachments.filter((a: any) => typeof a === 'string').map((a: string) => sanitizeForDb(a))
+      : undefined;
     const ticket = repo.create({
       userId: user.id,
       subject: safeSubject,
       message: safeMessage,
       priority: normalizedPriority,
       status: 'opened',
-      department: typeof department === 'string' ? department : null,
+      department: typeof department === 'string' ? sanitizeForDb(department) : null,
       messages: [{
         id: makeMsgId(),
         sender: 'user',
@@ -1300,7 +1347,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
       }
     } catch (e) { }
 
-    return { success: true, ticket: { ...saved, lastReply: now, status: saved.status || 'opened' } };
+    return { success: true, ticket: sanitizeTicketForOutput({ ...saved, lastReply: now, status: saved.status || 'opened' }) };
   }, {
     beforeHandle: authenticate,
     response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }) },
@@ -1337,7 +1384,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
       if (changed) { await repo.save(ticket).catch(() => { }); }
     }
 
-    const output: Record<string, unknown> = { ...ticket, status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) };
+    const output: Record<string, unknown> = { ...sanitizeTicketForOutput(ticket), status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) };
 
     if (canTicketRead) {
       const ticketUser = await AppDataSource.getRepository(User).findOneBy({ id: ticket.userId });
@@ -1349,19 +1396,23 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
             const org = m.organisation as Record<string, unknown>;
             return {
               id: org.id,
-              name: org.name,
-              handle: org.handle,
+              name: typeof org.name === 'string' ? sanitizeForOutput(org.name) : org.name,
+              handle: typeof org.handle === 'string' ? sanitizeForOutput(org.handle) : org.handle,
               portalTier: org.portalTier,
             orgRole: m.orgRole,
             };
           });
+        const safeTitle = typeof ticketUser.title === 'string' ? sanitizeForOutput(ticketUser.title) : ticketUser.title;
+        const safeFirstName = typeof ticketUser.firstName === 'string' ? sanitizeForOutput(ticketUser.firstName) : ticketUser.firstName;
+        const safeLastName = typeof ticketUser.lastName === 'string' ? sanitizeForOutput(ticketUser.lastName) : ticketUser.lastName;
+        const safeDisplayName = typeof ticketUser.displayName === 'string' ? sanitizeForOutput(ticketUser.displayName) : ticketUser.displayName;
         output.user = {
           id: ticketUser.id,
-          title: ticketUser.title,
+          title: safeTitle,
           gender: ticketUser.gender,
-          firstName: ticketUser.firstName,
-          lastName: ticketUser.lastName,
-          displayName: ticketUser.displayName,
+          firstName: safeFirstName,
+          lastName: safeLastName,
+          displayName: safeDisplayName,
           email: ticketUser.email,
           role: ticketUser.role,
           orgs,
@@ -1370,7 +1421,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
           suspended: ticketUser.suspended,
           supportBanned: ticketUser.supportBanned,
         };
-        output.userName = ticketUser.displayName || `${ticketUser.title ? `${ticketUser.title} ` : ''}${ticketUser.firstName} ${ticketUser.lastName}`.trim() || ticketUser.email;
+        output.userName = safeDisplayName || `${safeTitle ? `${safeTitle} ` : ''}${safeFirstName} ${safeLastName}`.trim() || ticketUser.email;
       }
     }
 
@@ -1413,9 +1464,9 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
     const now = new Date();
 
     if (status) ticket.status = normalizeStatus(status);
-    if (typeof priority === 'string' && priority && (canAdminWrite || canStaffReply)) ticket.priority = priority;
+    if (typeof priority === 'string' && priority && (canAdminWrite || canStaffReply)) ticket.priority = sanitizeForDb(priority);
     if (assignedTo != null && canAdminWrite) ticket.assignedTo = Number(assignedTo);
-    if (typeof department === 'string' && canAdminWrite) ticket.department = department;
+    if (typeof department === 'string' && canAdminWrite) ticket.department = sanitizeForDb(department);
     if (typeof aiDisabled === 'boolean' && canAdminWrite) ticket.aiDisabled = aiDisabled;
     if (typeof aiTouched === 'boolean' && canAdminWrite) ticket.aiTouched = aiTouched;
     if (archived !== undefined && canAdminWrite) ticket.archived = Boolean(archived);
@@ -1446,11 +1497,13 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
         } catch (e) { }
       }
 
-      const msgAttachments = Array.isArray(attachments) ? attachments.filter((a: any) => typeof a === 'string') : undefined;
+      const msgAttachments = Array.isArray(attachments)
+        ? attachments.filter((a: any) => typeof a === 'string').map((a: string) => sanitizeForDb(a))
+        : undefined;
 
       if (sender === 'staff') {
-        const staffDisplayName = typeof user.displayName === 'string' ? user.displayName.trim() : '';
-        const staffLegalName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        const staffDisplayName = typeof user.displayName === 'string' ? sanitizeForDb(user.displayName.trim()) : '';
+        const staffLegalName = sanitizeForDb(`${user.firstName || ''} ${user.lastName || ''}`.trim());
         const staffName = staffDisplayName || staffLegalName || 'Support Team';
         ticket.messages.push({
           id: makeMsgId(),
@@ -1511,7 +1564,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
       }
     } catch (e) { }
 
-    return { ...saved, status: normalizeStatus(saved.status), lastReply: computeLastReply(saved) };
+    return sanitizeTicketForOutput({ ...saved, status: normalizeStatus(saved.status), lastReply: computeLastReply(saved) });
   }, {
     beforeHandle: authenticate,
     response: { 200: t.Any(), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
@@ -1541,7 +1594,7 @@ Valid subpaths: /dashboard/*, /wings, /billing, /organisations, /docs, /ai, /inf
 
   const withTicketResult = (ticket: Ticket) => ({
     success: true,
-    ticket: { ...ticket, status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) },
+    ticket: sanitizeTicketForOutput({ ...ticket, status: normalizeStatus(ticket.status), lastReply: computeLastReply(ticket) }),
   });
   
   const isMessageAuthor = (msg: TicketMessage, ctx: TicketContext, ticket: Ticket) =>

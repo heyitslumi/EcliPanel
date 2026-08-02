@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
+import { decodeEntities } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import {
   Plus,
@@ -227,7 +228,7 @@ export default function TicketsPage() {
                         )}
                       </div>
                       <h3 className="mt-2 font-medium text-foreground group-hover:text-primary transition-colors">
-                        {ticket.subject}
+                        {decodeEntities(ticket.subject)}
                       </h3>
                       <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                         {ticket.department && <span>{t("labels.dept", { value: ticket.department })}</span>}

@@ -12,6 +12,7 @@ import { PanelHeader } from "@/components/panel/header"
 import { FeatureGuard } from "@/components/panel/feature-guard"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
+import { decodeEntities } from "@/lib/utils"
 import { useAuth, hasPermission } from "@/hooks/useAuth"
 import {
   ArrowLeft,
@@ -54,12 +55,12 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 function getTicketUserName(ticket: any, t?: any) {
-  if (ticket?.userName) return ticket.userName
-  if (ticket?.user?.displayName) return ticket.user.displayName
+  if (ticket?.userName) return decodeEntities(ticket.userName)
+  if (ticket?.user?.displayName) return decodeEntities(ticket.user.displayName)
   if (ticket?.user?.firstName || ticket?.user?.lastName) {
-    return `${ticket.user.firstName || ""} ${ticket.user.lastName || ""}`.trim()
+    return decodeEntities(`${ticket.user.firstName || ""} ${ticket.user.lastName || ""}`.trim())
   }
-  if (ticket?.user?.email) return ticket.user.email
+  if (ticket?.user?.email) return decodeEntities(ticket.user.email)
   return t ? t("common.you") : "You"
 }
 
@@ -903,7 +904,7 @@ export default function TicketDetailPage({
           <div className="shrink-0 flex items-start gap-2 sm:gap-3 border-b border-border px-3 py-2.5 sm:px-6 sm:py-4 bg-card/30">
             <div className="flex-1 min-w-0">
               <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-foreground leading-snug line-clamp-1 sm:line-clamp-2">
-                {ticket.subject}
+                {decodeEntities(ticket.subject)}
               </h1>
               <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                 <span className="font-mono text-[9px] sm:text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -989,13 +990,13 @@ export default function TicketDetailPage({
                 <div>
                   <p className="text-[10px] text-muted-foreground">{t("owner.name")}</p>
                   <p className="text-sm font-medium text-foreground">
-                    {ticket.user.displayName || `${ticket.user.title ? `${ticket.user.title} ` : ''}${ticket.user.firstName || ''} ${ticket.user.lastName || ''}`.trim() || t("common.unknownWrapped")}
+                    {decodeEntities(ticket.user.displayName || `${ticket.user.title ? `${ticket.user.title} ` : ''}${ticket.user.firstName || ''} ${ticket.user.lastName || ''}`.trim() || t("common.unknownWrapped"))}
                   </p>
                 </div>
                 {ticket.user.title && (
                   <div>
                     <p className="text-[10px] text-muted-foreground">{t("owner.title")}</p>
-                    <p className="text-sm font-medium text-foreground">{ticket.user.title}</p>
+                    <p className="text-sm font-medium text-foreground">{decodeEntities(ticket.user.title)}</p>
                   </div>
                 )}
                 {ticket.user.gender && (

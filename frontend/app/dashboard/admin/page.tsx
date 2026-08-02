@@ -11,6 +11,7 @@ import { StatCard, SectionHeader, StatusBadge } from "@/components/panel/shared"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { decodeEntities } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -4853,7 +4854,7 @@ remote: ${panelUrl}`
                                   <span className="font-mono text-[11px] text-muted-foreground shrink-0 mt-0.5">#{ticket.id}</span>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5">
-                                      <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
+                                      <p className="text-sm font-medium text-foreground truncate">{decodeEntities(ticket.subject)}</p>
                                       {ticket.aiTouched && (
                                         <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 shrink-0">
                                           AI
@@ -4976,7 +4977,7 @@ remote: ${panelUrl}`
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className="font-mono text-[11px] text-muted-foreground">#{ticket.id}</span>
-                                    <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
+                                    <p className="text-sm font-medium text-foreground truncate">{decodeEntities(ticket.subject)}</p>
                                     {ticket.aiTouched && (
                                       <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-violet-500/10 text-violet-400 shrink-0">AI</span>
                                     )}
@@ -5088,7 +5089,7 @@ remote: ${panelUrl}`
                                       <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-muted-foreground border border-border">Archived</span>
                                     )}
                                   </div>
-                                  <p className="text-sm font-semibold text-foreground mt-0.5 line-clamp-2">{ticket.subject}</p>
+                                  <p className="text-sm font-semibold text-foreground mt-0.5 line-clamp-2">{decodeEntities(ticket.subject)}</p>
                                 </div>
                                 <Badge variant="outline" className={`shrink-0 text-[10px] ${priorityColor[ticket.priority] || priorityColor.medium}`}>
                                   {ticket.priority}
