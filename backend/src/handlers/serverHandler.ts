@@ -4382,6 +4382,18 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
   // yeah so basically wings-rs only cuz wings-go compatibility
   // would be nightmare to add
   // be happy that most shit is already supported and using wings-go is possible
+  // no more wings go support uhahahahha - noname
+  
+  async function backupOwnedByServer(serverUuid: string, bid: string): Promise<boolean> {
+    try {
+      const repo = AppDataSource.getRepository(require('../models/serverBackup.entity').ServerBackup);
+      const rec = await repo.findOneBy({ uuid: bid });
+      return !rec || !rec.serverUuid || rec.serverUuid === serverUuid;
+    } catch {
+      return true;
+    }
+  }
+
   app.get(
     prefix + '/servers/v1/:id/backups',
     async (ctx: AuthenticatedHandlerContext) => {
@@ -4560,6 +4572,10 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
           return { error: ctx.t('server.invalidDownloadUrl') || 'download_url must be a public http(s) URL' };
         }
       }
+      if (!(await backupOwnedByServer(id, bid))) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
       try {
         const svc = await serviceFor(id);
         const res = await svc.restoreServerBackup(id, bid, {
@@ -4607,6 +4623,10 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
             require('../models/serverBackup.entity').ServerBackup
           );
           const rec = await repo.findOneBy({ uuid: bid });
+          if (rec && rec.serverUuid && rec.serverUuid !== id) {
+            ctx.set.status = 403;
+            return { error: ctx.t('common.forbidden') };
+          }
           if (rec && rec.locked) {
             const force =
               (ctx.query && (ctx.query.force === '1' || ctx.query.force === 'true')) ||
@@ -4687,6 +4707,10 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
           ctx.set.status = 404;
           return { error: ctx.t('server.backupNotFound') };
         }
+        if (!(await backupOwnedByServer(id, bid))) {
+          ctx.set.status = 403;
+          return { error: ctx.t('common.forbidden') };
+        }
         rec.locked = !!lock;
         await repo.save(rec);
         return { success: true, locked: rec.locked };
@@ -4725,6 +4749,10 @@ export async function serverRoutes(app: ServerApp, prefix = '') {
         if (!rec) {
           ctx.set.status = 404;
           return { error: ctx.t('server.backupNotFound') };
+        }
+        if (!(await backupOwnedByServer(id, bid))) {
+          ctx.set.status = 403;
+          return { error: ctx.t('common.forbidden') };
         }
         rec.displayName = name.trim();
         await repo.save(rec);
