@@ -1748,12 +1748,16 @@ export default function AdminPanel() {
   const [oauthCreateScopes, setOauthCreateScopes] = useState<string[]>(["profile", "email"])
   const [oauthCreateGrants, setOauthCreateGrants] = useState<string[]>(["authorization_code", "refresh_token"])
   const [oauthCreateLoading, setOauthCreateLoading] = useState(false)
+  const [oauthCreateLogo, setOauthCreateLogo] = useState<File | null>(null)
+  const [oauthCreateLogoPreview, setOauthCreateLogoPreview] = useState("")
   const [oauthNewSecret, setOauthNewSecret] = useState<{ name: string; clientId: string; clientSecret: string } | null>(null)
   const [oauthEditApp, setOauthEditApp] = useState<any | null>(null)
   const [oauthEditRedirects, setOauthEditRedirects] = useState<string[]>([""])
   const [oauthEditScopes, setOauthEditScopes] = useState<string[]>([])
   const [oauthEditGrants, setOauthEditGrants] = useState<string[]>([])
   const [oauthEditLoading, setOauthEditLoading] = useState(false)
+  const [oauthEditLogo, setOauthEditLogo] = useState<File | null>(null)
+  const [oauthEditLogoPreview, setOauthEditLogoPreview] = useState("")
   const [oauthRotateApp, setOauthRotateApp] = useState<any | null>(null)
   const [oauthRotateLoading, setOauthRotateLoading] = useState(false)
 
@@ -4122,11 +4126,19 @@ remote: ${panelUrl}`
           grantTypes: oauthCreateGrants,
         }),
       })
-      setOauthApps((prev) => [...prev, result])
+      let app = result
+      if (oauthCreateLogo) {
+        const fd = new FormData()
+        fd.append("file", oauthCreateLogo)
+        const up = await apiFetch(`/api/oauth/apps/${result.id}/logo`, { method: "POST", body: fd })
+        app = { ...result, logoUrl: up?.url || result.logoUrl }
+      }
+      setOauthApps((prev) => [...prev, app])
       setOauthCreateOpen(false)
       setOauthNewSecret({ name: result.name, clientId: result.clientId, clientSecret: result.clientSecret })
       setOauthCreateName(""); setOauthCreateDesc(""); setOauthCreateRedirects([""])
       setOauthCreateScopes(["profile", "email"]); setOauthCreateGrants(["authorization_code", "refresh_token"])
+      setOauthCreateLogo(null); setOauthCreateLogoPreview("")
     } catch (e: any) {
       alert(e.message || "Failed to create OAuth app")
     } finally {
@@ -4139,6 +4151,8 @@ remote: ${panelUrl}`
     setOauthEditRedirects(app.redirectUris?.length ? [...app.redirectUris] : [""])
     setOauthEditScopes(app.allowedScopes || [])
     setOauthEditGrants(app.grantTypes || [])
+    setOauthEditLogo(null)
+    setOauthEditLogoPreview("")
   }
 
   async function submitEditOAuthApp() {
@@ -4146,16 +4160,26 @@ remote: ${panelUrl}`
     setOauthEditLoading(true)
     try {
       const cleanRedirects = oauthEditRedirects.map((r) => r.trim()).filter(Boolean)
+      let logoUrl = oauthEditApp.logoUrl
+      if (oauthEditLogo) {
+        const fd = new FormData()
+        fd.append("file", oauthEditLogo)
+        const up = await apiFetch(`/api/oauth/apps/${oauthEditApp.id}/logo`, { method: "POST", body: fd })
+        logoUrl = up?.url || oauthEditApp.logoUrl
+      }
       const updated = await apiFetch(`/api/oauth/apps/${oauthEditApp.id}`, {
         method: "PUT",
         body: JSON.stringify({
           redirectUris: cleanRedirects,
           allowedScopes: oauthEditScopes,
           grantTypes: oauthEditGrants,
+          logoUrl,
         }),
       })
-      setOauthApps((prev) => prev.map((a) => a.id === oauthEditApp.id ? { ...a, ...updated } : a))
+      const updatedApp = updated?.app || updated
+      setOauthApps((prev) => prev.map((a) => a.id === oauthEditApp.id ? { ...a, ...updatedApp, logoUrl } : a))
       setOauthEditApp(null)
+      setOauthEditLogo(null); setOauthEditLogoPreview("")
     } catch (e: any) {
       alert(e.message || "Failed to update app")
     } finally {
@@ -6258,6 +6282,10 @@ remote: ${panelUrl}`
                     oauthCreateScopes,
                     oauthCreateGrants,
                     oauthCreateLoading,
+                    oauthCreateLogo,
+                    setOauthCreateLogo,
+                    oauthCreateLogoPreview,
+                    setOauthCreateLogoPreview,
                     submitCreateOAuthApp,
                     oauthApps,
                     setOauthApps,
@@ -6273,6 +6301,10 @@ remote: ${panelUrl}`
                     oauthEditGrants,
                     setOauthEditGrants,
                     oauthEditLoading,
+                    oauthEditLogo,
+                    setOauthEditLogo,
+                    oauthEditLogoPreview,
+                    setOauthEditLogoPreview,
                     submitEditOAuthApp,
                     oauthRotateApp,
                     setOauthRotateApp,

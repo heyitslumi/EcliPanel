@@ -13,6 +13,7 @@ const staticRoutes: Record<string, Loader> = {
   "/forgot-password": () => import("@/app/forgot-password/page"),
   "/restore-email": () => import("@/app/restore-email/page"),
   "/verify-email": () => import("@/app/verify-email/page"),
+  "/oauth/authorize": () => import("@/app/oauth/authorize/page"),
   "/license": () => import("@/app/license/page"),
   "/geoblock": () => import("@/app/geoblock/page"),
   "/security": () => import("@/app/security/page"),

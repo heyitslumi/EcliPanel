@@ -19,10 +19,14 @@
  *   DELETE /oauth/apps/:id         – delete your app
  *   GET  /.well-known/oauth-authorization-server  – RFC 8414 discovery document
  *
- * FUN FACT I HAVE NEVER EVER TESTED IT PROPERLY..
+ * FUN FACT I HAVE NEVER EVER TESTED IT PROPERLY.. I did it. It works.
  * BURN IN HELLLLLLLLL OAUTH 2.0
  */
+import fs from 'fs';
+import path from 'node:path';
+import sharp from 'sharp';
 import { randomHex, sha256Base64Url, timingSafeEqual } from '../utils/bunCrypto';
+import { resizeImage } from '../workers/imageWorker';
 import { t } from 'elysia';
 import { AppDataSource } from '../config/typeorm';
 import { OAuthApp, OAUTH_SCOPES } from '../models/oauthApp.entity';
@@ -348,6 +352,110 @@ export async function oauthRoutes(app: any, prefix = '') {
     }
   );
 
+  app.post(
+    prefix + '/oauth/apps/:id/logo',
+    async ctx => {
+      const f = await requireFeature(ctx, 'oauth');
+      if (f !== true) return f;
+      const user = (ctx as any).user as User;
+      const id = Number(ctx.params['id']);
+      const oauthApp = await appRepo.findOne({ where: { id }, relations: { owner: true } });
+      if (!oauthApp) {
+        ctx.set.status = 404;
+        return { error: ctx.t('common.appNotFound') };
+      }
+      if (
+        oauthApp.owner?.id !== user.id &&
+        !hasPermissionSync(ctx, 'oauth:manage') &&
+        !hasPermissionSync(ctx, 'admin:oauth')
+      ) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+
+      const { file } = (ctx.body || {}) as any;
+      const uploadFile = Array.isArray(file) ? file[0] : file;
+      if (!uploadFile) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.noFile') };
+      }
+
+      const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+      const mime = (uploadFile.type || uploadFile.mimetype || '').toString();
+      if (!allowed.includes(mime)) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.invalidImageType') };
+      }
+
+      const ab = await uploadFile.arrayBuffer();
+      const buffer = Buffer.from(ab);
+
+      let isAnimated = false;
+      if (mime === 'image/gif' || mime === 'image/webp') {
+        try {
+          const meta = await sharp(buffer, { animated: true }).metadata();
+          isAnimated = Number(meta.pages || 1) > 1;
+        } catch {
+          isAnimated = false;
+        }
+      }
+
+      const preserveOriginalAnimation =
+        (mime === 'image/gif' || mime === 'image/webp') && isAnimated;
+      const out = preserveOriginalAnimation
+        ? buffer
+        : await resizeImage(buffer, 256, 256).catch(async err => {
+            try {
+              return await sharp(buffer).rotate().resize(256, 256, { fit: 'cover' }).toBuffer();
+            } catch (e) {
+              throw err || e;
+            }
+          });
+      const originalName =
+        uploadFile.name || uploadFile.filename || `logo_oauth_${oauthApp.clientId}`;
+      const ext =
+        path.extname(originalName) ||
+        (mime === 'image/png'
+          ? '.png'
+          : mime === 'image/webp'
+            ? '.webp'
+            : mime === 'image/gif'
+              ? '.gif'
+              : '.jpg');
+      const filename = `oauth_logo_${oauthApp.clientId}` + ext;
+
+      const uploadDir = path.join(process.cwd(), 'uploads', 'oauth-logos');
+      await fs.promises.mkdir(uploadDir, { recursive: true });
+      const filepath = path.join(uploadDir, filename);
+      await Bun.write(filepath, out);
+
+      const backendBase =
+        (process.env.BACKEND_URL || '').replace(/\/+$/, '') ||
+        (() => {
+          const proto = (ctx.request.headers.get('x-forwarded-proto') || 'https') as string;
+          const host = (ctx.request.headers.get('host') || 'localhost') as string;
+          return `${proto}://${host}`;
+        })();
+
+      oauthApp.logoUrl = `${backendBase}/uploads/oauth-logos/${filename}`;
+      await appRepo.save(oauthApp);
+
+      return { success: true, url: oauthApp.logoUrl };
+    },
+    {
+      beforeHandle: authenticate,
+      body: t.Object({ file: t.File() }),
+      response: {
+        200: t.Object({ success: t.Boolean(), url: t.String() }),
+        400: t.Object({ error: t.String() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Upload an OAuth app logo', tags: ['OAuth'] },
+    }
+  );
+
   app.get(
     prefix + '/oauth/authorize',
     async ctx => {
@@ -393,6 +501,18 @@ export async function oauthRoutes(app: any, prefix = '') {
       if (!oauthApp.grantTypes.includes('authorization_code')) {
         ctx.set.status = 400;
         return { error: ctx.t('oauth.unauthorized_client') };
+      }
+
+      const accept = String(ctx.headers?.accept || ctx.headers?.Accept || '').toLowerCase();
+      if (accept.includes('text/html')) {
+        const panelUrl = String(
+          process.env.PANEL_URL || process.env.FRONTEND_URL || 'https://ecli.app'
+        ).replace(/\/+$/, '');
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(ctx.query || {})) {
+          if (v !== undefined && v !== null) params.set(k, String(v));
+        }
+        return ctx.redirect(`${panelUrl}/oauth/authorize?${params.toString()}`);
       }
 
       const requestedScopes = scope ? scope.split(' ') : ['profile'];
@@ -872,14 +992,6 @@ export async function oauthRoutes(app: any, prefix = '') {
       }
 
       return out;
-    },
-    {
-      detail: { summary: 'OpenID Connect userinfo endpoint', tags: ['OAuth'] },
-      response: {
-        200: t.Any(),
-        401: t.Object({ error: t.String() }),
-        403: t.Object({ error: t.String() }),
-      },
     },
     {
       beforeHandle: authenticate,

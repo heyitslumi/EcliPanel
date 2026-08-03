@@ -1595,7 +1595,7 @@ export async function initApp() {
     async (rawCtx: unknown) => {
       const ctx = rawCtx as unknown as AppRequestContext;
       const relPath = String(ctx.params?.['*'] || '');
-      const isPublicFile = /^(?:avatar_(?:user|org)_\d+|blog_\d+_\d+)\.[a-z0-9]+$/i.test(relPath);
+      const isPublicFile = /^(?:avatar_(?:user|org)_\d+|blog_\d+_\d+|oauth_logo_[a-z0-9-]+)\.[a-z0-9]+$/i.test(relPath);
       if (!isPublicFile) {
         const requester = ctx.user;
         const apiKey = ctx.apiKey;

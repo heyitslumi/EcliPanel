@@ -58,6 +58,7 @@ export const ALL: APIRoute = async ({ request, params }) => {
       method: request.method,
       headers,
       body,
+      redirect: "manual",
     });
 
     const resHeaders = new Headers();

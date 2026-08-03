@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { apiFetch } from "@/lib/api-client"
-import { BookOpen, Edit, FileCode, Globe, Key, Lock, Package, Plus, RefreshCw, Shield, Trash2, XCircle, Zap } from "lucide-react"
+import { BookOpen, Edit, FileCode, Globe, Image as ImageIcon, Key, Lock, Package, Plus, RefreshCw, Shield, Trash2, Upload, XCircle, Zap } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 export default function OauthTab({ ctx }: { ctx: any }) {
@@ -33,6 +33,10 @@ export default function OauthTab({ ctx }: { ctx: any }) {
     oauthCreateScopes,
     oauthCreateGrants,
     oauthCreateLoading,
+    oauthCreateLogo,
+    setOauthCreateLogo,
+    oauthCreateLogoPreview,
+    setOauthCreateLogoPreview,
     submitCreateOAuthApp,
     oauthNewSecret,
     setOauthNewSecret,
@@ -45,6 +49,10 @@ export default function OauthTab({ ctx }: { ctx: any }) {
     oauthEditGrants,
     setOauthEditGrants,
     oauthEditLoading,
+    oauthEditLogo,
+    setOauthEditLogo,
+    oauthEditLogoPreview,
+    setOauthEditLogoPreview,
     submitEditOAuthApp,
     oauthRotateApp,
     oauthRotateLoading,
@@ -459,6 +467,43 @@ Content-Type: application/json
             />
           </div>
           <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("createDialog.logo")}</label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary/50">
+                {oauthCreateLogoPreview ? (
+                  <img src={oauthCreateLogoPreview} alt="Logo preview" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <label className="flex cursor-pointer items-center gap-1.5 border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                <Upload className="h-3.5 w-3.5" />
+                {oauthCreateLogo ? oauthCreateLogo.name : t("createDialog.uploadLogo")}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setOauthCreateLogo(file)
+                    setOauthCreateLogoPreview(file ? URL.createObjectURL(file) : "")
+                  }}
+                />
+              </label>
+              {oauthCreateLogo && (
+                <button
+                  type="button"
+                  onClick={() => { setOauthCreateLogo(null); setOauthCreateLogoPreview("") }}
+                  className="border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label={t("actions.removeLogo")}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground/70">{t("createDialog.logoHint")}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-foreground">{t("createDialog.redirectUris")}</label>
             <div className="flex flex-col gap-2">
               {oauthCreateRedirects.map((uri: string, idx: number) => (
@@ -567,6 +612,43 @@ Content-Type: application/json
           <DialogTitle className="text-foreground">{t("editDialog.title", { name: oauthEditApp?.name || "" })}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("editDialog.logo")}</label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary/50">
+                {(oauthEditLogoPreview || oauthEditApp?.logoUrl) ? (
+                  <img src={oauthEditLogoPreview || oauthEditApp?.logoUrl} alt="Logo preview" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <label className="flex cursor-pointer items-center gap-1.5 border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                <Upload className="h-3.5 w-3.5" />
+                {oauthEditLogo ? oauthEditLogo.name : t("editDialog.uploadLogo")}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setOauthEditLogo(file)
+                    setOauthEditLogoPreview(file ? URL.createObjectURL(file) : "")
+                  }}
+                />
+              </label>
+              {oauthEditLogo && (
+                <button
+                  type="button"
+                  onClick={() => { setOauthEditLogo(null); setOauthEditLogoPreview("") }}
+                  className="border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label={t("actions.removeLogo")}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground/70">{t("editDialog.logoHint")}</p>
+          </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-foreground">{t("editDialog.redirectUris")}</label>
             <div className="flex flex-col gap-2">

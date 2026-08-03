@@ -1119,6 +1119,31 @@
       "missingToken": "Missing verification token."
     }
   },
+  "oauthConsentPage": {
+    "title": "Authorize access",
+    "subtitle": "This application is requesting access to your EcliPanel account.",
+    "application": "Application",
+    "securityNote": "This authorization is valid for a short time and can be revoked at any time from your account settings.",
+    "loading": "Loading…",
+    "byOwner": "by",
+    "signedInAs": "Signed in as",
+    "permissions": "This app will be able to:",
+    "actions": {
+      "authorize": "Authorize",
+      "cancel": "Cancel"
+    },
+    "loginRequired": {
+      "title": "Sign in required",
+      "description": "You need to be signed in to your EcliPanel account to authorize this application.",
+      "signIn": "Sign in to continue"
+    },
+    "errors": {
+      "title": "Something went wrong",
+      "missingParams": "Missing OAuth parameters.",
+      "loadFailed": "Failed to load the application details.",
+      "submitFailed": "Failed to submit your decision."
+    }
+  },
   "organisationAcceptPage": {
     "title": "Accept Organisation Invite",
     "actions": {
@@ -2623,7 +2648,10 @@
       "descriptionPlaceholder": "Optional description",
       "redirectUris": "Redirect URIs",
       "allowedScopes": "Allowed Scopes",
-      "grantTypes": "Grant Types"
+      "grantTypes": "Grant Types",
+      "logo": "Logo (optional)",
+      "uploadLogo": "Upload logo",
+      "logoHint": "PNG, JPEG, WebP or GIF. Shown on the consent screen, resized to 256×256."
     },
     "newSecretDialog": {
       "title": "App Created — Save Your Secret",
@@ -2636,7 +2664,10 @@
       "title": "Edit OAuth App — {name}",
       "redirectUris": "Redirect URIs",
       "allowedScopes": "Allowed Scopes",
-      "grantTypes": "Grant Types"
+      "grantTypes": "Grant Types",
+      "logo": "Logo",
+      "uploadLogo": "Upload new logo",
+      "logoHint": "Replace the logo shown on the consent screen."
     },
     "rotateDialog": {
       "title": "Rotate Client Secret?"
@@ -2648,6 +2679,7 @@
       "edit": "Edit",
       "rotateSecret": "Rotate Secret",
       "addUri": "Add URI",
+      "removeLogo": "Remove selected logo",
       "cancel": "Cancel",
       "creating": "Creating…",
       "createApp": "Create App",
