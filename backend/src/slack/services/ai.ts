@@ -1,4 +1,4 @@
-import { safeUrl } from "../../utils/url";
+import { isPrivateIp } from '../../utils/ssrf';
 
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -13,7 +13,6 @@ interface UserAiConfig {
   apiKey?: string;
   modelId?: string;
 }
-
 export interface StreamChunk {
   type: "text" | "done" | "tool_start" | "tool_end" | "thinking";
   text?: string;
@@ -37,10 +36,27 @@ function createAbortSignal(timeoutMs: number): { signal: AbortSignal; clear: () 
 const AI_REQUEST_TIMEOUT_MS = 120_000;
 const AI_CHUNK_TIMEOUT_MS = 60_000;
 
+function isSafeAiEndpoint(endpoint: string): boolean {
+  try {
+    const u = new URL(endpoint);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase().replace(/\.$/, '');
+    if (!host || host === 'localhost' || host === 'localhost.localdomain' || host === '0.0.0.0' || host === '::1') return false;
+    if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan')) return false;
+    if (isPrivateIp(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function makeRequest(body: Record<string, any>, stream: boolean, aiConfig?: UserAiConfig | null) {
   const payload = { ...body, stream };
   const { signal } = createAbortSignal(AI_REQUEST_TIMEOUT_MS);
   if (aiConfig?.endpoint && aiConfig?.apiKey) {
+    if (!isSafeAiEndpoint(aiConfig.endpoint)) {
+      throw new Error('Unsafe AI endpoint configured');
+    }
     const endpoint = new URL(aiConfig.endpoint).origin;
     return fetch(`${endpoint}/v1/chat/completions`, {
       method: "POST",
@@ -49,7 +65,8 @@ async function makeRequest(body: Record<string, any>, stream: boolean, aiConfig?
       signal,
     });
   }
-  return fetch(safeUrl(process.env.ECLI_API_URL || "http://localhost:3432/api", "/ai/byoai/chat/completions"), {
+  const apiBase = ("https://ecli.app/api").replace(/\/+$/, "");
+  return fetch(`${apiBase}/ai/byoai/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Api-Key": process.env.ECLI_ADMIN_KEY || "" },
     body: JSON.stringify(payload),

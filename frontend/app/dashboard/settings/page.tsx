@@ -1631,7 +1631,7 @@ export default function SettingsPage() {
     { value: "editor", icon: Settings, label: t("tabs.editor"), guideId: "settings-editor" },
     { value: "ai", icon: Sparkles, label: t("tabs.ai") || "AI", guideId: "settings-ai" },
     { value: "calendar", icon: Calendar, label: t("tabs.calendar"), guideId: "settings-calendar" },
-    { value: "slack", icon: MessageSquare, label: "Slack Bot", guideId: "settings-slack" },
+    { value: "slack", icon: MessageSquare, label: t("tabs.slack"), guideId: "settings-slack" },
   ]
 
   return (

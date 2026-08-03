@@ -1,5 +1,5 @@
 import { App } from "@slack/bolt";
-import { runAgent, continueAgent, clearPendingContinuation } from "./agent/orchestrator";
+import { runAgent, runAgentForUser, continueAgent, continueAgentForUser, clearPendingContinuation, type AgentProgress, type AgentResult } from "./agent/orchestrator";
 import { clearConversation } from "./services/conversation";
 import { resolveUser } from "./services/user-context";
 
@@ -131,23 +131,48 @@ function buildFinalReply(
   return statusLine + toolsLine + reply;
 }
 
-export function initSlackBot(): void {
-  if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_APP_TOKEN) {
-    console.log("[slack-bot] Slack tokens not configured — bot disabled");
-    return;
-  }
+export interface BotHandlerOptions {
+  ownerUserId?: number;
+}
 
-  if (process.env.SLACK_BOT_ENABLED === "false") {
-    console.log("[slack-bot] SLACK_BOT_ENABLED=false — bot disabled");
-    return;
-  }
+export function registerBotHandlers(app: App, opts: BotHandlerOptions = {}): void {
+  const { ownerUserId } = opts;
+  const requireOwner = async (slackUserId: string): Promise<boolean> => {
+    const requester = await resolveUser(slackUserId);
+    return !!requester && requester.userId === ownerUserId;
+  };
 
-  app = new App({
-    token: process.env.SLACK_BOT_TOKEN,
-    appToken: process.env.SLACK_APP_TOKEN,
-    socketMode: process.env.SLACK_SOCKET_MODE !== "false",
-    signingSecret: process.env.SLACK_SIGNING_SECRET,
+  const ownerDenied = (): AgentResult => ({
+    reply: "This bot is connected to another EcliPanel account and can only act for its owner. Create your own bot in *Settings → Slack Bot* to get a personal assistant.",
+    toolsUsed: [],
+    status: "ok",
   });
+
+  const runFor = async (
+    slackUserId: string,
+    convKey: string,
+    text: string,
+    context: string | undefined,
+    onProgress?: (p: AgentProgress) => void
+  ): Promise<AgentResult> => {
+    if (ownerUserId) {
+      if (!(await requireOwner(slackUserId))) return ownerDenied();
+      return runAgentForUser(ownerUserId, convKey, text, context, onProgress);
+    }
+    return runAgent(slackUserId, convKey, text, context, onProgress);
+  };
+
+  const continueFor = async (
+    slackUserId: string,
+    convKey: string,
+    onProgress?: (p: AgentProgress) => void
+  ): Promise<AgentResult> => {
+    if (ownerUserId) {
+      if (!(await requireOwner(slackUserId))) return ownerDenied();
+      return continueAgentForUser(ownerUserId, convKey, onProgress);
+    }
+    return continueAgent(slackUserId, convKey, onProgress);
+  };
 
   app.command("/ecli", async ({ command, ack, respond, client }) => {
     await ack();
@@ -166,7 +191,7 @@ export function initSlackBot(): void {
       let toolCalls: string[] = [];
       let toolStatuses = new Map<string, string>();
       let streamText = "";
-      const result = await runAgent(command.user_id, convKey, text, undefined, async (p) => {
+      const result = await runFor(command.user_id, convKey, text, undefined, async (p) => {
         if (p.type === "tool" && p.toolName) {
           toolCalls.push(p.toolName);
           toolStatuses.set(p.toolName, "running");
@@ -244,9 +269,13 @@ export function initSlackBot(): void {
     }
 
     if (!text) {
-      const linked = await resolveUser(event.user);
-      if (!linked) {
-        await client.chat.postMessage({ channel: event.channel, thread_ts: replyThread, text: "Hello! :wave: I'm *EcliBot*, the AI assistant for EcliPanel.\n\nTo use me:\n1. Register at *ecli.app*\n2. Go to *Settings → AI* and enable *Bring Your Own AI*\n3. Go to *Settings → Slack Bot* and enter your Slack User ID\n\nYour Slack User ID → profile picture → Profile → ••• → Copy member ID.", mrkdwn: true });
+      if (!ownerUserId) {
+        const linked = await resolveUser(event.user);
+        if (!linked) {
+          await client.chat.postMessage({ channel: event.channel, thread_ts: replyThread, text: "Hello! :wave: I'm *EcliBot*, the AI assistant for EcliPanel.\n\nTo use me:\n1. Register at *ecli.app*\n2. Go to *Settings → AI* and enable *Bring Your Own AI*\n3. Go to *Settings → Slack Bot* and enter your Slack User ID\n\nYour Slack User ID → profile picture → Profile → ••• → Copy member ID.", mrkdwn: true });
+        } else {
+          await client.chat.postMessage({ channel: event.channel, thread_ts: replyThread, text: "Hi! Ask me anything about your EcliPanel servers, GitHub repos, or infrastructure. :wave:", mrkdwn: true });
+        }
       } else {
         await client.chat.postMessage({ channel: event.channel, thread_ts: replyThread, text: "Hi! Ask me anything about your EcliPanel servers, GitHub repos, or infrastructure. :wave:", mrkdwn: true });
       }
@@ -279,7 +308,7 @@ export function initSlackBot(): void {
       let toolCalls: string[] = [];
       let toolStatuses = new Map<string, string>();
       let streamText = "";
-      const result = await runAgent(userId, convKey, text, context || undefined, async (p) => {
+      const result = await runFor(userId, convKey, text, context || undefined, async (p) => {
         if (p.type === "tool" && p.toolName) {
           toolCalls.push(p.toolName);
           toolStatuses.set(p.toolName, "running");
@@ -366,7 +395,7 @@ export function initSlackBot(): void {
       let streamText = "";
       let toolCalls: string[] = [];
       let toolStatuses = new Map<string, string>();
-      const result = await runAgent(userId, convKey, text, context || undefined, async (p) => {
+      const result = await runFor(userId, convKey, text, context || undefined, async (p) => {
         if (p.type === "tool" && p.toolName) {
           toolCalls.push(p.toolName);
           toolStatuses.set(p.toolName, "running");
@@ -407,16 +436,6 @@ export function initSlackBot(): void {
         blocks: buildRetryBlocks(err.message, retryValue),
       });
     }
-  });
-
-  app.start().then(async () => {
-    try {
-      const auth = await app!.client.auth.test();
-      botUserId = (auth as any).user_id || null;
-    } catch {}
-    console.log("[slack-bot] EcliPanel Slack Bot running (Socket Mode)");
-  }).catch((err: any) => {
-    console.error("[slack-bot] Failed to start:", err);
   });
 
   app.event("reaction_added", async ({ event, client }) => {
@@ -480,7 +499,7 @@ export function initSlackBot(): void {
       let toolCalls: string[] = [];
       let toolStatuses = new Map<string, string>();
       let streamText = "";
-      const result = await continueAgent(slackUserId, convKey, async (p) => {
+      const result = await continueFor(slackUserId, convKey, async (p) => {
         if (p.type === "tool" && p.toolName) {
           toolCalls.push(p.toolName);
           toolStatuses.set(p.toolName, "running");
@@ -573,7 +592,7 @@ export function initSlackBot(): void {
       let toolCalls: string[] = [];
       let toolStatuses = new Map<string, string>();
       let streamText = "";
-      const result = await runAgent(slackUserId, convKey, text, undefined, async (p) => {
+      const result = await runFor(slackUserId, convKey, text, undefined, async (p) => {
         if (p.type === "tool" && p.toolName) {
           toolCalls.push(p.toolName);
           toolStatuses.set(p.toolName, "running");
@@ -635,6 +654,37 @@ export function initSlackBot(): void {
     if (!channel || !messageTs) return;
 
     await client.chat.update({ channel, ts: messageTs, text: "_Dismissed._", blocks: [] });
+  });
+}
+
+export function initSlackBot(): void {
+  if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_APP_TOKEN) {
+    console.log("[slack] Slack tokens not configuredwbaot was disabled");
+    return;
+  }
+
+  if (process.env.SLACK_BOT_ENABLED === "false") {
+    console.log("[slack] SLACK_BOT_ENABLED=false bot was disabled");
+    return;
+  }
+
+  app = new App({
+    token: process.env.SLACK_BOT_TOKEN,
+    appToken: process.env.SLACK_APP_TOKEN,
+    socketMode: process.env.SLACK_SOCKET_MODE !== "false",
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+  });
+
+  registerBotHandlers(app, {});
+
+  app.start().then(async () => {
+    try {
+      const auth = await app!.client.auth.test();
+      botUserId = (auth as any).user_id || null;
+    } catch {}
+    console.log("[slack] EcliPanel Slack Bot running (socket)");
+  }).catch((err: any) => {
+    console.error("[slack] Failed to start:", err);
   });
 }
 

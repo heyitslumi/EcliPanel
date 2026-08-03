@@ -371,6 +371,16 @@ function isAllowedCorsOrigin(origin: string | null | undefined): boolean {
 const corsOriginCallback = (request: Request) => {
   const origin = request?.headers?.get?.('origin') ?? undefined;
   if (!origin) return true;
+  try {
+    const path = request?.url ? new URL(request.url).pathname : '';
+    if (
+      path.startsWith('/api/proxy/external') ||
+      path.startsWith('/api/proxy/web/') ||
+      path.startsWith('/api/proxy/ws') ||
+      path.startsWith('/api/proxy/chunkbase/') ||
+      path.startsWith('/api/proxy/image')
+    ) return true;
+  } catch {}
   return isAllowedCorsOrigin(origin);
 };
 
@@ -909,6 +919,14 @@ export async function initApp() {
     initSlackBot();
   } catch (e) {
     console.error('Failed to initialize Slack bot:', e);
+  }
+  try {
+    const { initUserSlackBots } = require('./slack/manager');
+    initUserSlackBots().catch((e: unknown) => {
+      console.error('Failed to initialize user owned slack bots:', e);
+    });
+  } catch (e) {
+    console.error('Failed to initialize user owned slack bots:', e);
   }
   try {
     scheduleCalendarNotificationJob();

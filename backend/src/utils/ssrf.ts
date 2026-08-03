@@ -60,3 +60,48 @@ export async function safeFetch(
   }
   return null;
 }
+
+export async function assertSafeWsUrl(rawUrl: string): Promise<string | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return null;
+  const httpUrl = parsed.href.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:');
+  const safe = await assertSafeUrl(httpUrl);
+  return safe ? rawUrl : null;
+}
+
+export interface SafeWsTarget {
+  url: string;
+  pinnedAddress: string;
+}
+
+export async function resolveSafeWsUrl(rawUrl: string): Promise<SafeWsTarget | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return null;
+
+  const httpUrl = parsed.href.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:');
+  const safe = await assertSafeUrl(httpUrl);
+  if (!safe) return null;
+
+  const host = parsed.hostname.replace(/\.$/, '').toLowerCase();
+  try {
+    const resolved = await dnsLookup(host, { all: true });
+    for (const addr of resolved) {
+      if (!isPrivateIp(addr.address)) {
+        return { url: rawUrl, pinnedAddress: addr.address };
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}

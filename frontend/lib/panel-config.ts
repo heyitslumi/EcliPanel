@@ -428,6 +428,8 @@ export const API_ENDPOINTS = {
   slackConfig: "/api/slack/config",
   slackGithubStart: "/api/slack/github/start",
   slackGithubUnlink: "/api/slack/github",
+  slackBots: "/api/slack/bots",
+  slackBot: "/api/slack/bots/:id",
   adminUserProfile: "/api/admin/users/:id/profile",
   adminUserAiLink: "/api/admin/users/:id/ai/:linkId",
   adminOutboundEmails: "/api/admin/outbound-emails",

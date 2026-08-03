@@ -1,7 +1,7 @@
 import { streamCompletion } from "../services/ai";
 import { githubService } from "../services/github";
 import { getEcliTools, executeEcliTool } from "../services/ecli-tools";
-import { resolveUser, type UserContext } from "../services/user-context";
+import { resolveUser, resolveUserById, type UserContext } from "../services/user-context";
 import { getConversation, addMessage, clearConversation, type Message } from "../services/conversation";
 
 const SYSTEM_PROMPT = `You are EcliBot, a personal AI assistant for EcliPanel — a server management platform.
@@ -214,19 +214,22 @@ async function runAgentLoop(
   return { reply: limitMsg, toolsUsed, status: "thinking_limit" };
 }
 
-export async function runAgent(
-  slackUserId: string,
+async function runAgentWithCtx(
+  userCtx: UserContext,
   conversationKey: string,
   userMessage: string,
   context?: string,
   onProgress?: (progress: AgentProgress) => void
 ): Promise<AgentResult> {
   const toolsUsed: string[] = [];
-  const userCtx = await resolveUser(slackUserId);
 
-  if (!userCtx) {
-    onProgress?.({ type: "text", text: "Checking account..." });
-    return { reply: "Hello! :wave: I'm *EcliBot*, the AI assistant for EcliPanel.\n\nI see you're new here — you haven't linked your EcliPanel account yet. To use me:\n\n1. Register at *ecli.app* if you don't have an account\n2. Go to *Settings → AI* and turn on *Bring Your Own AI*\n3. Go to *Settings → Slack Bot* and enter your *Slack User ID*\n\nYour Slack User ID can be found by clicking your profile picture → Profile → ••• → Copy member ID.\n\nOnce linked, you can ask me about your servers, GitHub repos, and more!", toolsUsed: [], status: "ok" };
+  if (!userCtx.aiConfig) {
+    onProgress?.({ type: "text", text: "Checking AI..." });
+    return {
+      reply: "I couldn't find an AI model for your account. To use me:\n\n1. Go to *Settings → AI* and turn on *Bring Your Own AI* (add your own OpenAI-compatible endpoint + API key), or\n2. Ask your administrator to assign you a model.\n\nOnce configured, try again!",
+      toolsUsed: [],
+      status: "ok",
+    };
   }
 
   let fullMessage = userMessage;
@@ -245,22 +248,43 @@ export async function runAgent(
   return runAgentLoop(conversationKey, userCtx, messages, toolsUsed, onProgress);
 }
 
-export async function continueAgent(
+export async function runAgent(
   slackUserId: string,
   conversationKey: string,
+  userMessage: string,
+  context?: string,
   onProgress?: (progress: AgentProgress) => void
 ): Promise<AgentResult> {
-  const pending = pendingContinuations.get(conversationKey);
-  if (!pending) {
-    return { reply: "No pending conversation to continue. Start a new request.", toolsUsed: [], status: "ok" };
-  }
-  pendingContinuations.delete(conversationKey);
-
   const userCtx = await resolveUser(slackUserId);
+
   if (!userCtx) {
-    return { reply: "Your account could not be found. Please re-link your Slack account.", toolsUsed: [], status: "ok" };
+    onProgress?.({ type: "text", text: "Checking account..." });
+    return { reply: "Hello! :wave: I'm *EcliBot*, the AI assistant for EcliPanel.\n\nI see you're new here — you haven't linked your EcliPanel account yet. To use me:\n\n1. Register at *ecli.app* if you don't have an account\n2. Go to *Settings → AI* and turn on *Bring Your Own AI*\n3. Go to *Settings → Slack Bot* and enter your *Slack User ID*\n\nYour Slack User ID can be found by clicking your profile picture → Profile → ••• → Copy member ID.\n\nOnce linked, you can ask me about your servers, GitHub repos, and more!", toolsUsed: [], status: "ok" };
   }
 
+  return runAgentWithCtx(userCtx, conversationKey, userMessage, context, onProgress);
+}
+
+export async function runAgentForUser(
+  userId: number,
+  conversationKey: string,
+  userMessage: string,
+  context?: string,
+  onProgress?: (progress: AgentProgress) => void
+): Promise<AgentResult> {
+  const userCtx = await resolveUserById(userId);
+  if (!userCtx) {
+    return { reply: "Your account could not be found. Please log in to EcliPanel to continue.", toolsUsed: [], status: "ok" };
+  }
+  return runAgentWithCtx(userCtx, conversationKey, userMessage, context, onProgress);
+}
+
+async function continueAgentWithCtx(
+  userCtx: UserContext,
+  conversationKey: string,
+  pending: PendingContinuation,
+  onProgress?: (progress: AgentProgress) => void
+): Promise<AgentResult> {
   const systemPrompt = buildSystemPrompt(userCtx);
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
@@ -269,6 +293,51 @@ export async function continueAgent(
 
   const toolsUsed = [...pending.toolsUsed];
   return runAgentLoop(conversationKey, userCtx, messages, toolsUsed, onProgress);
+}
+
+export async function continueAgent(
+  slackUserId: string,
+  conversationKey: string,
+  onProgress?: (progress: AgentProgress) => void
+): Promise<AgentResult> {
+  return continueAgentCommon(
+    conversationKey,
+    () => resolveUser(slackUserId),
+    "Your account could not be found. Please re-link your Slack account.",
+    onProgress
+  );
+}
+
+export async function continueAgentForUser(
+  userId: number,
+  conversationKey: string,
+  onProgress?: (progress: AgentProgress) => void
+): Promise<AgentResult> {
+  return continueAgentCommon(
+    conversationKey,
+    () => resolveUserById(userId),
+    "Your account could not be found. Please log in to EcliPanel to continue.",
+    onProgress
+  );
+}
+
+async function continueAgentCommon(
+  conversationKey: string,
+  resolve: () => Promise<UserContext | null>,
+  notFoundReply: string,
+  onProgress?: (progress: AgentProgress) => void
+): Promise<AgentResult> {
+  const pending = pendingContinuations.get(conversationKey);
+  if (!pending) {
+    return { reply: "No pending conversation to continue. Start a new request.", toolsUsed: [], status: "ok" };
+  }
+
+  const userCtx = await resolve();
+  if (!userCtx) {
+    return { reply: notFoundReply, toolsUsed: [], status: "ok" };
+  }
+  pendingContinuations.delete(conversationKey);
+  return continueAgentWithCtx(userCtx, conversationKey, pending, onProgress);
 }
 
 export function clearPendingContinuation(conversationKey: string): void {

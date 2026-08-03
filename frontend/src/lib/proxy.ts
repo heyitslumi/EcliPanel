@@ -25,6 +25,8 @@ export async function proxyRequest(request: Request, targetPath: string): Promis
     if (ct) headers.set("content-type", ct);
     const origin = request.headers.get("origin");
     if (origin) headers.set("origin", origin);
+    const accept = request.headers.get("accept");
+    if (accept) headers.set("accept", accept);
 
     const isMultipart = (ct || "").includes("multipart/form-data");
     const body = request.method !== "GET" && request.method !== "HEAD"
