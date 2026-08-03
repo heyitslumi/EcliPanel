@@ -1002,7 +1002,7 @@ export async function initApp() {
           });
         }
       } else {
-        if (!hasPermissionSync(ctx, 'id-docs:read')) {
+        if (!hasPermissionSync(ctx, 'admin:kyc:view:id')) {
           return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' },
@@ -1041,6 +1041,8 @@ export async function initApp() {
           headers: {
             'Content-Type': mimeTypes[ext] || 'application/octet-stream',
             'Content-Length': String(buf.length),
+            'Cache-Control': 'private, no-store',
+            'X-Content-Type-Options': 'nosniff',
           },
         });
       } catch {
@@ -1054,73 +1056,6 @@ export async function initApp() {
       beforeHandle: authenticate,
       detail: { hide: true },
     }
-    ,
-    async (rawCtx: unknown) => {
-      const ctx = rawCtx as unknown as AppRequestContext;
-      const user = ctx.user;
-      const apiKey = ctx.apiKey;
-      if (!user && !apiKey) {
-        return new Response(JSON.stringify({ error: 'Missing Authorization token' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (apiKey) {
-        if (apiKey.type !== 'admin') {
-          return new Response(JSON.stringify({ error: 'Forbidden' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-      } else {
-        if (!hasPermissionSync(ctx, 'id-docs:read')) {
-          return new Response(JSON.stringify({ error: 'Forbidden' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-      }
-
-      const relPath = String(ctx.params?.['*'] || '');
-      let filepath: string;
-      try {
-        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads', 'id-docs'), relPath);
-      } catch {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      const ext = path.extname(filepath).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-      };
-      try {
-        let buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
-        try {
-          buf = decryptBuffer(buf);
-        } catch {
-          // skip
-        }
-        return new Response(new Uint8Array(buf), {
-          status: 200,
-          headers: {
-            'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-            'Content-Length': String(buf.length),
-          },
-        });
-      } catch {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    },
   );
 
   (app as any).get(
@@ -1563,6 +1498,78 @@ export async function initApp() {
         });
       }
     },
+  );
+
+  (app as any).get(
+    '/uploads/student-proofs/*',
+    async (rawCtx: unknown) => {
+      const ctx = rawCtx as unknown as AppRequestContext;
+      const requester = ctx.user;
+      const apiKey = ctx.apiKey;
+      if (!requester && !apiKey) {
+        return new Response(JSON.stringify({ error: 'Missing Authorization token' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const relPath = String(ctx.params?.['*'] || '');
+      const ownerMatch = relPath.match(/^(\d+)-student-proof-/i);
+      const isOwner = !!requester && !!ownerMatch && Number(ownerMatch[1]) === requester.id;
+      const isAdmin =
+        (apiKey && apiKey.type === 'admin') || hasPermissionSync(ctx, 'admin:student:verify');
+      if (!isOwner && !isAdmin) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      let filepath: string;
+      try {
+        filepath = getSafeUploadPath(path.join(process.cwd(), 'uploads', 'student-proofs'), relPath);
+      } catch {
+        return new Response(JSON.stringify({ error: 'not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const ext = path.extname(filepath).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.pdf': 'application/pdf',
+      };
+      try {
+        let buf: Buffer<ArrayBufferLike> = Buffer.from(await Bun.file(filepath).arrayBuffer()) as Buffer<ArrayBufferLike>;
+        try {
+          buf = decryptBuffer(buf);
+        } catch { 
+          // skip
+         }
+        return new Response(new Uint8Array(buf), {
+          status: 200,
+          headers: {
+            'Content-Type': mimeTypes[ext] || 'application/octet-stream',
+            'Content-Length': String(buf.length),
+            'Cache-Control': 'private, no-store',
+            'X-Content-Type-Options': 'nosniff',
+          },
+        });
+      } catch {
+        return new Response(JSON.stringify({ error: 'not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { hide: true },
+    }
   );
 
   (app as any).get(
