@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { useTranslations } from "next-intl"
-import { CheckCircle, Clock, GraduationCap, RefreshCw, Trash2, XCircle } from "lucide-react"
+import { CheckCircle, Clock, FileX, GraduationCap, RefreshCw, Trash2, XCircle } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
@@ -39,6 +39,16 @@ export default function StudentVerificationsTab() {
     if (!confirm(t("deleteConfirm"))) return
     try {
       await apiFetch(API_ENDPOINTS.adminStudentVerificationDetail.replace(':id', String(id)), { method: 'DELETE' })
+      fetchRecords()
+    } catch (e: any) {
+      alert(e?.message || 'Failed')
+    }
+  }
+
+  async function deleteProof(id: number) {
+    if (!confirm(t("deleteProofConfirm"))) return
+    try {
+      await apiFetch(API_ENDPOINTS.adminStudentVerificationDeleteProof.replace(':id', String(id)), { method: 'DELETE' })
       fetchRecords()
     } catch (e: any) {
       alert(e?.message || 'Failed')
@@ -110,9 +120,19 @@ export default function StudentVerificationsTab() {
                     <span className="text-xs text-muted-foreground font-mono">{r.adminNotes}</span>
                   )}
                   {r.proofUrl && (
-                    <a href={r.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
-                      {t("actions.viewProof")}
-                    </a>
+                    <span className="inline-flex items-center gap-2">
+                      <a href={r.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
+                        {t("actions.viewProof")}
+                      </a>
+                      <button
+                        onClick={() => deleteProof(r.id)}
+                        className="inline-flex items-center gap-0.5 text-xs text-destructive hover:underline"
+                        title={t("actions.deleteProof")}
+                      >
+                        <FileX className="h-3 w-3" />
+                        {t("actions.deleteProof")}
+                      </button>
+                    </span>
                   )}
                   <span className="text-xs text-muted-foreground">
                     {new Date(r.createdAt).toLocaleDateString()}

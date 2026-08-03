@@ -110,6 +110,7 @@ export const API_ENDPOINTS = {
   studentVerificationStatus: "/api/student-verification/:id",
   adminStudentVerifications: "/api/admin/student-verifications",
   adminStudentVerificationDetail: "/api/admin/student-verifications/:id",
+  adminStudentVerificationDeleteProof: "/api/admin/student-verifications/:id/proof",
 
   // Users
   users: "/api/users",

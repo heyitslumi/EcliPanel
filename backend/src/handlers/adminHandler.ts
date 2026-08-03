@@ -3959,6 +3959,34 @@ export async function adminRoutes(app: any, prefix = '') {
     }
   );
 
+  app.delete(
+    prefix + '/admin/student-verifications/:id/proof',
+    async ctx => {
+      const adminErr = requireAdminPermission(ctx, 'admin:student:verify');
+      if (adminErr !== true) return adminErr;
+      const verRepo = AppDataSource.getRepository(StudentVerification);
+      const rec = await verRepo.findOneBy({ id: Number(ctx.params.id) });
+      if (!rec) { ctx.set.status = 404; return { error: ctx.t('common.notFound') }; }
+      if (rec.proofUrl) {
+        const filepath = getSafeRelativeFilePath(process.cwd(), rec.proofUrl);
+        if (filepath) {
+          try { await fs.promises.unlink(filepath); } catch { /* womp womp */ }
+        }
+        rec.proofUrl = null;
+        await verRepo.save(rec);
+      }
+      return { success: true, rec };
+    },
+    {
+      beforeHandle: [authenticate, authorize('admin:access')],
+      schema: {
+        params: t.Object({ id: t.String() }),
+        response: { 200: t.Object({ success: t.Boolean(), rec: t.Any() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }), 404: t.Object({ error: t.String() }) },
+      },
+      detail: { summary: 'Delete the proof file from a student verification record', tags: ['Admin'] },
+    }
+  );
+
   app.get(
     prefix + '/admin/deletions',
     async ctx => {

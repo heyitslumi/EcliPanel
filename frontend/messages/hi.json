@@ -1939,6 +1939,33 @@
       "invoice": "चालान"
     }
   },
+  "adminStudentVerificationsTab": {
+    "header": {
+      "title": "छात्र सत्यापन",
+      "subtitle": "मैन्युअल छात्र सत्यापन सबमिशन की समीक्षा और प्रबंधन करें",
+      "pending": "लंबित"
+    },
+    "actions": {
+      "refresh": "रिफ्रेश करें",
+      "approve": "अनुमोदित करें",
+      "reject": "अस्वीकार करें",
+      "delete": "हटाएँ",
+      "viewProof": "प्रमाण देखें",
+      "deleteProof": "प्रमाण हटाएँ"
+    },
+    "proofTypes": {
+      "schoolEmail": "स्कूल ईमेल",
+      "enrollmentDoc": "नामांकन दस्तावेज़",
+      "githubScreenshot": "GitHub स्क्रीनशॉट",
+      "other": "अन्य"
+    },
+    "states": {
+      "loading": "छात्र सत्यापन लोड हो रहे हैं…",
+      "noneFound": "अभी तक कोई छात्र सत्यापन सबमिशन नहीं"
+    },
+    "deleteConfirm": "क्या यह छात्र सत्यापन रिकॉर्ड हटाएँ?",
+    "deleteProofConfirm": "क्या इस सत्यापन के लिए प्रमाण फ़ाइल (जैसे फोटो/दस्तावेज़) हटाएँ? सत्यापन रिकॉर्ड स्वयं रखा जाएगा।"
+  },
   "adminVerificationsTab": {
     "common": {
       "user": "उपयोगकर्ता",

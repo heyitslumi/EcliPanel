@@ -2207,6 +2207,33 @@
       "invoice": "发票"
     }
   },
+  "adminStudentVerificationsTab": {
+    "header": {
+      "title": "学生验证",
+      "subtitle": "审核和管理手动学生验证提交",
+      "pending": "待处理"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "approve": "批准",
+      "reject": "拒绝",
+      "delete": "删除",
+      "viewProof": "查看证明",
+      "deleteProof": "删除证明"
+    },
+    "proofTypes": {
+      "schoolEmail": "学校邮箱",
+      "enrollmentDoc": "入学文件",
+      "githubScreenshot": "GitHub 截图",
+      "other": "其他"
+    },
+    "states": {
+      "loading": "正在加载学生验证…",
+      "noneFound": "暂无学生验证提交"
+    },
+    "deleteConfirm": "删除此学生验证记录？",
+    "deleteProofConfirm": "删除此验证的证明文件（例如照片/文档）？验证记录本身将保留。"
+  },
   "adminVerificationsTab": {
     "common": {
       "user": "用户",

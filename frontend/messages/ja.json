@@ -1939,6 +1939,33 @@
       "invoice": "請求書"
     }
   },
+  "adminStudentVerificationsTab": {
+    "header": {
+      "title": "学生認証",
+      "subtitle": "手動の学生認証申請を確認・管理します",
+      "pending": "保留中"
+    },
+    "actions": {
+      "refresh": "更新",
+      "approve": "承認",
+      "reject": "却下",
+      "delete": "削除",
+      "viewProof": "証明を表示",
+      "deleteProof": "証明を削除"
+    },
+    "proofTypes": {
+      "schoolEmail": "学校メール",
+      "enrollmentDoc": "在学証明書",
+      "githubScreenshot": "GitHub スクリーンショット",
+      "other": "その他"
+    },
+    "states": {
+      "loading": "学生認証を読み込み中…",
+      "noneFound": "学生認証の申請はまだありません"
+    },
+    "deleteConfirm": "この学生認証レコードを削除しますか？",
+    "deleteProofConfirm": "この認証の証明ファイル（写真・書類など）を削除しますか？認証レコード自体は保持されます。"
+  },
   "adminVerificationsTab": {
     "common": {
       "user": "ユーザー",

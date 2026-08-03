@@ -2221,7 +2221,8 @@
       "approve": "Approve",
       "reject": "Reject",
       "delete": "Delete",
-      "viewProof": "View proof"
+      "viewProof": "View proof",
+      "deleteProof": "Delete proof"
     },
     "proofTypes": {
       "schoolEmail": "School Email",
@@ -2233,7 +2234,8 @@
       "loading": "Loading student verifications...",
       "noneFound": "No student verification submissions yet"
     },
-    "deleteConfirm": "Delete this student verification record?"
+    "deleteConfirm": "Delete this student verification record?",
+    "deleteProofConfirm": "Delete the proof file (e.g. photo/document) for this verification? The verification record itself will be kept."
   },
   "adminVerificationsTab": {
     "common": {
