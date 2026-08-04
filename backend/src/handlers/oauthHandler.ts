@@ -1070,4 +1070,126 @@ export async function oauthRoutes(app: any, prefix = '') {
       },
     }
   );
+
+  app.get(
+    prefix + '/oauth/authorizations',
+    async ctx => {
+      const f = await requireFeature(ctx, 'oauth');
+      if (f !== true) return f;
+      const user = (ctx as any).user as User;
+
+      const tokens = await tokenRepo.find({
+        where: { user: { id: user.id }, revoked: false },
+        relations: { app: true },
+      });
+
+      const byApp = new Map<number, any>();
+      for (const tk of tokens) {
+        if (!tk.app) continue;
+        const ts = tk.createdAt ? new Date(tk.createdAt).getTime() : 0;
+        const existing = byApp.get(tk.app.id);
+        if (!existing) {
+          byApp.set(tk.app.id, {
+            appId: tk.app.id,
+            clientId: tk.app.clientId,
+            name: tk.app.name,
+            description: tk.app.description,
+            logoUrl: tk.app.logoUrl,
+            active: tk.app.active,
+            scopes: new Set<string>(tk.scopes || []),
+            tokenCount: 1,
+            firstGrantedAt: ts,
+            lastUsedAt: ts,
+          });
+        } else {
+          (tk.scopes || []).forEach((s: string) => existing.scopes.add(s));
+          existing.tokenCount += 1;
+          if (ts > 0 && (existing.firstGrantedAt === 0 || ts < existing.firstGrantedAt)) {
+            existing.firstGrantedAt = ts;
+          }
+          if (ts > existing.lastUsedAt) existing.lastUsedAt = ts;
+        }
+      }
+
+      const apps = Array.from(byApp.values())
+        .map(a => ({
+          appId: a.appId,
+          clientId: a.clientId,
+          name: a.name,
+          description: a.description,
+          logoUrl: a.logoUrl,
+          active: a.active,
+          scopes: Array.from(a.scopes),
+          tokenCount: a.tokenCount,
+          firstGrantedAt: a.firstGrantedAt ? new Date(a.firstGrantedAt).toISOString() : null,
+          lastUsedAt: a.lastUsedAt ? new Date(a.lastUsedAt).toISOString() : null,
+        }))
+        .sort((a, b) => (b.lastUsedAt || '').localeCompare(a.lastUsedAt || ''));
+
+      return { apps };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'List OAuth apps the current user has authorized', tags: ['OAuth'] },
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }) },
+    }
+  );
+
+  app.post(
+    prefix + '/oauth/authorizations/revoke-all',
+    async ctx => {
+      const f = await requireFeature(ctx, 'oauth');
+      if (f !== true) return f;
+      const user = (ctx as any).user as User;
+
+      const res = await tokenRepo.update(
+        { user: { id: user.id }, revoked: false },
+        { revoked: true }
+      );
+
+      return { success: true, revoked: res.affected ?? 0 };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Revoke current users access to all OAuth apps', tags: ['OAuth'] },
+      response: { 200: t.Any(), 401: t.Object({ error: t.String() }) },
+    }
+  );
+
+  app.post(
+    prefix + '/oauth/authorizations/:appId/revoke',
+    async ctx => {
+      const f = await requireFeature(ctx, 'oauth');
+      if (f !== true) return f;
+      const user = (ctx as any).user as User;
+      const appId = Number(ctx.params['appId']);
+      if (!Number.isInteger(appId) || appId <= 0) {
+        ctx.set.status = 400;
+        return { error: ctx.t('oauth.invalid_client') };
+      }
+
+      const oauthApp = await appRepo.findOneBy({ id: appId });
+      if (!oauthApp) {
+        ctx.set.status = 404;
+        return { error: ctx.t('common.appNotFound') };
+      }
+
+      const res = await tokenRepo.update(
+        { app: { id: appId }, user: { id: user.id }, revoked: false },
+        { revoked: true }
+      );
+
+      return { success: true, revoked: res.affected ?? 0 };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Revoke current users access to a single OAuth app', tags: ['OAuth'] },
+      response: {
+        200: t.Any(),
+        400: t.Object({ error: t.String() }),
+        401: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+      },
+    }
+  );
 }

@@ -3820,6 +3820,23 @@ remote: ${panelUrl}`
     }
   }
 
+  async function exportEgg(egg: AdminEgg) {
+    try {
+      const data = await apiFetch(API_ENDPOINTS.adminEggExport.replace(":id", String(egg.id)))
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${egg.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      alert("Export failed: " + (e?.message || String(e)))
+    }
+  }
+
   // ── AI Model functions ──
   function openNewAIModel() {
     setAiModelDialog("new")
@@ -6116,6 +6133,7 @@ remote: ${panelUrl}`
                     forceSyncEgg,
                     syncingEggIds,
                     deleteEgg,
+                    exportEgg,
                   }}
                 />
               ) : null}

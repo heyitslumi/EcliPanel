@@ -494,6 +494,11 @@ export const API_ENDPOINTS = {
   sessionLogout: "/api/sessions/logout",
   sessionLogoutAll: "/api/sessions/logout-all",
 
+  // OAuth authorizations
+  oauthAuthorizations: "/api/oauth/authorizations",
+  oauthAuthorizationRevoke: "/api/oauth/authorizations/:appId/revoke",
+  oauthAuthorizationsRevokeAll: "/api/oauth/authorizations/revoke-all",
+
   // Deletion requests
   deletionRequests: "/api/deletion-requests",
 
@@ -551,6 +556,7 @@ export const API_ENDPOINTS = {
   publicFeatures: "/api/public/features",
   adminEggDetail: "/api/admin/eggs/:id",
   adminEggImport: "/api/admin/eggs/import",
+  adminEggExport: "/api/admin/eggs/:id/export",
 
   // Enterprise Infrastructure
   infraNodes: "/api/infrastructure/nodes",

@@ -1056,6 +1056,125 @@ function SessionList() {
   )
 }
 
+function ConnectedAppsList() {
+  const t = useTranslations("settingsPage")
+  const [apps, setApps] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    apiFetch(API_ENDPOINTS.oauthAuthorizations)
+      .then((data) => setApps(data?.apps || []))
+      .catch(() => setApps([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const revoke = async (app: any) => {
+    if (!confirm(t("connectedApps.confirmRevoke", { app: app.name }))) return
+    try {
+      await apiFetch(
+        API_ENDPOINTS.oauthAuthorizationRevoke.replace(":appId", app.appId.toString()),
+        { method: "POST" }
+      )
+      setApps((prev) => prev.filter((a) => a.appId !== app.appId))
+      alert(t("connectedApps.revoked"))
+    } catch {}
+  }
+
+  const revokeAll = async () => {
+    if (!confirm(t("connectedApps.confirmRevokeAll"))) return
+    try {
+      await apiFetch(API_ENDPOINTS.oauthAuthorizationsRevokeAll, { method: "POST" })
+      setApps([])
+      alert(t("connectedApps.revokedAll"))
+    } catch {}
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-12">
+        <Loader2 className="h-5 w-5 rounded-full animate-spin" /> {t("connectedApps.loading")}
+      </div>
+    )
+  }
+
+  if (apps.length === 0) {
+    return (
+      <div className="mt-4 border border-dashed border-border bg-secondary/10 p-6 text-center">
+        <KeyRound className="h-6 w-6 text-muted-foreground/60 mx-auto mb-2" />
+        <p className="text-sm font-medium text-foreground">{t("connectedApps.emptyTitle")}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t("connectedApps.emptyDescription")}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-2 min-w-0">
+      {apps.map((app) => (
+        <div
+          key={app.appId}
+          className="flex items-center justify-between border border-border bg-secondary/20 p-3 md:p-4 min-w-0 overflow-hidden hover:bg-secondary/30 transition-colors"
+        >
+          <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+            <div className="shrink-0 w-10 h-10 bg-secondary/50 flex items-center justify-center overflow-hidden">
+              {app.logoUrl ? (
+                <img src={app.logoUrl} alt={app.name} className="w-full h-full object-cover" />
+              ) : (
+                <KeyRound className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate min-w-0">{app.name}</p>
+                {!app.active && (
+                  <Badge className="bg-muted text-muted-foreground border-0 text-[10px] px-2 shrink-0">
+                    {t("connectedApps.inactive")}
+                  </Badge>
+                )}
+              </div>
+              {app.description && (
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{app.description}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {(app.scopes || []).map((scope: string) => (
+                  <span
+                    key={scope}
+                    className="inline-flex items-center text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20"
+                  >
+                    {t(`connectedApps.scopes.${scope}`)}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground/70 mt-1">
+                {t("connectedApps.granted")}:{" "}
+                {app.firstGrantedAt ? new Date(app.firstGrantedAt).toLocaleDateString() : "—"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => revoke(app)}
+            className="shrink-0 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors active:scale-[0.98]"
+          >
+            {t("connectedApps.revoke")}
+          </button>
+        </div>
+      ))}
+      <div className="mt-3 pt-4 border-t border-border flex justify-end">
+        <button
+          onClick={revokeAll}
+          className="border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary/50 transition-all active:scale-[0.98]"
+        >
+          {t("connectedApps.revokeAll")}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const t = useTranslations("settingsPage")
   const locale = useLocale()
@@ -2168,6 +2287,16 @@ export default function SettingsPage() {
                     {t("security.requestDeletion")}
                   </button>
                 </div>
+              </SettingsCard>
+
+              <SettingsCard>
+                <h3 className="text-sm font-semibold text-foreground mb-1">
+                  {t("connectedApps.title")}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t("connectedApps.hint")}
+                </p>
+                <ConnectedAppsList />
               </SettingsCard>
             </div>
           )}

@@ -3892,6 +3892,30 @@
       "current": "Current",
       "revoke": "Revoke"
     },
+    "connectedApps": {
+      "title": "Connected Apps",
+      "hint": "Apps you've granted access to your account. Revoke access at any time.",
+      "loading": "Loading connected apps...",
+      "emptyTitle": "No connected apps",
+      "emptyDescription": "Apps you authorize to use your account will appear here.",
+      "revoke": "Revoke",
+      "confirmRevoke": "Revoke access for \"{app}\"? It will immediately lose access to your account.",
+      "revoked": "Access revoked",
+      "revokeAll": "Revoke All Access",
+      "confirmRevokeAll": "Revoke access for all connected apps?",
+      "revokedAll": "All app access revoked",
+      "granted": "Granted",
+      "inactive": "Inactive",
+      "scopes": {
+        "profile": "View your profile",
+        "email": "Read your email",
+        "servers:read": "View your servers",
+        "servers:write": "Manage your servers",
+        "orgs:read": "Read your organisations",
+        "billing:read": "View billing info",
+        "admin": "Admin-level access"
+      }
+    },
     "api": {
       "apiKeys": "API Keys",
       "apiKeysHint": "Manage programmatic access to your account",
