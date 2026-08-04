@@ -1126,6 +1126,10 @@
     "securityNote": "This authorization is valid for a short time and can be revoked at any time from your account settings.",
     "loading": "Loading…",
     "byOwner": "by",
+    "links": {
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
+    },
     "signedInAs": "Signed in as",
     "permissions": "This app will be able to:",
     "actions": {
@@ -2646,6 +2650,10 @@
       "appNamePlaceholder": "My Eclipse Service",
       "description": "Description",
       "descriptionPlaceholder": "Optional description",
+      "privacyPolicyUrl": "Privacy Policy URL (optional)",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "termsOfServiceUrl": "Terms of Service URL (optional)",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
       "redirectUris": "Redirect URIs",
       "allowedScopes": "Allowed Scopes",
       "grantTypes": "Grant Types",
@@ -2662,6 +2670,10 @@
     },
     "editDialog": {
       "title": "Edit OAuth App — {name}",
+      "privacyPolicyUrl": "Privacy Policy URL",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "termsOfServiceUrl": "Terms of Service URL",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
       "redirectUris": "Redirect URIs",
       "allowedScopes": "Allowed Scopes",
       "grantTypes": "Grant Types",
@@ -2678,6 +2690,8 @@
       "deleteApp": "Delete app",
       "edit": "Edit",
       "rotateSecret": "Rotate Secret",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
       "addUri": "Add URI",
       "removeLogo": "Remove selected logo",
       "cancel": "Cancel",

@@ -62,6 +62,12 @@ const ACCESS_TOKEN_TTL = 3600;
 const REFRESH_TOKEN_TTL = 30 * 86400;
 const AUTH_CODE_TTL = 600;
 
+function oauthOwnerDisplayName(owner?: User | null): string {
+  if (!owner) return 'Eclipse Systems';
+  const fullName = [owner.firstName, owner.lastName].filter(Boolean).join(' ').trim();
+  return (owner as any).displayName || fullName || 'Eclipse Systems';
+}
+
 export async function oauthWellKnownRoutes(app: any, prefix = '') {
   app.get(
     prefix + '/.well-known/oauth-authorization-server',
@@ -102,7 +108,7 @@ export async function oauthRoutes(app: any, prefix = '') {
       const f = await requireFeature(ctx, 'oauth');
       if (f !== true) return f;
       const owner = (ctx as any).user as User;
-      const { name, description, logoUrl, redirectUris, allowedScopes, grantTypes } =
+      const { name, description, logoUrl, redirectUris, allowedScopes, grantTypes, privacyPolicyUrl, termsOfServiceUrl } =
         ctx.body as any;
 
       if (!name) {
@@ -135,6 +141,8 @@ export async function oauthRoutes(app: any, prefix = '') {
         name,
         description,
         logoUrl,
+        privacyPolicyUrl: privacyPolicyUrl ? String(privacyPolicyUrl).trim() : null,
+        termsOfServiceUrl: termsOfServiceUrl ? String(termsOfServiceUrl).trim() : null,
         redirectUris,
         allowedScopes: validScopes,
         grantTypes: grants,
@@ -150,6 +158,9 @@ export async function oauthRoutes(app: any, prefix = '') {
         clientSecret: rawSecret,
         name: entity.name,
         description: entity.description,
+        logoUrl: entity.logoUrl,
+        privacyPolicyUrl: entity.privacyPolicyUrl,
+        termsOfServiceUrl: entity.termsOfServiceUrl,
         redirectUris: entity.redirectUris,
         allowedScopes: entity.allowedScopes,
         grantTypes: entity.grantTypes,
@@ -185,6 +196,8 @@ export async function oauthRoutes(app: any, prefix = '') {
         name: a.name,
         description: a.description,
         logoUrl: a.logoUrl,
+        privacyPolicyUrl: a.privacyPolicyUrl,
+        termsOfServiceUrl: a.termsOfServiceUrl,
         redirectUris: a.redirectUris,
         allowedScopes: a.allowedScopes,
         grantTypes: a.grantTypes,
@@ -215,11 +228,11 @@ export async function oauthRoutes(app: any, prefix = '') {
         name: oauthApp.name,
         description: oauthApp.description,
         logoUrl: oauthApp.logoUrl,
+        privacyPolicyUrl: oauthApp.privacyPolicyUrl,
+        termsOfServiceUrl: oauthApp.termsOfServiceUrl,
         allowedScopes: oauthApp.allowedScopes,
         grantTypes: oauthApp.grantTypes,
-        ownerName: oauthApp.owner
-          ? `${oauthApp.owner.firstName} ${oauthApp.owner.lastName}`
-          : 'Eclipse Systems',
+        ownerName: oauthOwnerDisplayName(oauthApp.owner),
       };
     },
     {
@@ -248,11 +261,13 @@ export async function oauthRoutes(app: any, prefix = '') {
         ctx.set.status = 403;
         return { error: ctx.t('common.forbidden') };
       }
-      const { name, description, logoUrl, redirectUris, allowedScopes, grantTypes, active } =
+      const { name, description, logoUrl, redirectUris, allowedScopes, grantTypes, active, privacyPolicyUrl, termsOfServiceUrl } =
         ctx.body as any;
       if (name !== undefined) oauthApp.name = name;
       if (description !== undefined) oauthApp.description = description;
       if (logoUrl !== undefined) oauthApp.logoUrl = logoUrl;
+      if (privacyPolicyUrl !== undefined) oauthApp.privacyPolicyUrl = privacyPolicyUrl ? String(privacyPolicyUrl).trim() : null;
+      if (termsOfServiceUrl !== undefined) oauthApp.termsOfServiceUrl = termsOfServiceUrl ? String(termsOfServiceUrl).trim() : null;
       if (redirectUris !== undefined) oauthApp.redirectUris = redirectUris;
       if (allowedScopes !== undefined) {
         oauthApp.allowedScopes = filterScopes(allowedScopes, [...OAUTH_SCOPES]);
@@ -524,9 +539,9 @@ export async function oauthRoutes(app: any, prefix = '') {
           name: oauthApp.name,
           description: oauthApp.description,
           logoUrl: oauthApp.logoUrl,
-          ownerName: oauthApp.owner
-            ? `${oauthApp.owner.firstName} ${oauthApp.owner.lastName}`
-            : 'Eclipse Systems',
+          privacyPolicyUrl: oauthApp.privacyPolicyUrl,
+          termsOfServiceUrl: oauthApp.termsOfServiceUrl,
+          ownerName: oauthOwnerDisplayName(oauthApp.owner),
         },
         requestedScopes: grantableScopes,
         state: state || null,

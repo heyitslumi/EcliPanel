@@ -330,7 +330,8 @@
     "expandSidebar": "展开侧边栏",
     "collapseSidebar": "收起侧边栏",
     "navigationMenu": "导航菜单",
-    "closeMenu": "关闭菜单"
+    "closeMenu": "关闭菜单",
+    "noOrg": "没有组织"
   },
   "otpMethodSelector": {
     "authenticatorApp": "身份验证器应用",
@@ -1659,7 +1660,8 @@
       "audit": "审计",
       "feedback": "反馈",
       "chat": "聊天",
-      "companyMailboxes": "公司邮箱"
+      "companyMailboxes": "公司邮箱",
+      "studentVerifications": "学生验证"
     },
     "shortUrls": {
       "overview": {
@@ -2120,7 +2122,8 @@
       "created": "创建时间",
       "expires": "过期于 {date}",
       "expiresShort": "过期时间",
-      "actions": "操作"
+      "actions": "操作",
+      "org": "组织"
     },
     "status": {
       "active": "active",
@@ -2620,7 +2623,14 @@
       "descriptionPlaceholder": "可选描述",
       "redirectUris": "重定向 URI",
       "allowedScopes": "允许的范围",
-      "grantTypes": "授权类型"
+      "grantTypes": "授权类型",
+      "logo": "徽标（可选）",
+      "logoHint": "PNG、JPEG、WebP 或 GIF。显示在同意屏幕上，缩放为 256×256。",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "隐私政策 URL（可选）",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "服务条款 URL（可选）",
+      "uploadLogo": "上传徽标"
     },
     "newSecretDialog": {
       "title": "应用已创建 — 保存您的密钥",
@@ -2633,7 +2643,14 @@
       "title": "编辑 OAuth 应用 — {name}",
       "redirectUris": "重定向 URI",
       "allowedScopes": "允许的范围",
-      "grantTypes": "授权类型"
+      "grantTypes": "授权类型",
+      "logo": "徽标",
+      "logoHint": "替换同意屏幕上显示的徽标。",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "隐私政策 URL",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "服务条款 URL",
+      "uploadLogo": "上传新徽标"
     },
     "rotateDialog": {
       "title": "轮换客户端密钥？"
@@ -2650,7 +2667,10 @@
       "createApp": "创建应用",
       "saving": "保存中…",
       "saveChanges": "保存更改",
-      "rotating": "轮换中…"
+      "rotating": "轮换中…",
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款",
+      "removeLogo": "移除所选徽标"
     }
   },
   "adminEggsTab": {
@@ -3727,7 +3747,9 @@
         "passwordMinLength": "新密码必须至少 8 个字符",
         "passwordsDoNotMatch": "密码不匹配",
         "failedUpdatePassword": "更新密码失败"
-      }
+      },
+      "currentPasswordRequired": "请输入当前密码以更改邮箱地址",
+      "emailStepUpHint": "需要用于确认邮箱更改"
     },
     "notifications": {
       "title": "通知偏好",
@@ -3949,7 +3971,8 @@
       "poor": "差",
       "okay": "一般",
       "good": "好",
-      "excellent": "非常好"
+      "excellent": "非常好",
+      "helpsImprove": "您的反馈有助于我们改进面板。"
     },
     "verification": {
       "dateOfBirth": "出生日期",
@@ -4082,7 +4105,9 @@
       "submitForVerification": "提交验证",
       "verifySelfieAge": "验证自拍年龄",
       "connectHackClub": "通过 Hack Club 验证",
-      "connectGithub": "通过 GitHub 验证"
+      "connectGithub": "通过 GitHub 验证",
+      "verifyStudent": "验证学生身份",
+      "viewBenefits": "查看福利"
     },
     "messages": {
       "submittedForReview": "验证已提交 - 您的文件正在审核中。"
@@ -4132,7 +4157,8 @@
         "connectHackClub": "通过 Hack Club 验证以获取学生特惠",
         "connectGithub": "通过 GitHub 验证以获取学生特惠",
         "comingSoon": "学生验证即将推出",
-        "uploadProof": "上传在学证明以验证学生身份"
+        "uploadProof": "上传在学证明以验证学生身份",
+        "verifyPrompt": "验证您的学生身份以解锁免费服务器和额外资源"
       },
       "identityDocument": {
         "title": "身份证件",
@@ -4345,7 +4371,8 @@
     "newServerModal": {
       "header": {
         "title": "新建服务器",
-        "subtitle": "配置和部署"
+        "subtitle": "配置和部署",
+        "forOrg": "用于 {org}"
       },
       "alerts": {
         "verifyEmail": "创建服务器前请验证您的邮箱。",
@@ -4840,7 +4867,8 @@
       "poor": "差",
       "okay": "一般",
       "good": "好",
-      "excellent": "非常好"
+      "excellent": "非常好",
+      "helpsImprove": "您的反馈有助于我们改进面板。"
     }
   },
   "verification": {
@@ -5065,7 +5093,13 @@
         "multiplexHint": "并行传输流 (0-16)。越高越快，但占用更多带宽。",
         "multiplexChannels": "多路通道",
         "compression": "压缩",
-        "archiveFormat": "归档格式"
+        "archiveFormat": "归档格式",
+        "archived": "已归档",
+        "files": "文件",
+        "loadingNodes": "加载节点中...",
+        "progress": "已完成 {pct}%",
+        "sent": "已发送",
+        "total": "总计"
       }
     },
     "kvm": {
@@ -5892,7 +5926,8 @@
       "description": "管理您的组织"
     },
     "actions": {
-      "newOrganisation": "新建组织"
+      "newOrganisation": "新建组织",
+      "viaBilling": "$1（通过账单）"
     },
     "states": {
       "loading": "加载中...",
@@ -5900,9 +5935,10 @@
     },
     "labels": {
       "role": "角色：{value}",
-      "tier": "等级：{value}"
+      "tier": "等级：{value}",
+      "members": "{count} 名成员"
     },
-    "description": {},
+    "description": "组织让您可以与团队成员在服务器、基础设施节点和 DNS 上协作。每个组织拥有自己的资源和账单。",
     "empty": {
       "title": "暂无组织",
       "description": "创建一个组织，开始与团队在服务器和基础设施上协作。"
@@ -5915,7 +5951,11 @@
     },
     "fields": {
       "namePlaceholder": "组织名称",
-      "handlePlaceholder": "标识（例如 acme.ecli.app）"
+      "handlePlaceholder": "标识（例如 acme.ecli.app）",
+      "handleHint": "必须是域名，例如 myteam.ecli.app 或 myteam.com",
+      "handleLabel": "域名（Handle）",
+      "nameLabel": "组织名称",
+      "tierLabel": "订阅套餐"
     },
     "tiers": {
       "free": "免费",
@@ -5924,7 +5964,8 @@
     },
     "actions": {
       "creating": "创建中...",
-      "create": "创建"
+      "create": "创建",
+      "cancel": "取消"
     },
     "errors": {
       "failedCreate": "创建组织失败"
@@ -5966,7 +6007,9 @@
       "servers": "服务器",
       "nodes": "节点",
       "dns": "DNS",
-      "activity": "活动"
+      "activity": "活动",
+      "billing": "账单",
+      "settings": "设置"
     },
     "roles": {
       "member": "成员",
@@ -6004,13 +6047,17 @@
         "description": "描述",
         "amount": "金额",
         "status": "状态",
-        "date": "日期"
-      }
+        "date": "日期",
+        "actions": ""
+      },
+      "invoice": "发票",
+      "invoiceFailed": "下载发票失败"
     },
     "servers": {
       "title": "组织服务器",
       "loading": "加载服务器中…",
-      "none": "未找到此组织的服务器。"
+      "none": "未找到此组织的服务器。",
+      "newServer": "新服务器"
     },
     "nodes": {
       "title": "组织节点",
@@ -6396,7 +6443,18 @@
       "switched": "已切换到",
       "queued": "已排队等待续费",
       "activateNow": "立即激活（替换当前套餐）",
-      "activateOnRenewal": "排队等待下次续费"
+      "activateOnRenewal": "排队等待下次续费",
+      "billingFor": "账单对象",
+      "handleTaken": "此域名已被其他组织占用",
+      "newOrganisation": "新建组织",
+      "orgCreateFailed": "创建组织失败",
+      "orgFormationFee": "组织创建费",
+      "orgHandleHint": "必须是域名。DNS 管理需要企业版套餐。",
+      "orgHandlePlaceholder": "域名（例如 myteam.ecli.app）",
+      "orgNamePlaceholder": "组织名称",
+      "orgNameRequired": "需要组织名称和域名",
+      "personalAccount": "个人账户",
+      "verifyStudent": "验证学生身份"
     },
     "invoices": {
       "title": "发票历史",
@@ -6887,7 +6945,60 @@
     "analyticsTableStatus": "状态",
     "analyticsTableCreated": "创建时间",
     "views": "次浏览",
-    "handbook": "手册"
+    "handbook": "手册",
+    "add": "添加",
+    "adding": "添加中...",
+    "avatarLabel": "头像",
+    "bio": "简介",
+    "bioPlaceholder": "写一段简短简介...",
+    "builderBlogHeader": "博客页头",
+    "builderCancel": "取消",
+    "builderClickToAdd": "点击添加",
+    "builderConfigure": "配置",
+    "builderConfigureSection": "配置：{section}",
+    "builderDefaultHero": "默认主视觉",
+    "builderDone": "完成",
+    "builderEmptyField": "空",
+    "builderHasContent": "有内容",
+    "builderHasHtml": "有 HTML",
+    "builderHasScript": "有脚本",
+    "builderLoadingEditor": "加载编辑器中...",
+    "builderNoConfiguration": "没有可用的配置。",
+    "builderNoUrl": "没有 URL",
+    "builderOrder": "顺序：",
+    "builderPostsInGrid": "网格中有 {count} 篇文章",
+    "builderPostsInList": "列表中有 {count} 篇文章",
+    "builderSearchBar": "搜索栏",
+    "builderSections": "版块",
+    "builderVideoPrefix": "视频：",
+    "cancel": "取消",
+    "coverImageAlt": "封面图片",
+    "displayName": "显示名称",
+    "displayNamePlaceholder": "您在此博客中的显示方式",
+    "editProfile": "编辑博客资料",
+    "emailPlaceholder": "user@example.com",
+    "memberFallback": "成员",
+    "previewTruncated": "预览截断为 5000 个字符",
+    "roleAdmin": "管理员",
+    "roleAdminDesc": "管理员 / 管理成员 + 撰写文章",
+    "roleAuthor": "作者",
+    "roleAuthorDesc": "作者 / 撰写文章",
+    "roleOwnerDesc": "所有者 / 完全控制",
+    "scheduleAutoPublish": "文章将在 {date} 自动发布",
+    "schedulePost": "安排发布（可选）",
+    "setDisplayName": "设置您的显示名称",
+    "slugPlaceholder": "my-post-slug",
+    "tagsPlaceholder": "web, tutorial, guide",
+    "toolbarBold": "粗体",
+    "toolbarBulletList": "无序列表",
+    "toolbarCode": "代码",
+    "toolbarHeading": "标题",
+    "toolbarImage": "图片",
+    "toolbarItalic": "斜体",
+    "toolbarLink": "链接",
+    "toolbarNumberedList": "有序列表",
+    "toolbarQuote": "引用",
+    "toolbarVideo": "视频"
   },
   "orgBilling": {
     "title": "组织账单",
@@ -7058,5 +7169,34 @@
     "purgeToggle": "清除垃圾邮件",
     "purgeHide": "隐藏",
     "purgeQueued": "清除已在后台开始。完成后您将收到通知。"
+  },
+  "oauthConsentPage": {
+    "title": "授权访问",
+    "subtitle": "此应用正在请求访问您的 EcliPanel 账户。",
+    "application": "应用",
+    "securityNote": "此授权短期有效，可随时从您的账户设置中撤销。",
+    "loading": "加载中…",
+    "byOwner": "由",
+    "links": {
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款"
+    },
+    "signedInAs": "当前登录为",
+    "permissions": "此应用将能够：",
+    "actions": {
+      "authorize": "授权",
+      "cancel": "取消"
+    },
+    "loginRequired": {
+      "title": "需要登录",
+      "description": "您需要登录您的 EcliPanel 账户才能授权此应用。",
+      "signIn": "登录以继续"
+    },
+    "errors": {
+      "title": "出现问题",
+      "missingParams": "缺少 OAuth 参数。",
+      "loadFailed": "加载应用详情失败。",
+      "submitFailed": "提交您的决定失败。"
+    }
   }
 }

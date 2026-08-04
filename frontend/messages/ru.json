@@ -42,7 +42,8 @@
       "mailbox": "Почтовый ящик",
       "adminPanel": "Панель персонала",
       "tunnels": "Туннели",
-      "blog": "Блог"
+      "blog": "Блог",
+      "family": "Семья"
     },
     "badges": {
       "new": "Новое",
@@ -329,7 +330,8 @@
     "expandSidebar": "Развернуть боковую панель",
     "collapseSidebar": "Свернуть боковую панель",
     "navigationMenu": "Меню навигации",
-    "closeMenu": "Закрыть меню"
+    "closeMenu": "Закрыть меню",
+    "noOrg": "Нет организации"
   },
   "otpMethodSelector": {
     "authenticatorApp": "Приложение-аутентификатор",
@@ -868,7 +870,8 @@
     "backendUnavailableMessage": "Бэкенд панели недоступен. Попробуйте позже.",
     "loginFailed": "Ошибка входа",
     "missingTemporarySession": "Отсутствует временная сессия",
-    "failedToSendEmailCode": "Не удалось отправить код на email"
+    "failedToSendEmailCode": "Не удалось отправить код на email",
+    "back": "Назад"
   },
   "register": {
     "steps": {
@@ -1124,6 +1127,10 @@
     "securityNote": "Разрешение действительно недолго и может быть отозвано в любой момент из настроек аккаунта.",
     "loading": "Загрузка…",
     "byOwner": "от",
+    "links": {
+      "privacyPolicy": "Политика конфиденциальности",
+      "termsOfService": "Условия использования"
+    },
     "signedInAs": "Вы вошли как",
     "permissions": "Это приложение сможет:",
     "actions": {
@@ -1480,7 +1487,9 @@
       "rollouts": "Роллауты",
       "audit": "Аудит",
       "feedback": "Отзывы",
-      "companyMailboxes": "Корпоративные ящики"
+      "companyMailboxes": "Корпоративные ящики",
+      "chat": "Чат",
+      "studentVerifications": "Проверки студентов"
     },
     "tunnelsTab": {
       "header": {
@@ -1941,7 +1950,8 @@
       "created": "Создан",
       "expires": "Истекает {date}",
       "expiresShort": "Истекает",
-      "actions": "Действия"
+      "actions": "Действия",
+      "org": "Орг."
     },
     "status": {
       "active": "активен",
@@ -2121,7 +2131,9 @@
       "minRead": "~{minutes} мин. чтения",
       "forceTitle": "Принудительная отправка всем",
       "forceSubtitle": "Переопределить настройки email пользователей",
-      "forceWarning": "Это отправит письмо всем пользователям независимо от их настроек уведомлений."
+      "forceWarning": "Это отправит письмо всем пользователям независимо от их настроек уведомлений.",
+      "excludeSuspendedSubtitle": "Пропустить пользователей с приостановленными аккаунтами",
+      "excludeSuspendedTitle": "Не отправлять пользователям с приостановленным аккаунтом"
     },
     "preview": {
       "title": "Предпросмотр письма",
@@ -2437,6 +2449,10 @@
       "appNamePlaceholder": "Мой сервис Eclipse",
       "description": "Описание",
       "descriptionPlaceholder": "Необязательное описание",
+      "privacyPolicyUrl": "URL политики конфиденциальности (необязательно)",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "termsOfServiceUrl": "URL условий использования (необязательно)",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
       "redirectUris": "URI перенаправления",
       "allowedScopes": "Разрешённые области доступа",
       "grantTypes": "Типы разрешений",
@@ -2453,6 +2469,10 @@
     },
     "editDialog": {
       "title": "Редактирование OAuth-приложения — {name}",
+      "privacyPolicyUrl": "URL политики конфиденциальности",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "termsOfServiceUrl": "URL условий использования",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
       "redirectUris": "URI перенаправления",
       "allowedScopes": "Разрешённые области доступа",
       "grantTypes": "Типы разрешений",
@@ -2469,6 +2489,8 @@
       "deleteApp": "Удалить приложение",
       "edit": "Редактировать",
       "rotateSecret": "Сменить секрет",
+      "privacyPolicy": "Политика конфиденциальности",
+      "termsOfService": "Условия использования",
       "addUri": "Добавить URI",
       "removeLogo": "Удалить выбранный логотип",
       "cancel": "Отмена",
@@ -3553,7 +3575,9 @@
         "passwordMinLength": "Новый пароль должен содержать минимум 8 символов",
         "passwordsDoNotMatch": "Пароли не совпадают",
         "failedUpdatePassword": "Не удалось обновить пароль"
-      }
+      },
+      "currentPasswordRequired": "Введите текущий пароль, чтобы изменить адрес электронной почты",
+      "emailStepUpHint": "Требуется для подтверждения смены почты"
     },
     "notifications": {
       "title": "Настройки уведомлений",
@@ -3909,7 +3933,9 @@
       "submitForVerification": "Отправить на проверку",
       "verifySelfieAge": "Проверить возраст по селфи",
       "connectHackClub": "Подтвердить через Hack Club",
-      "connectGithub": "Подтвердить через GitHub"
+      "connectGithub": "Подтвердить через GitHub",
+      "verifyStudent": "Подтвердить статус студента",
+      "viewBenefits": "Посмотреть льготы"
     },
     "messages": {
       "submittedForReview": "Верификация отправлена - ваши документы на проверке."
@@ -3959,7 +3985,8 @@
         "connectHackClub": "Подтвердите через Hack Club для студенческих льгот",
         "connectGithub": "Подтвердите через GitHub для студенческих льгот",
         "comingSoon": "Верификация студентов скоро появится",
-        "uploadProof": "Загрузите подтверждение обучения для верификации статуса студента"
+        "uploadProof": "Загрузите подтверждение обучения для верификации статуса студента",
+        "verifyPrompt": "Подтвердите статус студента, чтобы получить бесплатные серверы и дополнительные ресурсы"
       },
       "identityDocument": {
         "title": "Документ личности",
@@ -4102,7 +4129,9 @@
       "offline": "Офлайн",
       "dmca": "DMCA",
       "unknown": "Неизвестно",
-      "unavailable": "Недоступен"
+      "unavailable": "Недоступен",
+      "hibernated": "В спящем режиме",
+      "installing": "Установка"
     },
     "resources": {
       "cpu": "CPU",
@@ -4170,7 +4199,8 @@
     "newServerModal": {
       "header": {
         "title": "Новый сервер",
-        "subtitle": "Настройка и развёртывание"
+        "subtitle": "Настройка и развёртывание",
+        "forOrg": "Для {org}"
       },
       "alerts": {
         "verifyEmail": "Подтвердите email перед созданием сервера.",
@@ -4323,7 +4353,8 @@
     "status": {
       "connected": "Подключено",
       "stopping": "Остановка",
-      "disconnected": "Отключено"
+      "disconnected": "Отключено",
+      "installing": "Установка"
     },
     "history": {
       "empty": "История команд пуста",
@@ -4332,13 +4363,16 @@
     "toolbar": {
       "console": "Консоль",
       "copyOutput": "Копировать вывод консоли",
-      "clearConsole": "Очистить консоль"
+      "clearConsole": "Очистить консоль",
+      "reinstall": "Переустановить"
     },
     "input": {
       "placeholder": "Введите команду..."
     },
     "states": {
-      "loadingConsole": "Загрузка консоли..."
+      "loadingConsole": "Загрузка консоли...",
+      "frozenDescription": "Нажмите, чтобы продолжить",
+      "frozenTitle": "Консоль заморожена"
     },
     "footer": {
       "typeCommandsAbove": "Вводите команды напрямую в консоль выше"
@@ -4412,7 +4446,9 @@
         "digest": "Хеш: {digest}",
         "status": "Статус: {status}",
         "finishedPulling": "Загрузка Docker образа завершена"
-      }
+      },
+      "confirmReinstall": "Переустановить этот сервер? Все файлы будут удалены.",
+      "reinstallStarted": "Переустановка началась. Ожидание вывода установки..."
     }
   },
   "serverTabShared": {
@@ -5157,7 +5193,13 @@
         "multiplexHint": "Параллельные потоки (0-16). Больше = быстрее, но больше трафика.",
         "multiplexChannels": "Мультиплексные каналы",
         "compression": "Сжатие",
-        "archiveFormat": "Формат архива"
+        "archiveFormat": "Формат архива",
+        "archived": "Архивировано",
+        "files": "Файлы",
+        "loadingNodes": "Загрузка узлов...",
+        "progress": "Выполнено {pct}%",
+        "sent": "Отправлено",
+        "total": "Всего"
       }
     },
     "kvm": {
@@ -5452,7 +5494,9 @@
       "editSubuser": "Редактировать субпользователя",
       "editPermissions": "Редактировать разрешения",
       "savePermissions": "Сохранить",
-      "failedUpdatePerms": "Не удалось обновить разрешения: {reason}"
+      "failedUpdatePerms": "Не удалось обновить разрешения: {reason}",
+      "orgFullAccess": "Полный доступ как участник организации",
+      "orgMember": "Организация: {role}"
     },
     "settings": {
       "confirmReinstall": "Переустановить этот сервер? Все файлы будут удалены.",
@@ -5981,7 +6025,8 @@
       "description": "Управление организациями"
     },
     "actions": {
-      "newOrganisation": "Новая организация"
+      "newOrganisation": "Новая организация",
+      "viaBilling": "$1 через биллинг"
     },
     "states": {
       "loading": "Загрузка...",
@@ -5989,9 +6034,10 @@
     },
     "labels": {
       "role": "Роль: {value}",
-      "tier": "Уровень: {value}"
+      "tier": "Уровень: {value}",
+      "members": "{count} участников"
     },
-    "description": {},
+    "description": "Организации позволяют совместно работать с участниками команды над серверами, инфраструктурными узлами и DNS. У каждой организации свои ресурсы и биллинг.",
     "empty": {
       "title": "Пока нет организаций",
       "description": "Создайте организацию, чтобы начать совместную работу с командой над серверами и инфраструктурой."
@@ -6004,7 +6050,11 @@
     },
     "fields": {
       "namePlaceholder": "Название организации",
-      "handlePlaceholder": "Идентификатор (например, acme.ecli.app)"
+      "handlePlaceholder": "Идентификатор (например, acme.ecli.app)",
+      "handleHint": "Должно быть доменным именем, например myteam.ecli.app или myteam.com",
+      "handleLabel": "Хэндл (домен)",
+      "nameLabel": "Название организации",
+      "tierLabel": "Тариф подписки"
     },
     "tiers": {
       "free": "Бесплатный",
@@ -6013,7 +6063,8 @@
     },
     "actions": {
       "creating": "Создание...",
-      "create": "Создать"
+      "create": "Создать",
+      "cancel": "Отмена"
     },
     "errors": {
       "failedCreate": "Не удалось создать организацию"
@@ -6055,7 +6106,9 @@
       "servers": "Серверы",
       "nodes": "Ноды",
       "dns": "DNS",
-      "activity": "Активность"
+      "activity": "Активность",
+      "billing": "Биллинг",
+      "settings": "Настройки"
     },
     "roles": {
       "member": "Участник",
@@ -6093,13 +6146,17 @@
         "description": "Описание",
         "amount": "Сумма",
         "status": "Статус",
-        "date": "Дата"
-      }
+        "date": "Дата",
+        "actions": ""
+      },
+      "invoice": "Счёт",
+      "invoiceFailed": "Не удалось скачать счёт"
     },
     "servers": {
       "title": "Серверы организации",
       "loading": "Загрузка серверов…",
-      "none": "Серверы для этой организации не найдены."
+      "none": "Серверы для этой организации не найдены.",
+      "newServer": "Новый сервер"
     },
     "nodes": {
       "title": "Ноды организации",
@@ -6485,7 +6542,18 @@
       "switched": "Переключено на",
       "queued": "В очереди на продление",
       "activateNow": "Активировать сейчас (заменить текущий план)",
-      "activateOnRenewal": "В очередь на продление"
+      "activateOnRenewal": "В очередь на продление",
+      "billingFor": "Счёт на",
+      "handleTaken": "Этот хэндл уже занят другой организацией",
+      "newOrganisation": "Новая организация",
+      "orgCreateFailed": "Не удалось создать организацию",
+      "orgFormationFee": "Комиссия за создание организации",
+      "orgHandleHint": "Должен быть доменным именем. Управление DNS требует тарифа Enterprise.",
+      "orgHandlePlaceholder": "Хэндл (например, myteam.ecli.app)",
+      "orgNamePlaceholder": "Название организации",
+      "orgNameRequired": "Требуются название организации и хэндл",
+      "personalAccount": "Личный аккаунт",
+      "verifyStudent": "Подтвердить статус студента"
     },
     "invoices": {
       "title": "История счетов",
@@ -6976,7 +7044,60 @@
     "analyticsTableStatus": "Статус",
     "analyticsTableCreated": "Создан",
     "views": "просмотров",
-    "handbook": "Справочник"
+    "handbook": "Справочник",
+    "add": "Добавить",
+    "adding": "Добавление...",
+    "avatarLabel": "Аватар",
+    "bio": "Биография",
+    "bioPlaceholder": "Напишите краткую биографию...",
+    "builderBlogHeader": "Шапка блога",
+    "builderCancel": "Отмена",
+    "builderClickToAdd": "Нажмите, чтобы добавить",
+    "builderConfigure": "Настроить",
+    "builderConfigureSection": "Настроить: {section}",
+    "builderDefaultHero": "Главный блок по умолчанию",
+    "builderDone": "Готово",
+    "builderEmptyField": "Пусто",
+    "builderHasContent": "Есть содержимое",
+    "builderHasHtml": "Есть HTML",
+    "builderHasScript": "Есть скрипт",
+    "builderLoadingEditor": "Загрузка редактора...",
+    "builderNoConfiguration": "Конфигурация недоступна.",
+    "builderNoUrl": "Нет URL",
+    "builderOrder": "Порядок:",
+    "builderPostsInGrid": "{count} записей в сетке",
+    "builderPostsInList": "{count} записей в списке",
+    "builderSearchBar": "Строка поиска",
+    "builderSections": "Разделы",
+    "builderVideoPrefix": "Видео:",
+    "cancel": "Отмена",
+    "coverImageAlt": "Обложка",
+    "displayName": "Отображаемое имя",
+    "displayNamePlaceholder": "Как вы отображаетесь в этом блоге",
+    "editProfile": "Редактировать профиль блога",
+    "emailPlaceholder": "user@example.com",
+    "memberFallback": "Участник",
+    "previewTruncated": "Предпросмотр обрезан на 5000 символов",
+    "roleAdmin": "Администратор",
+    "roleAdminDesc": "Администратор / управление участниками + написание записей",
+    "roleAuthor": "Автор",
+    "roleAuthorDesc": "Автор / написание записей",
+    "roleOwnerDesc": "Владелец / полный контроль",
+    "scheduleAutoPublish": "Запись будет автоматически опубликована {date}",
+    "schedulePost": "Запланировать публикацию (необязательно)",
+    "setDisplayName": "Укажите отображаемое имя",
+    "slugPlaceholder": "my-post-slug",
+    "tagsPlaceholder": "web, tutorial, guide",
+    "toolbarBold": "Жирный",
+    "toolbarBulletList": "Маркированный список",
+    "toolbarCode": "Код",
+    "toolbarHeading": "Заголовок",
+    "toolbarImage": "Изображение",
+    "toolbarItalic": "Курсив",
+    "toolbarLink": "Ссылка",
+    "toolbarNumberedList": "Нумерованный список",
+    "toolbarQuote": "Цитата",
+    "toolbarVideo": "Видео"
   },
   "orgBilling": {
     "title": "Биллинг организации",

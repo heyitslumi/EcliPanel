@@ -1744,6 +1744,8 @@ export default function AdminPanel() {
   const [oauthCreateOpen, setOauthCreateOpen] = useState(false)
   const [oauthCreateName, setOauthCreateName] = useState("")
   const [oauthCreateDesc, setOauthCreateDesc] = useState("")
+  const [oauthCreatePrivacy, setOauthCreatePrivacy] = useState("")
+  const [oauthCreateTerms, setOauthCreateTerms] = useState("")
   const [oauthCreateRedirects, setOauthCreateRedirects] = useState<string[]>([""])
   const [oauthCreateScopes, setOauthCreateScopes] = useState<string[]>(["profile", "email"])
   const [oauthCreateGrants, setOauthCreateGrants] = useState<string[]>(["authorization_code", "refresh_token"])
@@ -1755,6 +1757,8 @@ export default function AdminPanel() {
   const [oauthEditRedirects, setOauthEditRedirects] = useState<string[]>([""])
   const [oauthEditScopes, setOauthEditScopes] = useState<string[]>([])
   const [oauthEditGrants, setOauthEditGrants] = useState<string[]>([])
+  const [oauthEditPrivacy, setOauthEditPrivacy] = useState("")
+  const [oauthEditTerms, setOauthEditTerms] = useState("")
   const [oauthEditLoading, setOauthEditLoading] = useState(false)
   const [oauthEditLogo, setOauthEditLogo] = useState<File | null>(null)
   const [oauthEditLogoPreview, setOauthEditLogoPreview] = useState("")
@@ -4121,6 +4125,8 @@ remote: ${panelUrl}`
         body: JSON.stringify({
           name: oauthCreateName.trim(),
           description: oauthCreateDesc.trim() || undefined,
+          privacyPolicyUrl: oauthCreatePrivacy.trim() || undefined,
+          termsOfServiceUrl: oauthCreateTerms.trim() || undefined,
           redirectUris: cleanRedirects,
           allowedScopes: oauthCreateScopes,
           grantTypes: oauthCreateGrants,
@@ -4136,7 +4142,7 @@ remote: ${panelUrl}`
       setOauthApps((prev) => [...prev, app])
       setOauthCreateOpen(false)
       setOauthNewSecret({ name: result.name, clientId: result.clientId, clientSecret: result.clientSecret })
-      setOauthCreateName(""); setOauthCreateDesc(""); setOauthCreateRedirects([""])
+      setOauthCreateName(""); setOauthCreateDesc(""); setOauthCreatePrivacy(""); setOauthCreateTerms(""); setOauthCreateRedirects([""])
       setOauthCreateScopes(["profile", "email"]); setOauthCreateGrants(["authorization_code", "refresh_token"])
       setOauthCreateLogo(null); setOauthCreateLogoPreview("")
     } catch (e: any) {
@@ -4151,6 +4157,8 @@ remote: ${panelUrl}`
     setOauthEditRedirects(app.redirectUris?.length ? [...app.redirectUris] : [""])
     setOauthEditScopes(app.allowedScopes || [])
     setOauthEditGrants(app.grantTypes || [])
+    setOauthEditPrivacy(app.privacyPolicyUrl || "")
+    setOauthEditTerms(app.termsOfServiceUrl || "")
     setOauthEditLogo(null)
     setOauthEditLogoPreview("")
   }
@@ -4174,6 +4182,8 @@ remote: ${panelUrl}`
           allowedScopes: oauthEditScopes,
           grantTypes: oauthEditGrants,
           logoUrl,
+          privacyPolicyUrl: oauthEditPrivacy.trim(),
+          termsOfServiceUrl: oauthEditTerms.trim(),
         }),
       })
       const updatedApp = updated?.app || updated
@@ -6271,6 +6281,10 @@ remote: ${panelUrl}`
                   ctx={{
                     setOauthCreateName,
                     setOauthCreateDesc,
+                    setOauthCreatePrivacy,
+                    setOauthCreateTerms,
+                    oauthCreatePrivacy,
+                    oauthCreateTerms,
                     setOauthCreateRedirects,
                     setOauthCreateScopes,
                     setOauthCreateGrants,
@@ -6300,6 +6314,10 @@ remote: ${panelUrl}`
                     setOauthEditScopes,
                     oauthEditGrants,
                     setOauthEditGrants,
+                    oauthEditPrivacy,
+                    setOauthEditPrivacy,
+                    oauthEditTerms,
+                    setOauthEditTerms,
                     oauthEditLoading,
                     oauthEditLogo,
                     setOauthEditLogo,

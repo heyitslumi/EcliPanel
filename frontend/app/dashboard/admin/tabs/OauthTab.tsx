@@ -17,6 +17,8 @@ export default function OauthTab({ ctx }: { ctx: any }) {
   const {
     setOauthCreateName,
     setOauthCreateDesc,
+    setOauthCreatePrivacy,
+    setOauthCreateTerms,
     setOauthCreateRedirects,
     setOauthCreateScopes,
     setOauthCreateGrants,
@@ -29,6 +31,8 @@ export default function OauthTab({ ctx }: { ctx: any }) {
     oauthCreateOpen,
     oauthCreateName,
     oauthCreateDesc,
+    oauthCreatePrivacy,
+    oauthCreateTerms,
     oauthCreateRedirects,
     oauthCreateScopes,
     oauthCreateGrants,
@@ -48,6 +52,10 @@ export default function OauthTab({ ctx }: { ctx: any }) {
     setOauthEditScopes,
     oauthEditGrants,
     setOauthEditGrants,
+    oauthEditPrivacy,
+    setOauthEditPrivacy,
+    oauthEditTerms,
+    setOauthEditTerms,
     oauthEditLoading,
     oauthEditLogo,
     setOauthEditLogo,
@@ -312,6 +320,8 @@ Content-Type: application/json
                   onClick={() => {
                     setOauthCreateName("")
                     setOauthCreateDesc("")
+                    setOauthCreatePrivacy("")
+                    setOauthCreateTerms("")
                     setOauthCreateRedirects([""])
                     setOauthCreateScopes(["profile", "email"])
                     setOauthCreateGrants(["authorization_code", "refresh_token"])
@@ -358,6 +368,16 @@ Content-Type: application/json
                     </div>
                     <p className="text-[11px] font-mono text-muted-foreground break-all">{oa.clientId}</p>
                     {oa.description && <p className="text-xs text-muted-foreground">{oa.description}</p>}
+                    {(oa.privacyPolicyUrl || oa.termsOfServiceUrl) && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        {oa.privacyPolicyUrl && (
+                          <a href={oa.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground">{t("actions.privacyPolicy")}</a>
+                        )}
+                        {oa.termsOfServiceUrl && (
+                          <a href={oa.termsOfServiceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground">{t("actions.termsOfService")}</a>
+                        )}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-1 mt-1">
                       {(oa.allowedScopes || []).map((s: string) => (
                         <span key={s} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono text-primary">{s}</span>
@@ -464,6 +484,24 @@ Content-Type: application/json
               onChange={(e) => setOauthCreateDesc(e.target.value)}
               placeholder={t("createDialog.descriptionPlaceholder")}
               className="border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("createDialog.privacyPolicyUrl")}</label>
+            <input
+              value={oauthCreatePrivacy}
+              onChange={(e) => setOauthCreatePrivacy(e.target.value)}
+              placeholder={t("createDialog.privacyPolicyPlaceholder")}
+              className="border border-border bg-secondary/50 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("createDialog.termsOfServiceUrl")}</label>
+            <input
+              value={oauthCreateTerms}
+              onChange={(e) => setOauthCreateTerms(e.target.value)}
+              placeholder={t("createDialog.termsOfServicePlaceholder")}
+              className="border border-border bg-secondary/50 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -648,6 +686,24 @@ Content-Type: application/json
               )}
             </div>
             <p className="text-[11px] text-muted-foreground/70">{t("editDialog.logoHint")}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("editDialog.privacyPolicyUrl")}</label>
+            <input
+              value={oauthEditPrivacy}
+              onChange={(e) => setOauthEditPrivacy(e.target.value)}
+              placeholder={t("editDialog.privacyPolicyPlaceholder")}
+              className="border border-border bg-secondary/50 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">{t("editDialog.termsOfServiceUrl")}</label>
+            <input
+              value={oauthEditTerms}
+              onChange={(e) => setOauthEditTerms(e.target.value)}
+              placeholder={t("editDialog.termsOfServicePlaceholder")}
+              className="border border-border bg-secondary/50 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-foreground">{t("editDialog.redirectUris")}</label>

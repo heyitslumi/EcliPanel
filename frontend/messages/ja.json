@@ -330,7 +330,8 @@
     "expandSidebar": "サイドバーを展開",
     "collapseSidebar": "サイドバーを折りたたむ",
     "navigationMenu": "ナビゲーションメニュー",
-    "closeMenu": "メニューを閉じる"
+    "closeMenu": "メニューを閉じる",
+    "noOrg": "組織がありません"
   },
   "otpMethodSelector": {
     "authenticatorApp": "認証アプリ",
@@ -1391,7 +1392,8 @@
       "audit": "監査",
       "feedback": "フィードバック",
       "chat": "チャット",
-      "companyMailboxes": "会社メールボックス"
+      "companyMailboxes": "会社メールボックス",
+      "studentVerifications": "学生認証"
     },
     "shortUrls": {
       "overview": {
@@ -1852,7 +1854,8 @@
       "created": "作成日",
       "expires": "{date}に期限切れ",
       "expiresShort": "有効期限",
-      "actions": "アクション"
+      "actions": "アクション",
+      "org": "組織"
     },
     "status": {
       "active": "アクティブ",
@@ -2352,7 +2355,14 @@
       "descriptionPlaceholder": "任意の説明",
       "redirectUris": "リダイレクトURI",
       "allowedScopes": "許可されたスコープ",
-      "grantTypes": "認可タイプ"
+      "grantTypes": "認可タイプ",
+      "logo": "ロゴ（任意）",
+      "logoHint": "PNG・JPEG・WebP・GIF に対応。同意画面に表示され、256×256 にリサイズされます。",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "プライバシーポリシー URL（任意）",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "利用規約 URL（任意）",
+      "uploadLogo": "ロゴをアップロード"
     },
     "newSecretDialog": {
       "title": "アプリが作成されました — シークレットを保存してください",
@@ -2365,7 +2375,14 @@
       "title": "OAuthアプリを編集 — {name}",
       "redirectUris": "リダイレクトURI",
       "allowedScopes": "許可されたスコープ",
-      "grantTypes": "認可タイプ"
+      "grantTypes": "認可タイプ",
+      "logo": "ロゴ",
+      "logoHint": "同意画面に表示されるロゴを置き換えます。",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "プライバシーポリシー URL",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "利用規約 URL",
+      "uploadLogo": "新しいロゴをアップロード"
     },
     "rotateDialog": {
       "title": "クライアントシークレットをローテーションしますか？"
@@ -2382,7 +2399,10 @@
       "createApp": "アプリを作成",
       "saving": "保存中…",
       "saveChanges": "変更を保存",
-      "rotating": "ローテーション中…"
+      "rotating": "ローテーション中…",
+      "privacyPolicy": "プライバシーポリシー",
+      "termsOfService": "利用規約",
+      "removeLogo": "選択したロゴを削除"
     }
   },
   "adminEggsTab": {
@@ -3459,7 +3479,9 @@
         "passwordMinLength": "新しいパスワードは8文字以上必要です",
         "passwordsDoNotMatch": "パスワードが一致しません",
         "failedUpdatePassword": "パスワードの更新に失敗しました"
-      }
+      },
+      "currentPasswordRequired": "メールアドレスを変更するには現在のパスワードを入力してください",
+      "emailStepUpHint": "メール変更の確認に必要です"
     },
     "notifications": {
       "title": "通知設定",
@@ -3815,7 +3837,9 @@
       "submitForVerification": "確認を送信",
       "verifySelfieAge": "自撮り年齢確認",
       "connectHackClub": "Hack Clubで確認",
-      "connectGithub": "GitHubで確認"
+      "connectGithub": "GitHubで確認",
+      "verifyStudent": "学生ステータスを確認",
+      "viewBenefits": "特典を表示"
     },
     "messages": {
       "submittedForReview": "確認書類が送信されました - 書類は審査中です。"
@@ -3865,7 +3889,8 @@
         "connectHackClub": "Hack Clubで確認して学生特典を利用",
         "connectGithub": "GitHubで確認して学生特典を利用",
         "comingSoon": "学生確認は近日公開予定です",
-        "uploadProof": "在学証明書をアップロードして学生ステータスを確認"
+        "uploadProof": "在学証明書をアップロードして学生ステータスを確認",
+        "verifyPrompt": "無料サーバーとボーナスリソースを解放するには学生ステータスを確認してください"
       },
       "identityDocument": {
         "title": "身分証明書",
@@ -4078,7 +4103,8 @@
     "newServerModal": {
       "header": {
         "title": "新しいサーバー",
-        "subtitle": "設定とデプロイ"
+        "subtitle": "設定とデプロイ",
+        "forOrg": "{org} 用"
       },
       "alerts": {
         "verifyEmail": "サーバーを作成する前にメールアドレスを確認してください。",
@@ -5066,7 +5092,13 @@
         "multiplexHint": "並列転送ストリーム (0-16)。高いほど高速ですが帯域幅を消費します。",
         "multiplexChannels": "多重チャンネル",
         "compression": "圧縮",
-        "archiveFormat": "アーカイブ形式"
+        "archiveFormat": "アーカイブ形式",
+        "archived": "アーカイブ済み",
+        "files": "ファイル",
+        "loadingNodes": "ノードを読み込み中...",
+        "progress": "{pct}% 完了",
+        "sent": "送信済み",
+        "total": "合計"
       }
     },
     "kvm": {
@@ -5893,7 +5925,8 @@
       "description": "組織を管理"
     },
     "actions": {
-      "newOrganisation": "新しい組織"
+      "newOrganisation": "新しい組織",
+      "viaBilling": "$1（請求経由）"
     },
     "states": {
       "loading": "読み込み中...",
@@ -5901,9 +5934,10 @@
     },
     "labels": {
       "role": "ロール：{value}",
-      "tier": "ティア：{value}"
+      "tier": "ティア：{value}",
+      "members": "{count} 人のメンバー"
     },
-    "description": {},
+    "description": "組織を使うと、サーバー、インフラノード、DNS についてチームメンバーと共同作業できます。各組織は独自のリソースと請求を持ちます。",
     "empty": {
       "title": "まだ組織はありません",
       "description": "組織を作成して、チームでサーバーとインフラストラクチャの共同作業を始めましょう。"
@@ -5916,7 +5950,11 @@
     },
     "fields": {
       "namePlaceholder": "組織名",
-      "handlePlaceholder": "ハンドル（例：acme.ecli.app）"
+      "handlePlaceholder": "ハンドル（例：acme.ecli.app）",
+      "handleHint": "ドメイン名である必要があります（例：myteam.ecli.app や myteam.com）",
+      "handleLabel": "ハンドル（ドメイン）",
+      "nameLabel": "組織名",
+      "tierLabel": "サブスクリプションプラン"
     },
     "tiers": {
       "free": "無料",
@@ -5925,7 +5963,8 @@
     },
     "actions": {
       "creating": "作成中...",
-      "create": "作成"
+      "create": "作成",
+      "cancel": "キャンセル"
     },
     "errors": {
       "failedCreate": "組織の作成に失敗しました"
@@ -5967,7 +6006,9 @@
       "servers": "サーバー",
       "nodes": "ノード",
       "dns": "DNS",
-      "activity": "アクティビティ"
+      "activity": "アクティビティ",
+      "billing": "請求",
+      "settings": "設定"
     },
     "roles": {
       "member": "メンバー",
@@ -6005,13 +6046,17 @@
         "description": "説明",
         "amount": "金額",
         "status": "ステータス",
-        "date": "日付"
-      }
+        "date": "日付",
+        "actions": ""
+      },
+      "invoice": "請求書",
+      "invoiceFailed": "請求書をダウンロードできませんでした"
     },
     "servers": {
       "title": "組織のサーバー",
       "loading": "サーバーを読み込み中…",
-      "none": "この組織のサーバーは見つかりませんでした。"
+      "none": "この組織のサーバーは見つかりませんでした。",
+      "newServer": "新しいサーバー"
     },
     "nodes": {
       "title": "組織のノード",
@@ -6397,7 +6442,18 @@
       "switched": "切り替えました",
       "queued": "更新待ち",
       "activateNow": "今すぐ有効化（現在のプランを置き換え）",
-      "activateOnRenewal": "次回更新時に適用"
+      "activateOnRenewal": "次回更新時に適用",
+      "billingFor": "請求先",
+      "handleTaken": "このハンドルは別の組織が既に使用しています",
+      "newOrganisation": "新しい組織",
+      "orgCreateFailed": "組織を作成できませんでした",
+      "orgFormationFee": "組織設立手数料",
+      "orgHandleHint": "ドメイン名である必要があります。DNS 管理には Enterprise プランが必要です。",
+      "orgHandlePlaceholder": "ハンドル（例：myteam.ecli.app）",
+      "orgNamePlaceholder": "組織名",
+      "orgNameRequired": "組織名とハンドルが必要です",
+      "personalAccount": "個人アカウント",
+      "verifyStudent": "学生ステータスを確認"
     },
     "invoices": {
       "title": "請求履歴",
@@ -6888,7 +6944,60 @@
     "analyticsTableStatus": "ステータス",
     "analyticsTableCreated": "作成日",
     "views": "閲覧数",
-    "handbook": "ハンドブック"
+    "handbook": "ハンドブック",
+    "add": "追加",
+    "adding": "追加中...",
+    "avatarLabel": "アバター",
+    "bio": "自己紹介",
+    "bioPlaceholder": "簡単な自己紹介を書いてください...",
+    "builderBlogHeader": "ブログヘッダー",
+    "builderCancel": "キャンセル",
+    "builderClickToAdd": "クリックして追加",
+    "builderConfigure": "設定",
+    "builderConfigureSection": "設定：{section}",
+    "builderDefaultHero": "デフォルトのヒーロー",
+    "builderDone": "完了",
+    "builderEmptyField": "空",
+    "builderHasContent": "コンテンツあり",
+    "builderHasHtml": "HTML あり",
+    "builderHasScript": "スクリプトあり",
+    "builderLoadingEditor": "エディターを読み込み中...",
+    "builderNoConfiguration": "設定はありません。",
+    "builderNoUrl": "URL なし",
+    "builderOrder": "順序：",
+    "builderPostsInGrid": "グリッド内の投稿: {count} 件",
+    "builderPostsInList": "リスト内の投稿: {count} 件",
+    "builderSearchBar": "検索バー",
+    "builderSections": "セクション",
+    "builderVideoPrefix": "動画：",
+    "cancel": "キャンセル",
+    "coverImageAlt": "カバー画像",
+    "displayName": "表示名",
+    "displayNamePlaceholder": "このブログでの表示名",
+    "editProfile": "ブログプロフィールを編集",
+    "emailPlaceholder": "user@example.com",
+    "memberFallback": "メンバー",
+    "previewTruncated": "プレビューは 5000 文字で切り捨てられました",
+    "roleAdmin": "管理者",
+    "roleAdminDesc": "管理者 / メンバー管理 + 投稿作成",
+    "roleAuthor": "著者",
+    "roleAuthorDesc": "著者 / 投稿作成",
+    "roleOwnerDesc": "所有者 / フルコントロール",
+    "scheduleAutoPublish": "投稿は {date} に自動公開されます",
+    "schedulePost": "公開を予約（任意）",
+    "setDisplayName": "表示名を設定",
+    "slugPlaceholder": "my-post-slug",
+    "tagsPlaceholder": "web, tutorial, guide",
+    "toolbarBold": "太字",
+    "toolbarBulletList": "箇条書きリスト",
+    "toolbarCode": "コード",
+    "toolbarHeading": "見出し",
+    "toolbarImage": "画像",
+    "toolbarItalic": "斜体",
+    "toolbarLink": "リンク",
+    "toolbarNumberedList": "番号付きリスト",
+    "toolbarQuote": "引用",
+    "toolbarVideo": "動画"
   },
   "orgBilling": {
     "title": "組織の請求",
@@ -7059,5 +7168,34 @@
     "purgeToggle": "スパムを削除",
     "purgeHide": "非表示",
     "purgeQueued": "削除処理をバックグラウンドで開始しました。完了すると通知されます。"
+  },
+  "oauthConsentPage": {
+    "title": "アクセスを承認",
+    "subtitle": "このアプリケーションはあなたの EcliPanel アカウントへのアクセスを要求しています。",
+    "application": "アプリケーション",
+    "securityNote": "この承認は短期間有効で、アカウント設定からいつでも取り消せます。",
+    "loading": "読み込み中…",
+    "byOwner": "提供元",
+    "links": {
+      "privacyPolicy": "プライバシーポリシー",
+      "termsOfService": "利用規約"
+    },
+    "signedInAs": "ログイン中",
+    "permissions": "このアプリができること：",
+    "actions": {
+      "authorize": "承認",
+      "cancel": "キャンセル"
+    },
+    "loginRequired": {
+      "title": "ログインが必要です",
+      "description": "このアプリケーションを承認するには、EcliPanel アカウントにログインする必要があります。",
+      "signIn": "続行するにはログイン"
+    },
+    "errors": {
+      "title": "問題が発生しました",
+      "missingParams": "OAuth パラメータが不足しています。",
+      "loadFailed": "アプリケーションの詳細を読み込めませんでした。",
+      "submitFailed": "決定を送信できませんでした。"
+    }
   }
 }

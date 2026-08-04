@@ -33,6 +33,12 @@ export class OAuthApp {
   @Column({ nullable: true })
   logoUrl?: string;
 
+  @Column({ nullable: true })
+  privacyPolicyUrl?: string | null;
+
+  @Column({ nullable: true })
+  termsOfServiceUrl?: string | null;
+
   @Column('simple-json')
   redirectUris: string[];
 

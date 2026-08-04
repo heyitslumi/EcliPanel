@@ -24,6 +24,8 @@ interface OAuthConsentInfo {
     name: string;
     description: string | null;
     logoUrl: string | null;
+    privacyPolicyUrl?: string | null;
+    termsOfServiceUrl?: string | null;
     ownerName: string;
   };
   requestedScopes: string[];
@@ -265,6 +267,30 @@ export default function OAuthAuthorizePage() {
                 </p>
               </div>
             </div>
+            {app.privacyPolicyUrl || app.termsOfServiceUrl ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3">
+                {app.privacyPolicyUrl ? (
+                  <a
+                    href={app.privacyPolicyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    {t("links.privacyPolicy")}
+                  </a>
+                ) : null}
+                {app.termsOfServiceUrl ? (
+                  <a
+                    href={app.termsOfServiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    {t("links.termsOfService")}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-md border border-white/20 bg-secondary/10 p-4">

@@ -330,7 +330,8 @@
     "expandSidebar": "साइडबार फैलाएं",
     "collapseSidebar": "साइडबार सिकोड़ें",
     "navigationMenu": "नेविगेशन मेनू",
-    "closeMenu": "मेनू बंद करें"
+    "closeMenu": "मेनू बंद करें",
+    "noOrg": "कोई संगठन नहीं"
   },
   "otpMethodSelector": {
     "authenticatorApp": "प्रमाणक ऐप",
@@ -1391,7 +1392,8 @@
       "audit": "ऑडिट",
       "feedback": "प्रतिक्रिया",
       "chat": "चैट",
-      "companyMailboxes": "कंपनी मेलबॉक्स"
+      "companyMailboxes": "कंपनी मेलबॉक्स",
+      "studentVerifications": "छात्र सत्यापन"
     },
     "shortUrls": {
       "overview": {
@@ -1852,7 +1854,8 @@
       "created": "बनाया गया",
       "expires": "{date} को समाप्त होता है",
       "expiresShort": "समाप्त होता है",
-      "actions": "कार्रवाइयां"
+      "actions": "कार्रवाइयां",
+      "org": "संगठन"
     },
     "status": {
       "active": "सक्रिय",
@@ -2352,7 +2355,14 @@
       "descriptionPlaceholder": "वैकल्पिक विवरण",
       "redirectUris": "रीडायरेक्ट URIs",
       "allowedScopes": "अनुमत स्कोप",
-      "grantTypes": "अनुदान प्रकार"
+      "grantTypes": "अनुदान प्रकार",
+      "logo": "लोगो (वैकल्पिक)",
+      "logoHint": "PNG, JPEG, WebP या GIF। सहमति स्क्रीन पर दिखाया जाता है, 256×256 पर साइज़ बदला जाता है।",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "गोपनीयता नीति URL (वैकल्पिक)",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "सेवा की शर्तें URL (वैकल्पिक)",
+      "uploadLogo": "लोगो अपलोड करें"
     },
     "newSecretDialog": {
       "title": "ऐप बनाया गया — अपना सीक्रेट सहेजें",
@@ -2365,7 +2375,14 @@
       "title": "OAuth ऐप संपादित करें — {name}",
       "redirectUris": "रीडायरेक्ट URIs",
       "allowedScopes": "अनुमत स्कोप",
-      "grantTypes": "अनुदान प्रकार"
+      "grantTypes": "अनुदान प्रकार",
+      "logo": "लोगो",
+      "logoHint": "सहमति स्क्रीन पर दिखाया गया लोगो बदलें।",
+      "privacyPolicyPlaceholder": "https://yourapp.example.com/privacy",
+      "privacyPolicyUrl": "गोपनीयता नीति URL",
+      "termsOfServicePlaceholder": "https://yourapp.example.com/terms",
+      "termsOfServiceUrl": "सेवा की शर्तें URL",
+      "uploadLogo": "नया लोगो अपलोड करें"
     },
     "rotateDialog": {
       "title": "क्लाइंट सीक्रेट रोटेट करें?"
@@ -2382,7 +2399,10 @@
       "createApp": "ऐप बनाएं",
       "saving": "सहेजा जा रहा है…",
       "saveChanges": "परिवर्तन सहेजें",
-      "rotating": "रोटेट हो रहा है…"
+      "rotating": "रोटेट हो रहा है…",
+      "privacyPolicy": "गोपनीयता नीति",
+      "termsOfService": "सेवा की शर्तें",
+      "removeLogo": "चयनित लोगो हटाएं"
     }
   },
   "adminEggsTab": {
@@ -3459,7 +3479,9 @@
         "passwordMinLength": "नया पासवर्ड कम से कम 8 अक्षर का होना चाहिए",
         "passwordsDoNotMatch": "पासवर्ड मेल नहीं खाते",
         "failedUpdatePassword": "पासवर्ड अपडेट करने में विफल"
-      }
+      },
+      "currentPasswordRequired": "ईमेल पता बदलने के लिए अपना वर्तमान पासवर्ड दर्ज करें",
+      "emailStepUpHint": "ईमेल परिवर्तन की पुष्टि के लिए आवश्यक"
     },
     "notifications": {
       "title": "सूचना प्राथमिकताएं",
@@ -3815,7 +3837,9 @@
       "submitForVerification": "सत्यापन के लिए जमा करें",
       "verifySelfieAge": "सेल्फ़ी आयु सत्यापित करें",
       "connectHackClub": "Hack Club से सत्यापित करें",
-      "connectGithub": "GitHub से सत्यापित करें"
+      "connectGithub": "GitHub से सत्यापित करें",
+      "verifyStudent": "छात्र स्थिति सत्यापित करें",
+      "viewBenefits": "लाभ देखें"
     },
     "messages": {
       "submittedForReview": "सत्यापन जमा किया गया - आपके दस्तावेज़ समीक्षाधीन हैं।"
@@ -3865,7 +3889,8 @@
         "connectHackClub": "छात्र लाभ के लिए Hack Club से सत्यापित करें",
         "connectGithub": "छात्र लाभ के लिए GitHub से सत्यापित करें",
         "comingSoon": "छात्र सत्यापन जल्द आ रहा है",
-        "uploadProof": "छात्र स्थिति सत्यापित करने के लिए नामांकन प्रमाण अपलोड करें"
+        "uploadProof": "छात्र स्थिति सत्यापित करने के लिए नामांकन प्रमाण अपलोड करें",
+        "verifyPrompt": "मुफ़्त सर्वर और बोनस संसाधन अनलॉक करने के लिए अपनी छात्र स्थिति सत्यापित करें"
       },
       "identityDocument": {
         "title": "पहचान दस्तावेज़",
@@ -4078,7 +4103,8 @@
     "newServerModal": {
       "header": {
         "title": "नया सर्वर",
-        "subtitle": "कॉन्फ़िगर करें और तैनात करें"
+        "subtitle": "कॉन्फ़िगर करें और तैनात करें",
+        "forOrg": "{org} के लिए"
       },
       "alerts": {
         "verifyEmail": "सर्वर बनाने से पहले अपना ईमेल सत्यापित करें।",
@@ -5066,7 +5092,13 @@
         "multiplexHint": "समानांतर स्थानांतरण स्ट्रीम (0-16)। अधिक = तेज़ लेकिन अधिक बैंडविड्थ।",
         "multiplexChannels": "मल्टीप्लेक्स चैनल",
         "compression": "संपीड़न",
-        "archiveFormat": "आर्काइव प्रारूप"
+        "archiveFormat": "आर्काइव प्रारूप",
+        "archived": "संग्रहीत",
+        "files": "फ़ाइलें",
+        "loadingNodes": "नोड लोड हो रहे हैं...",
+        "progress": "{pct}% पूर्ण",
+        "sent": "भेजा गया",
+        "total": "कुल"
       }
     },
     "kvm": {
@@ -5893,7 +5925,8 @@
       "description": "अपने संगठन प्रबंधित करें"
     },
     "actions": {
-      "newOrganisation": "नया संगठन"
+      "newOrganisation": "नया संगठन",
+      "viaBilling": "$1 बिलिंग के माध्यम से"
     },
     "states": {
       "loading": "लोड हो रहा है...",
@@ -5901,9 +5934,10 @@
     },
     "labels": {
       "role": "भूमिका: {value}",
-      "tier": "स्तर: {value}"
+      "tier": "स्तर: {value}",
+      "members": "{count} सदस्य"
     },
-    "description": {},
+    "description": "संगठन आपको सर्वर, इन्फ्रास्ट्रक्चर नोड्स और DNS पर टीम के सदस्यों के साथ सहयोग करने देते हैं। प्रत्येक संगठन के अपने संसाधन और बिलिंग होते हैं।",
     "empty": {
       "title": "अभी तक कोई संगठन नहीं",
       "description": "सर्वर और इंफ्रास्ट्रक्चर पर अपनी टीम के साथ सहयोग शुरू करने के लिए एक संगठन बनाएं।"
@@ -5916,7 +5950,11 @@
     },
     "fields": {
       "namePlaceholder": "संगठन का नाम",
-      "handlePlaceholder": "हैंडल (जैसे acme.ecli.app)"
+      "handlePlaceholder": "हैंडल (जैसे acme.ecli.app)",
+      "handleHint": "यह एक डोमेन नाम होना चाहिए, जैसे myteam.ecli.app या myteam.com",
+      "handleLabel": "हैंडल (डोमेन)",
+      "nameLabel": "संगठन का नाम",
+      "tierLabel": "सदस्यता स्तर"
     },
     "tiers": {
       "free": "मुफ़्त",
@@ -5925,7 +5963,8 @@
     },
     "actions": {
       "creating": "बनाया जा रहा है...",
-      "create": "बनाएं"
+      "create": "बनाएं",
+      "cancel": "रद्द करें"
     },
     "errors": {
       "failedCreate": "संगठन बनाने में विफल"
@@ -5967,7 +6006,9 @@
       "servers": "सर्वर",
       "nodes": "नोड्स",
       "dns": "DNS",
-      "activity": "गतिविधि"
+      "activity": "गतिविधि",
+      "billing": "बिलिंग",
+      "settings": "सेटिंग्स"
     },
     "roles": {
       "member": "सदस्य",
@@ -6005,13 +6046,17 @@
         "description": "विवरण",
         "amount": "राशि",
         "status": "स्थिति",
-        "date": "दिनांक"
-      }
+        "date": "दिनांक",
+        "actions": ""
+      },
+      "invoice": "चालान",
+      "invoiceFailed": "चालान डाउनलोड करने में विफल"
     },
     "servers": {
       "title": "संगठन सर्वर",
       "loading": "सर्वर लोड हो रहे हैं…",
-      "none": "इस संगठन के लिए कोई सर्वर नहीं मिला।"
+      "none": "इस संगठन के लिए कोई सर्वर नहीं मिला।",
+      "newServer": "नया सर्वर"
     },
     "nodes": {
       "title": "संगठन नोड्स",
@@ -6397,7 +6442,18 @@
       "switched": "इसमें स्विच किया गया",
       "queued": "नवीनीकरण के लिए कतारबद्ध",
       "activateNow": "अभी सक्रिय करें (वर्तमान योजना बदलें)",
-      "activateOnRenewal": "अगले नवीनीकरण के लिए कतारबद्ध करें"
+      "activateOnRenewal": "अगले नवीनीकरण के लिए कतारबद्ध करें",
+      "billingFor": "बिल किसे",
+      "handleTaken": "यह हैंडल पहले से किसी अन्य संगठन द्वारा लिया गया है",
+      "newOrganisation": "नया संगठन",
+      "orgCreateFailed": "संगठन बनाने में विफल",
+      "orgFormationFee": "संगठन गठन शुल्क",
+      "orgHandleHint": "यह एक डोमेन नाम होना चाहिए। DNS प्रबंधन के लिए एंटरप्राइज़ स्तर आवश्यक है।",
+      "orgHandlePlaceholder": "हैंडल (जैसे myteam.ecli.app)",
+      "orgNamePlaceholder": "संगठन का नाम",
+      "orgNameRequired": "संगठन का नाम और हैंडल आवश्यक हैं",
+      "personalAccount": "व्यक्तिगत खाता",
+      "verifyStudent": "छात्र स्थिति सत्यापित करें"
     },
     "invoices": {
       "title": "चालान इतिहास",
@@ -6888,7 +6944,60 @@
     "analyticsTableStatus": "स्थिति",
     "analyticsTableCreated": "बनाया गया",
     "views": "दृश्य",
-    "handbook": "हैंडबुक"
+    "handbook": "हैंडबुक",
+    "add": "जोड़ें",
+    "adding": "जोड़ा जा रहा है...",
+    "avatarLabel": "अवतार",
+    "bio": "परिचय",
+    "bioPlaceholder": "एक छोटा परिचय लिखें...",
+    "builderBlogHeader": "ब्लॉग हेडर",
+    "builderCancel": "रद्द करें",
+    "builderClickToAdd": "जोड़ने के लिए क्लिक करें",
+    "builderConfigure": "कॉन्फ़िगर करें",
+    "builderConfigureSection": "कॉन्फ़िगर करें: {section}",
+    "builderDefaultHero": "डिफ़ॉल्ट हीरो",
+    "builderDone": "हो गया",
+    "builderEmptyField": "खाली",
+    "builderHasContent": "सामग्री है",
+    "builderHasHtml": "HTML है",
+    "builderHasScript": "स्क्रिप्ट है",
+    "builderLoadingEditor": "एडिटर लोड हो रहा है...",
+    "builderNoConfiguration": "कोई कॉन्फ़िगरेशन उपलब्ध नहीं है।",
+    "builderNoUrl": "कोई URL नहीं",
+    "builderOrder": "क्रम:",
+    "builderPostsInGrid": "ग्रिड में {count} पोस्ट",
+    "builderPostsInList": "सूची में {count} पोस्ट",
+    "builderSearchBar": "खोज बार",
+    "builderSections": "अनुभाग",
+    "builderVideoPrefix": "वीडियो:",
+    "cancel": "रद्द करें",
+    "coverImageAlt": "कवर छवि",
+    "displayName": "प्रदर्शित नाम",
+    "displayNamePlaceholder": "इस ब्लॉग पर आप कैसे दिखते हैं",
+    "editProfile": "ब्लॉग प्रोफ़ाइल संपादित करें",
+    "emailPlaceholder": "user@example.com",
+    "memberFallback": "सदस्य",
+    "previewTruncated": "पूर्वावलोकन 5000 वर्णों पर काटा गया",
+    "roleAdmin": "एडमिन",
+    "roleAdminDesc": "एडमिन / सदस्य प्रबंधन + पोस्ट लेखन",
+    "roleAuthor": "लेखक",
+    "roleAuthorDesc": "लेखक / पोस्ट लेखन",
+    "roleOwnerDesc": "स्वामी / पूर्ण नियंत्रण",
+    "scheduleAutoPublish": "पोस्ट {date} को स्वतः प्रकाशित होगा",
+    "schedulePost": "प्रकाशन अनुसूचित करें (वैकल्पिक)",
+    "setDisplayName": "अपना प्रदर्शित नाम सेट करें",
+    "slugPlaceholder": "my-post-slug",
+    "tagsPlaceholder": "web, tutorial, guide",
+    "toolbarBold": "बोल्ड",
+    "toolbarBulletList": "बुलेट सूची",
+    "toolbarCode": "कोड",
+    "toolbarHeading": "शीर्षक",
+    "toolbarImage": "छवि",
+    "toolbarItalic": "इटैलिक",
+    "toolbarLink": "लिंक",
+    "toolbarNumberedList": "क्रमांकित सूची",
+    "toolbarQuote": "उद्धरण",
+    "toolbarVideo": "वीडियो"
   },
   "orgBilling": {
     "title": "संगठन बिलिंग",
@@ -7059,5 +7168,34 @@
     "purgeToggle": "स्पैम हटाएं",
     "purgeHide": "छिपाएं",
     "purgeQueued": "सफाई पृष्ठभूमि में शुरू हो गई है। पूरी होने पर आपको सूचना मिलेगी।"
+  },
+  "oauthConsentPage": {
+    "title": "पहुंच अधिकृत करें",
+    "subtitle": "यह ऐप्लिकेशन आपके EcliPanel खाते तक पहुंच का अनुरोध कर रहा है।",
+    "application": "ऐप्लिकेशन",
+    "securityNote": "यह अधिकरण थोड़े समय के लिए मान्य है और इसे कभी भी अपनी खाता सेटिंग से रद्द किया जा सकता है।",
+    "loading": "लोड हो रहा है…",
+    "byOwner": "द्वारा",
+    "links": {
+      "privacyPolicy": "गोपनीयता नीति",
+      "termsOfService": "सेवा की शर्तें"
+    },
+    "signedInAs": "इस रूप में साइन इन",
+    "permissions": "यह ऐप इन कामों में सक्षम होगा:",
+    "actions": {
+      "authorize": "अधिकृत करें",
+      "cancel": "रद्द करें"
+    },
+    "loginRequired": {
+      "title": "साइन इन आवश्यक",
+      "description": "इस ऐप्लिकेशन को अधिकृत करने के लिए आपको अपने EcliPanel खाते में साइन इन होना चाहिए।",
+      "signIn": "जारी रखने के लिए साइन इन करें"
+    },
+    "errors": {
+      "title": "कुछ गलत हो गया",
+      "missingParams": "OAuth पैरामीटर अनुपलब्ध हैं।",
+      "loadFailed": "ऐप्लिकेशन का विवरण लोड नहीं किया जा सका।",
+      "submitFailed": "आपका निर्णय सबमिट नहीं किया जा सका।"
+    }
   }
 }
