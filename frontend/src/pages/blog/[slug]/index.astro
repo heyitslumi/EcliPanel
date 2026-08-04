@@ -12,7 +12,7 @@ const backendUrl = ((process.env.BACKEND_URL || "") || (process.env.PUBLIC_API_B
 let title = `${slug} Blog — EclipseSystems`, description = "", ogImage = "";
 try {
   const res = await fetch(`${backendUrl}/api/public/blog/${slug}`);
-  if (res.ok) { const blog = await res.json(); title = blog.title || blog.name || title; description = (blog.description || "").replace(/[#*`>\-\[\]()]/g, "").slice(0, 200); ogImage = blog.coverImage || blog.image || ""; }
+  if (res.ok) { const blog = await res.json(); title = blog.title || blog.name || title; description = (blog.description || "").replace(/[#*`>\-\[\]()]/g, "").slice(0, 200); ogImage = blog.coverImageUrl || ""; }
 } catch {}
 ---
 
