@@ -6281,6 +6281,7 @@ remote: ${panelUrl}`
                     fetchLogs,
                     deleteLog,
                     redact,
+                    privateMode,
                   }}
                 />
               ) : null}

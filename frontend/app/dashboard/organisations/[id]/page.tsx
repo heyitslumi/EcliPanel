@@ -436,6 +436,7 @@ export default function OrganisationDetail() {
                 orgId={orgId} activity={activity} activityLoading={activityLoading}
                 activityPage={activityPage} activityHasMore={activityHasMore}
                 onLoadActivity={loadActivity}
+                canExport={perms.canManage}
               />
             </TabsContent>
 

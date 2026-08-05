@@ -3,7 +3,17 @@
 import { useState, useCallback } from "react"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/api-client"
-import { Search, Loader2, Clock, User, ChevronLeft, ChevronRight, FileJson } from "lucide-react"
+import { API_ENDPOINTS } from "@/lib/panel-config"
+import { Search, Loader2, Clock, User, ChevronLeft, ChevronRight, FileJson, Download, FileSpreadsheet } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { downloadTextFile, dateStamp } from "@/lib/csv-utils"
+import { toExportContent } from "@/lib/export-utils"
+import { toast } from "@/hooks/use-toast"
 
 export default function AuditLogsTab() {
   const t = useTranslations("adminAuditLogs")
@@ -15,7 +25,27 @@ export default function AuditLogsTab() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [exporting, setExporting] = useState(false)
   const PER = 100
+
+  const handleExport = async (format: "csv" | "json") => {
+    const q = searchUuid || uuid.trim()
+    if (!q) return
+    setExporting(true)
+    try {
+      const url = `${API_ENDPOINTS.adminAuditExport.replace(":uuid", encodeURIComponent(q))}?format=${format}`
+      const data = await apiFetch(url, { timeout: 60000, retries: 1 })
+      const content = toExportContent(data, format)
+      const safeQ = q.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 64)
+      downloadTextFile(content, `audit-${safeQ}-${dateStamp()}.${format}`, format)
+      toast({ title: t?.("exportSuccess") || "Audit log exported" })
+    } catch (e) {
+      console.error("Audit log export failed", e)
+      toast({ title: t?.("exportFailed") || "Failed to export audit log", variant: "destructive" })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const toggleExpand = (id: number) => {
     setExpanded(prev => {
@@ -101,6 +131,27 @@ export default function AuditLogsTab() {
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{total} {t?.("entriesFound") || "entries found"}</span>
             <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    disabled={exporting}
+                    className="p-1.5 hover:text-foreground disabled:opacity-40 transition-colors inline-flex items-center gap-1"
+                    title={t?.("exportTitle") || "Export"}
+                  >
+                    {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem disabled={exporting} onClick={() => handleExport("csv")}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    {t?.("exportCsv") || "Export as CSV"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={exporting} onClick={() => handleExport("json")}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    {t?.("exportJson") || "Export as JSON"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 onClick={() => doSearch(page - 1)}
                 disabled={page <= 1 || loading}

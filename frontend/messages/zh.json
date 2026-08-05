@@ -3558,13 +3558,25 @@
       "refresh": "刷新",
       "previous": "上一页",
       "next": "下一页"
+    },
+    "export": {
+      "title": "导出",
+      "csv": "导出为 CSV",
+      "json": "导出为 JSON",
+      "success": "活动日志导出成功",
+      "failed": "活动日志导出失败"
     }
   },
   "adminAuditLogs": {
     "searchPlaceholder": "输入服务器 UUID 以查看所有关联活动...",
     "search": "搜索",
     "entriesFound": "条记录已找到",
-    "noResults": "未找到此 UUID 的活动日志。服务器可能在记录任何活动之前已被删除。"
+    "noResults": "未找到此 UUID 的活动日志。服务器可能在记录任何活动之前已被删除。",
+    "exportTitle": "导出",
+    "exportCsv": "导出为 CSV",
+    "exportJson": "导出为 JSON",
+    "exportSuccess": "审计日志导出成功",
+    "exportFailed": "审计日志导出失败"
   },
   "adminRolesTab": {
     "header": {
@@ -4266,6 +4278,13 @@
       "prev": "上一页",
       "next": "下一页"
     },
+    "export": {
+      "title": "导出",
+      "csv": "导出为 CSV",
+      "json": "导出为 JSON",
+      "success": "活动日志导出成功",
+      "failed": "活动日志导出失败"
+    },
     "actionLabels": {
       "startedServer": "启动了服务器",
       "stoppedServer": "停止了服务器",
@@ -4902,6 +4921,13 @@
     "header": {
       "serverFallback": "服务器",
       "unnamedServer": "未命名服务器"
+    },
+    "export": {
+      "title": "导出",
+      "csv": "导出为 CSV",
+      "json": "导出为 JSON",
+      "success": "活动日志导出成功",
+      "failed": "活动日志导出失败"
     },
     "tabs": {
       "console": "控制台",
@@ -5978,6 +6004,13 @@
   "organisationsDetailPage": {
     "header": {
       "fallbackTitle": "组织"
+    },
+    "export": {
+      "title": "导出",
+      "csv": "导出为 CSV",
+      "json": "导出为 JSON",
+      "success": "活动日志导出成功",
+      "failed": "活动日志导出失败"
     },
     "common": {
       "dash": "—"

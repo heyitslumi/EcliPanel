@@ -3587,13 +3587,25 @@
       "refresh": "Refresh",
       "previous": "Previous",
       "next": "Next"
+    },
+    "export": {
+      "title": "Export",
+      "csv": "Export as CSV",
+      "json": "Export as JSON",
+      "success": "Activity log exported successfully",
+      "failed": "Failed to export activity log"
     }
   },
   "adminAuditLogs": {
     "searchPlaceholder": "Enter server UUID to view all linked activity...",
     "search": "Search",
     "entriesFound": "entries found",
-    "noResults": "No activity logs found for this UUID. The server may have been deleted before any activity was recorded."
+    "noResults": "No activity logs found for this UUID. The server may have been deleted before any activity was recorded.",
+    "exportTitle": "Export",
+    "exportCsv": "Export as CSV",
+    "exportJson": "Export as JSON",
+    "exportSuccess": "Audit log exported",
+    "exportFailed": "Failed to export audit log"
   },
   "adminRolesTab": {
     "header": {
@@ -4316,6 +4328,13 @@
       "prev": "Prev",
       "next": "Next"
     },
+    "export": {
+      "title": "Export",
+      "csv": "Export as CSV",
+      "json": "Export as JSON",
+      "success": "Activity log exported successfully",
+      "failed": "Failed to export activity log"
+    },
     "actionLabels": {
       "startedServer": "Started server",
       "stoppedServer": "Stopped server",
@@ -4924,6 +4943,13 @@
     "header": {
       "serverFallback": "Server",
       "unnamedServer": "Unnamed Server"
+    },
+    "export": {
+      "title": "Export",
+      "csv": "Export as CSV",
+      "json": "Export as JSON",
+      "success": "Activity log exported successfully",
+      "failed": "Failed to export activity log"
     },
     "tabs": {
       "console": "Console",
@@ -5999,6 +6025,13 @@
   "organisationsDetailPage": {
     "header": {
       "fallbackTitle": "Organisation"
+    },
+    "export": {
+      "title": "Export",
+      "csv": "Export as CSV",
+      "json": "Export as JSON",
+      "success": "Activity log exported successfully",
+      "failed": "Failed to export activity log"
     },
     "common": {
       "dash": "—"

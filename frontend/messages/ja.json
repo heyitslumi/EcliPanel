@@ -3290,13 +3290,25 @@
       "refresh": "更新",
       "previous": "前",
       "next": "次"
+    },
+    "export": {
+      "title": "エクスポート",
+      "csv": "CSVとしてエクスポート",
+      "json": "JSONとしてエクスポート",
+      "success": "アクティビティログをエクスポートしました",
+      "failed": "アクティビティログのエクスポートに失敗しました"
     }
   },
   "adminAuditLogs": {
     "searchPlaceholder": "サーバーUUIDを入力して関連するすべてのアクティビティを表示...",
     "search": "検索",
     "entriesFound": "件のエントリが見つかりました",
-    "noResults": "このUUIDのアクティビティログは見つかりませんでした。アクティビティが記録される前にサーバーが削除された可能性があります。"
+    "noResults": "このUUIDのアクティビティログは見つかりませんでした。アクティビティが記録される前にサーバーが削除された可能性があります。",
+    "exportTitle": "エクスポート",
+    "exportCsv": "CSVとしてエクスポート",
+    "exportJson": "JSONとしてエクスポート",
+    "exportSuccess": "監査ログをエクスポートしました",
+    "exportFailed": "監査ログのエクスポートに失敗しました"
   },
   "adminRolesTab": {
     "header": {
@@ -3997,6 +4009,13 @@
     "actions": {
       "prev": "前",
       "next": "次"
+    },
+    "export": {
+      "title": "エクスポート",
+      "csv": "CSVとしてエクスポート",
+      "json": "JSONとしてエクスポート",
+      "success": "アクティビティログをエクスポートしました",
+      "failed": "アクティビティログのエクスポートに失敗しました"
     },
     "actionLabels": {
       "startedServer": "サーバーを起動しました",
@@ -4901,6 +4920,13 @@
     "header": {
       "serverFallback": "サーバー",
       "unnamedServer": "名前のないサーバー"
+    },
+    "export": {
+      "title": "エクスポート",
+      "csv": "CSVとしてエクスポート",
+      "json": "JSONとしてエクスポート",
+      "success": "アクティビティログをエクスポートしました",
+      "failed": "アクティビティログのエクスポートに失敗しました"
     },
     "tabs": {
       "console": "コンソール",
@@ -5977,6 +6003,13 @@
   "organisationsDetailPage": {
     "header": {
       "fallbackTitle": "組織"
+    },
+    "export": {
+      "title": "エクスポート",
+      "csv": "CSVとしてエクスポート",
+      "json": "JSONとしてエクスポート",
+      "success": "アクティビティログをエクスポートしました",
+      "failed": "アクティビティログのエクスポートに失敗しました"
     },
     "common": {
       "dash": "—"

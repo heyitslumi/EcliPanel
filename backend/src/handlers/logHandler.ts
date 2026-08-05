@@ -2,6 +2,9 @@ import { AppDataSource } from '../config/typeorm';
 import { UserLog } from '../models/userLog.entity';
 import { User } from '../models/user.entity';
 import { ServerConfig } from '../models/serverConfig.entity';
+import { ServerSubuser } from '../models/serverSubuser.entity';
+import { OrganisationMember } from '../models/organisationMember.entity';
+import { Organisation } from '../models/organisation.entity';
 import { sendMail } from '../services/mailService';
 import { resolveLocale } from '../i18n/resolve';
 import { tForUser } from '../i18n';
@@ -419,6 +422,130 @@ function getPagination(query: Record<string, unknown> | undefined) {
   return { limit: Math.min(Number(limit), 200), offset: Number(offset) };
 }
 
+export function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  let str: string;
+  if (typeof value === 'object') {
+    try {
+      str = JSON.stringify(value);
+    } catch {
+      str = String(value);
+    }
+  } else {
+    str = String(value);
+  }
+  if (/^[\s=+\-@]/.test(str)) {
+    str = "'" + str;
+  }
+  if (/[",\r\n]/.test(str)) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+export function rowsToCsv(header: string[], rows: (string | number | boolean | null | undefined)[][]): string {
+  const lines = [header.map(csvEscape).join(',')];
+  for (const row of rows) {
+    lines.push(row.map(csvEscape).join(','));
+  }
+  return lines.join('\r\n');
+}
+
+const USER_LOG_CSV_HEADER = ['id', 'timestamp', 'action', 'targetType', 'targetId', 'ipAddress', 'isRead', 'metadata'];
+
+function userLogRow(log: UserLog): (string | number | boolean | null | undefined)[] {
+  return [
+    log.id,
+    log.timestamp instanceof Date ? log.timestamp.toISOString() : String(log.timestamp || ''),
+    log.action,
+    log.targetType || '',
+    log.targetId || '',
+    log.ipAddress || '',
+    log.isRead ? 'true' : 'false',
+    log.metadata ? JSON.stringify(log.metadata) : '',
+  ];
+}
+
+function userLogsToCsv(logs: UserLog[]): string {
+  return rowsToCsv(USER_LOG_CSV_HEADER, logs.map(userLogRow));
+}
+
+export function safeFilename(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+export const MAX_EXPORT_ROWS = 10000;
+
+function sendLogsExport(ctx: LogContext, logs: UserLog[], filename: string, format: unknown) {
+  const fmt = String(format || 'csv').toLowerCase() === 'json' ? 'json' : 'csv';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const baseName = safeFilename(`${filename}-${dateStr}`);
+  ctx.set.status = 200;
+  if (logs.length === MAX_EXPORT_ROWS) {
+    ctx.set.headers['X-Truncated'] = 'true';
+  }
+  if (fmt === 'json') {
+    ctx.set.headers['Content-Type'] = 'application/json; charset=utf-8';
+    ctx.set.headers['Content-Disposition'] = `attachment; filename="${baseName}.json"`;
+    return logs;
+  }
+  ctx.set.headers['Content-Type'] = 'text/csv; charset=utf-8';
+  ctx.set.headers['Content-Disposition'] = `attachment; filename="${baseName}.csv"`;
+  return '\uFEFF' + userLogsToCsv(logs);
+}
+
+async function canAccessServerLogs(ctx: LogContext, serverUuid: string) {
+  const server = await AppDataSource.getRepository(ServerConfig).findOneBy({ uuid: serverUuid });
+  if (!server) return { ok: false as const, status: 404, message: ctx.t('server.notFound') };
+  const requester = ctx.user as User | null;
+  if (!requester) return { ok: false as const, status: 401, message: ctx.t('auth.unauthorized') };
+  if (hasPermissionSync(ctx, 'admin:access') || hasPermissionSync(ctx, 'servers:list')) return { ok: true as const };
+  if (server.userId === requester.id) return { ok: true as const };
+  const sub = await AppDataSource.getRepository(ServerSubuser).findOneBy({
+    serverUuid,
+    userId: requester.id,
+    accepted: true,
+  });
+  if (sub && (sub.permissions.includes('*') || sub.permissions.includes('activity'))) {
+    return { ok: true as const };
+  }
+  if (server.orgId) {
+    const m = await AppDataSource.getRepository(OrganisationMember).findOne({
+      where: { userId: requester.id, organisationId: server.orgId },
+    });
+    if (m && (m.orgRole === 'admin' || m.orgRole === 'owner')) return { ok: true as const };
+  }
+  return { ok: false as const, status: 403, message: ctx.t('common.forbidden') };
+}
+
+async function canAccessOrgLogs(ctx: LogContext, orgId: number) {
+  const requester = ctx.user as User | null;
+  if (!requester) return { ok: false as const, status: 401, message: ctx.t('auth.unauthorized') };
+  if (hasPermissionSync(ctx, 'logs:read')) return { ok: true as const };
+  const m = await AppDataSource.getRepository(OrganisationMember).findOne({
+    where: { userId: requester.id, organisationId: orgId },
+  });
+  if (m && (m.orgRole === 'admin' || m.orgRole === 'owner')) return { ok: true as const };
+  return { ok: false as const, status: 403, message: ctx.t('common.forbidden') };
+}
+
+function buildUserLogExportQuery(
+  repo: import('typeorm').Repository<UserLog>,
+  where: string,
+  params: Record<string, unknown>,
+  action?: unknown,
+  targetType?: unknown
+) {
+  const qb = repo
+    .createQueryBuilder('log')
+    .where(where, params)
+    .orderBy('log.timestamp', 'DESC')
+    .take(MAX_EXPORT_ROWS);
+  if (action) qb.andWhere('log.action LIKE :action', { action: `%${action}%` });
+  if (targetType) qb.andWhere('log.targetType = :targetType', { targetType });
+  return qb;
+}
+
 export async function logRoutes(app: LogApp, prefix = '') {
   app.post(
     prefix + '/logs',
@@ -726,6 +853,116 @@ export async function logRoutes(app: LogApp, prefix = '') {
       beforeHandle: authenticate,
       response: { 200: t.Array(t.Any()), 403: t.Object({ error: t.String() }) },
       detail: { summary: 'Fetch activity logs for a given user (alias)', tags: ['Logs'] },
+    }
+  );
+
+  app.get(
+    prefix + '/users/:id/logs/export',
+    async (ctx: LogContext) => {
+      const userId = Number(ctx.params['id']);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        ctx.set.status = 400;
+        return { error: ctx.t('validation.validUserIdRequired') };
+      }
+      const requester = ctx.user as User | null;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: ctx.t('auth.unauthorized') };
+      }
+      if (requester.id !== userId && !hasPermissionSync(ctx, 'logs:read')) {
+        ctx.set.status = 403;
+        return { error: ctx.t('common.forbidden') };
+      }
+      const { action, targetType, format } = (ctx.query || {}) as Record<string, unknown>;
+      const logRepo = AppDataSource.getRepository(UserLog);
+      const qb = buildUserLogExportQuery(
+        logRepo,
+        'log.userId = :userId',
+        { userId },
+        action,
+        targetType
+      );
+      const logs = await qb.getMany();
+      return sendLogsExport(ctx, logs, `activity-${userId}`, format);
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Any(),
+        400: t.Object({ error: t.String() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Export all activity logs for a given user', tags: ['Logs'] },
+    }
+  );
+
+  app.get(
+    prefix + '/servers/:id/logs/export',
+    async (ctx: LogContext) => {
+      const serverId = ctx.params['id'] as string;
+      const acc = await canAccessServerLogs(ctx, serverId);
+      if (!acc.ok) {
+        ctx.set.status = acc.status;
+        return { error: acc.message };
+      }
+      const { action, format } = (ctx.query || {}) as Record<string, unknown>;
+      const logRepo = AppDataSource.getRepository(UserLog);
+      const qb = buildUserLogExportQuery(
+        logRepo,
+        'log.targetId = :serverId AND log.targetType = :type',
+        { serverId, type: 'server' },
+        action
+      );
+      const logs = await qb.getMany();
+      return sendLogsExport(ctx, logs, `server-activity-${serverId}`, format);
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Any(),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Export activity logs for a server (CSV or JSON)', tags: ['Logs'] },
+    }
+  );
+
+  app.get(
+    prefix + '/organisations/:id/logs/export',
+    async (ctx: LogContext) => {
+      const orgId = Number(ctx.params['id']);
+      if (!Number.isInteger(orgId) || orgId <= 0) {
+        ctx.set.status = 400;
+        return { error: ctx.t('organisation.notFound') };
+      }
+      const acc = await canAccessOrgLogs(ctx, orgId);
+      if (!acc.ok) {
+        ctx.set.status = acc.status;
+        return { error: acc.message };
+      }
+      const { action, format } = (ctx.query || {}) as Record<string, unknown>;
+      const logRepo = AppDataSource.getRepository(UserLog);
+      const qb = buildUserLogExportQuery(
+        logRepo,
+        'log.targetId = :orgId AND log.targetType = :type',
+        { orgId: String(orgId), type: 'organisation' },
+        action
+      );
+      const logs = await qb.getMany();
+      return sendLogsExport(ctx, logs, `organisation-activity-${orgId}`, format);
+    },
+    {
+      beforeHandle: authenticate,
+      response: {
+        200: t.Any(),
+        400: t.Object({ error: t.String() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+        404: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Export activity logs for an organisation', tags: ['Logs'] },
     }
   );
 }

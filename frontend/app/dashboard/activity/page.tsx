@@ -18,6 +18,9 @@ import {
   Shield,
   Ticket,
   Cpu,
+  Download,
+  FileJson,
+  FileSpreadsheet,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -37,6 +40,14 @@ import {
   UserPlus,
   Calendar,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "@/hooks/use-toast"
+import { exportActivityLogs } from "@/lib/export-utils"
 
 const typeIcons: Record<string, typeof Server> = {
   server: Server,
@@ -267,6 +278,7 @@ export default function AccountActivity() {
   const [hasMore, setHasMore] = useState(false)
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Set<string | number>>(new Set())
+  const [exporting, setExporting] = useState(false)
   const actionLabels: Record<string, string> = {
     "login_passkey": t("actionLabels.loginPasskey"),
     "login_2fa": t("actionLabels.login2fa"),
@@ -316,6 +328,25 @@ export default function AccountActivity() {
   useEffect(() => {
     loadLogs(1)
   }, [user])
+
+  const exportLogs = async (format: "csv" | "json") => {
+    if (!user) return
+    setExporting(true)
+    try {
+      await exportActivityLogs({
+        url: API_ENDPOINTS.userLogsExport.replace(":id", user.id.toString()),
+        format,
+        filter,
+        guessTypeFn: guessType,
+        filenamePrefix: `activity-${user.id}`,
+      })
+      toast({ title: t("export.success") })
+    } catch (e) {
+      toast({ title: t("export.failed"), description: e instanceof Error ? e.message : undefined, variant: "destructive" })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const displayLogs = logs.filter((item) => {
     if (!filter) return true
@@ -466,6 +497,43 @@ export default function AccountActivity() {
                   {t("log.shown", { count: displayLogs.length })}
                 </Badge>
               </div>
+              {/* Export */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={exporting || loading}
+                    data-telemetry="activity:export-open"
+                    className="h-7 sm:h-8 px-2 gap-1.5"
+                  >
+                    {exporting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline text-xs">{t("export.title")}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    disabled={exporting}
+                    onClick={() => exportLogs("csv")}
+                    data-telemetry="activity:export-csv"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    {t("export.csv")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={exporting}
+                    onClick={() => exportLogs("json")}
+                    data-telemetry="activity:export-json"
+                  >
+                    <FileJson className="h-4 w-4 mr-2" />
+                    {t("export.json")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {/* Pagination */}
               <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">

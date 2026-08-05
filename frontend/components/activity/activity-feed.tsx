@@ -22,7 +22,17 @@ import {
   Box,
   LogIn,
   RefreshCw,
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import {
   typeIcons,
   typeColors,
@@ -59,6 +69,8 @@ export interface ActivityFeedProps {
   onRefresh?: () => void
   refreshing?: boolean
 
+  onExport?: (format: "csv" | "json", filter: string | null) => Promise<void> | void
+
   translate: (key: string, values?: Record<string, any>) => string
   emptyTitle?: string
   emptyMessage?: string
@@ -79,6 +91,7 @@ export function ActivityFeed({
   onNextPage,
   onRefresh,
   refreshing,
+  onExport,
   translate: t,
   emptyTitle,
   emptyMessage,
@@ -86,6 +99,19 @@ export function ActivityFeed({
   const [filter, setFilter] = useState<string | null>(null)
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Set<string | number>>(new Set())
+  const [exporting, setExporting] = useState(false)
+
+  const handleExport = async (format: "csv" | "json") => {
+    if (!onExport) return
+    setExporting(true)
+    try {
+      await onExport(format, filter)
+    } catch (err) {
+      console.error("Activity log export failed", err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const displayLogs = logs.filter((item) => {
     if (!filter) return true
@@ -191,6 +217,36 @@ export function ActivityFeed({
               {t("log.shown", { count: displayLogs.length })}
             </Badge>
           </div>
+          {onExport && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={exporting || loading}
+                  aria-label={t("export.title")}
+                  className="h-7 sm:h-8 px-2 gap-1.5"
+                >
+                  {exporting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden sm:inline text-xs">{t("export.title")}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem disabled={exporting} onClick={() => handleExport("csv")}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  {t("export.csv")}
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={exporting} onClick={() => handleExport("json")}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  {t("export.json")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {/* Pagination */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">

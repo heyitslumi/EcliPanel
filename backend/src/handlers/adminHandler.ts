@@ -16,6 +16,7 @@ import { renderEmailTemplate, sendMail } from '../services/mailService';
 import { createAdminBroadcastJob } from '../services/adminBroadcastService';
 import { UserLog } from '../models/userLog.entity';
 import { ApiRequestLog } from '../models/apiRequestLog.entity';
+import { rowsToCsv, safeFilename, MAX_EXPORT_ROWS } from './logHandler';
 import { AIModel } from '../models/aiModel.entity';
 import { Egg } from '../models/egg.entity';
 import { nodeService } from '../services/nodeService';
@@ -7973,6 +7974,248 @@ export async function adminRoutes(app: any, prefix = '') {
       beforeHandle: [authenticate, authorize('admin:audit')],
       response: { 200: t.Object({ logs: t.Array(t.Any()), total: t.Number(), page: t.Number(), per: t.Number() }), 400: t.Object({ error: t.String() }), 401: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }) },
       detail: { summary: 'Get audit logs for a server UUID', tags: ['Admin'] }
+    }
+  );
+
+  async function resolveAdminUserNames(userIds: (number | undefined | null)[]) {
+    const ids = [...new Set(userIds.filter((id): id is number => !!id && id > 0))];
+    const map: Record<number, { username: string; email: string }> = {};
+    if (ids.length) {
+      const users = await AppDataSource.getRepository(User)
+        .createQueryBuilder('u')
+        .select(['u.id', 'u.firstName', 'u.lastName', 'u.email'])
+        .where('u.id IN (:...ids)', { ids })
+        .getMany();
+      users.forEach(u => {
+        map[u.id] = {
+          username:
+            [`${u.firstName || ''}`.trim(), `${u.lastName || ''}`.trim()].filter(Boolean).join(' ') ||
+            u.email ||
+            `User #${u.id}`,
+          email: u.email,
+        };
+      });
+    }
+    return map;
+  }
+
+  const ADMIN_LOG_CSV_HEADER = ['id', 'timestamp', 'userId', 'username', 'email', 'action', 'targetType', 'targetId', 'ipAddress', 'isRead', 'metadata', 'source'];
+
+  function adminLogEntriesToCsv(logs: any[]): string {
+    const rows = logs.map(e => [
+      String(e.id ?? ''),
+      e.timestamp instanceof Date ? e.timestamp.toISOString() : String(e.timestamp || ''),
+      e.userId ?? '',
+      e.username ?? '',
+      e.email ?? '',
+      e.action ?? '',
+      e.targetType ?? '',
+      e.targetId ?? '',
+      e.ipAddress ?? '',
+      e.isRead ? 'true' : 'false',
+      e.metadata ? JSON.stringify(e.metadata) : '',
+      e.source ?? '',
+    ]);
+    return rowsToCsv(ADMIN_LOG_CSV_HEADER, rows);
+  }
+
+  function apiRequestLogCsv(logs: any[]): string {
+    const header = ['id', 'timestamp', 'userId', 'organisationId', 'endpoint', 'count'];
+    const rows = logs.map(e => [
+      String(e.id ?? ''),
+      e.timestamp instanceof Date ? e.timestamp.toISOString() : String(e.timestamp || ''),
+      e.userId ?? '',
+      e.organisationId ?? '',
+      e.endpoint ?? '',
+      e.count ?? '',
+    ]);
+    return rowsToCsv(header, rows);
+  }
+
+  function sendAdminExport(ctx: any, csv: string, jsonData: unknown, filename: string, format: unknown) {
+    const fmt = String(format || 'csv').toLowerCase() === 'json' ? 'json' : 'csv';
+    const baseName = safeFilename(`${filename}-${new Date().toISOString().slice(0, 10)}`);
+    ctx.set.status = 200;
+    if (Array.isArray(jsonData) && jsonData.length === MAX_EXPORT_ROWS) {
+      ctx.set.headers['X-Truncated'] = 'true';
+    }
+    if (fmt === 'json') {
+      ctx.set.headers['Content-Type'] = 'application/json; charset=utf-8';
+      ctx.set.headers['Content-Disposition'] = `attachment; filename="${baseName}.json"`;
+      return jsonData;
+    }
+    ctx.set.headers['Content-Type'] = 'text/csv; charset=utf-8';
+    ctx.set.headers['Content-Disposition'] = `attachment; filename="${baseName}.csv"`;
+    return '\uFEFF' + csv;
+  }
+
+  function redactExportData(logs: any[], privateMode: boolean): any[] {
+    if (!privateMode) return logs;
+    return logs.map(e => ({
+      ...e,
+      userId: e.userId === 0 || e.userId == null ? e.userId : '***',
+      username: e.username != null ? '***' : e.username,
+      email: e.email != null ? '***' : e.email,
+      ipAddress: e.ipAddress ? '***' : e.ipAddress,
+    }));
+  }
+
+  app.get(
+    prefix + '/admin/logs/export',
+    async (ctx: any) => {
+      const adminErr = requireAdminPermission(ctx, 'logs:read');
+      if (adminErr !== true) return adminErr;
+      const { userId, type = 'audit', format, privateMode } = (ctx.query || {}) as Record<string, unknown>;
+      const isPrivate =
+        String(privateMode) === '1' || String(privateMode).toLowerCase() === 'true';
+      const uid =
+        userId !== undefined && userId !== null && userId !== '' ? Number(userId) : null;
+      if (uid !== null && (!Number.isInteger(uid) || uid < 0)) {
+        ctx.set.status = 400;
+        return { error: 'Invalid userId parameter' };
+      }
+
+      if (type === 'requests') {
+        const repo = AppDataSource.getRepository(ApiRequestLog);
+        let qb = repo.createQueryBuilder('l').orderBy('l.timestamp', 'DESC');
+        if (uid !== null) qb = qb.where('l.userId = :uid', { uid });
+        const raw = await qb.take(MAX_EXPORT_ROWS).getMany();
+        const logs = isPrivate
+          ? raw.map(e => ({
+              ...e,
+              userId: e.userId === 0 || e.userId == null ? e.userId : '***',
+              organisationId: e.organisationId == null ? e.organisationId : '***',
+            }))
+          : raw;
+        return sendAdminExport(ctx, apiRequestLogCsv(logs), logs, 'admin-logs-requests', format);
+      }
+
+      const repo = AppDataSource.getRepository(UserLog);
+      let qb = repo.createQueryBuilder('l').orderBy('l.timestamp', 'DESC');
+      if (type === 'serverErrors') {
+        qb = qb.where(
+          'l.action LIKE :error1 OR l.action LIKE :error2 OR l.action LIKE :error3',
+          { error1: '%error%', error2: '%crash%', error3: '%failed%' }
+        );
+      }
+      if (uid !== null) qb = qb.andWhere('l.userId = :uid', { uid });
+      const entries = await qb.take(MAX_EXPORT_ROWS).getMany();
+
+      const userMap = await resolveAdminUserNames(entries.map(e => e.userId));
+      const enriched = entries.map(e => ({
+        ...e,
+        username: e.userId === 0 ? 'System' : (userMap[e.userId as number]?.username ?? null),
+        email: e.userId === 0 ? '' : (userMap[e.userId as number]?.email ?? null),
+      }));
+      const logs = redactExportData(enriched, isPrivate);
+      return sendAdminExport(ctx, adminLogEntriesToCsv(logs), logs, `admin-logs-${safeFilename(String(type))}`, format);
+    },
+    {
+      beforeHandle: [authenticate, authorize('admin:access')],
+      schema: {
+        querystring: t.Object({
+          userId: t.Optional(t.String()),
+          type: t.Optional(t.String()),
+          format: t.Optional(t.String()),
+          privateMode: t.Optional(t.String()),
+        }),
+        response: {
+          200: t.Any(),
+          400: t.Object({ error: t.String() }),
+          401: t.Object({ error: t.String() }),
+          403: t.Object({ error: t.String() }),
+        },
+      },
+      detail: { summary: 'Export admin logs', tags: ['Admin'] },
+    }
+  );
+
+  app.get(
+    prefix + '/admin/audit/:uuid/export',
+    async (ctx: any) => {
+      const adminErr = requireAdminPermission(ctx, 'admin:audit');
+      if (adminErr !== true) return adminErr;
+      const uuid = String(ctx.params.uuid).trim();
+      if (!uuid) {
+        ctx.set.status = 400;
+        return { error: ctx.t('admin.server_uuid_is_required') };
+      }
+      const { format } = (ctx.query || {}) as Record<string, unknown>;
+      const logRepo = AppDataSource.getRepository(UserLog);
+      const fullSearch = ctx.query.full === '1' || ctx.query.full === 'true';
+      let where = '(l.targetId = :uuid AND l.targetType = :type)';
+      const params: any = { uuid, type: 'server' };
+      where += ' OR (l.targetType = :mboxType AND l.targetId = :uuid)';
+      params.mboxType = 'mailbox';
+      if (fullSearch) { where += ' OR l.metadata LIKE :ms'; params.ms = `%"${uuid}"%`; }
+
+      const entries = await logRepo
+        .createQueryBuilder('l')
+        .where(where, params)
+        .orderBy('l.timestamp', 'DESC')
+        .take(MAX_EXPORT_ROWS)
+        .getMany();
+
+      const userMap = await resolveAdminUserNames(entries.map(e => e.userId));
+      const logs = entries.map(e => ({
+        id: e.id,
+        timestamp: e.timestamp,
+        userId: e.userId || 0,
+        username: e.userId ? (userMap[e.userId]?.username ?? `#${e.userId}`) : 'System',
+        email: e.userId ? (userMap[e.userId]?.email ?? null) : null,
+        action: e.action,
+        targetId: e.targetId,
+        targetType: e.targetType,
+        ipAddress: e.ipAddress || null,
+        metadata: e.metadata || null,
+        isRead: e.isRead ? true : false,
+        source: 'userlog',
+      }));
+
+      const subRepo = AppDataSource.getRepository(ApplicationSubmission);
+      const formRepo = AppDataSource.getRepository(ApplicationForm);
+      const abuseForm = await formRepo.findOne({ where: { slug: 'antiabuse-incidents' } as any });
+      let subEntries: any[] = [];
+      if (abuseForm) {
+        subEntries = await subRepo
+          .createQueryBuilder('s')
+          .where('s.formId = :fid', { fid: abuseForm.id })
+          .andWhere('s.content LIKE :us', { us: `%${uuid}%` })
+          .orderBy('s.createdAt', 'DESC')
+          .take(MAX_EXPORT_ROWS)
+          .getMany();
+      }
+      const subLogs = subEntries.map(s => {
+        let parsed: any = {};
+        try { parsed = JSON.parse(s.content || '{}'); } catch { }
+        return {
+          id: `abuse-${s.id}`,
+          timestamp: s.createdAt,
+          userId: s.userId || 0,
+          username: s.userId ? `User #${s.userId}` : 'System',
+          email: null,
+          action: `antiabuse:${parsed.detectionType || s.status || 'incident'}`,
+          targetId: uuid,
+          targetType: 'antiabuse',
+          ipAddress: s.ipAddress || null,
+          metadata: parsed,
+          isRead: false,
+          source: 'antiabuse',
+        };
+      });
+      const all = [...logs, ...subLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      return sendAdminExport(ctx, adminLogEntriesToCsv(all), all, `audit-${safeFilename(uuid)}`, format);
+    },
+    {
+      beforeHandle: [authenticate, authorize('admin:audit')],
+      response: {
+        200: t.Any(),
+        400: t.Object({ error: t.String() }),
+        401: t.Object({ error: t.String() }),
+        403: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Export audit logs for a server UUID', tags: ['Admin'] },
     }
   );
 

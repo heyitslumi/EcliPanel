@@ -1,13 +1,24 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { API_ENDPOINTS } from "@/lib/panel-config"
 import { apiFetch } from "@/lib/api-client"
 import { useTranslations } from "next-intl"
-import { AlertTriangle, Bot, ChevronLeft, ChevronRight, Globe, RefreshCw, ScrollText, Shield, Timer, Trash2 } from "lucide-react"
+import { AlertTriangle, Bot, ChevronLeft, ChevronRight, Globe, RefreshCw, ScrollText, Shield, Timer, Trash2, Download, FileJson, FileSpreadsheet, Loader2 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { downloadTextFile, dateStamp } from "@/lib/csv-utils"
+import { toExportContent } from "@/lib/export-utils"
+import { toast } from "@/hooks/use-toast"
 
 export default function LogsTab({ ctx }: { ctx: any }) {
   const t = useTranslations("adminLogsTab")
+  const [exporting, setExporting] = useState(false)
   const {
     logType,
     setLogType,
@@ -20,7 +31,29 @@ export default function LogsTab({ ctx }: { ctx: any }) {
     fetchLogs,
     deleteLog,
     redact,
+    privateMode,
   } = ctx
+
+  const handleExport = async (format: "csv" | "json") => {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams({ type: logType, format })
+      if (logsUserFilter) params.set("userId", logsUserFilter)
+      if (privateMode) params.set("privateMode", "1")
+      const data = await apiFetch(`${API_ENDPOINTS.adminLogsExport}?${params.toString()}`, {
+        timeout: 60000,
+        retries: 1,
+      })
+      const content = toExportContent(data, format)
+      downloadTextFile(content, `admin-logs-${logType}-${dateStamp()}.${format}`, format)
+      toast({ title: t("export.success") })
+    } catch (e) {
+      console.error("Admin logs export failed", e)
+      toast({ title: t("export.failed"), variant: "destructive" })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -56,6 +89,35 @@ export default function LogsTab({ ctx }: { ctx: any }) {
                   <Trash2 className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t("actions.clear")}</span>
                 </Button>
+              )}
+              {logType !== "slow" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={exporting}
+                      className="h-8 gap-1.5 px-2"
+                    >
+                      {exporting ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span className="hidden sm:inline text-xs">{t("export.title")}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem disabled={exporting} onClick={() => handleExport("csv")}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      {t("export.csv")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={exporting} onClick={() => handleExport("json")}>
+                      <FileJson className="h-4 w-4 mr-2" />
+                      {t("export.json")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <button
                 onClick={async () => {

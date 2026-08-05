@@ -48,6 +48,8 @@ import {
   serverTypeBadgeColors,
 } from "@/components/activity/helpers"
 import { API_ENDPOINTS } from "@/lib/panel-config"
+import { exportActivityLogs } from "@/lib/export-utils"
+import { toast } from "@/hooks/use-toast"
 import { formatBytes } from "./serverTabHelpers"
 import { StatCard, LoadingState, MiniStat, CardGrid } from "./serverTabShared"
 import { ServerViewV2 } from "./ServerViewV2"
@@ -3885,6 +3887,21 @@ function ActivityTab({ serverId }: { serverId: string }) {
     loadLogs(1)
   }, [serverId])
 
+  const handleExport = async (format: "csv" | "json", filter: string | null) => {
+    try {
+      await exportActivityLogs({
+        url: API_ENDPOINTS.serverLogsExport.replace(":id", serverId),
+        format,
+        filter,
+        guessTypeFn: serverGuessType,
+        filenamePrefix: `server-activity-${serverId}`,
+      })
+      toast({ title: t("export.success") })
+    } catch (e) {
+      toast({ title: t("export.failed"), description: e instanceof Error ? e.message : undefined, variant: "destructive" })
+    }
+  }
+
   return (
     <div className="p-3 sm:p-4 md:p-6 min-w-0 overflow-hidden">
       <ActivityFeed
@@ -3918,6 +3935,7 @@ function ActivityTab({ serverId }: { serverId: string }) {
         onNextPage={() => loadLogs(page + 1)}
         onRefresh={() => loadLogs(page)}
         refreshing={loading}
+        onExport={handleExport}
         translate={t}
         filterOptions={[
           { key: "power", label: t("filters.power"), icon: Power },

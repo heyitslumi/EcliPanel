@@ -117,6 +117,7 @@ export const API_ENDPOINTS = {
   userRegister: "/api/users/register",
   userDetail: "/api/users/:id",
   userGuide: "/api/users/:id/guide",
+  userLogsExport: "/api/users/:id/logs/export",
 
   orderInvoice: "/api/orders/:id/invoice",
 
@@ -252,6 +253,7 @@ export const API_ENDPOINTS = {
   publicShareMedia: "/public/share/:token/media",
   serverConfigEgg: "/api/servers/v1/:id/configuration/egg",
   serverActivity: "/api/servers/:id/activity",
+  serverLogsExport: "/api/servers/:id/logs/export",
   serverSubusers: "/api/servers/:id/subusers",
   serverMounts: "/api/servers/v1/:id/mounts",
   serverSubuserDetail: "/api/servers/:id/subusers/:subId",
@@ -272,6 +274,7 @@ export const API_ENDPOINTS = {
   mailboxMessageMark: "/api/mailbox/messages/:id/read",
   mailboxMessageDelete: "/api/mailbox/messages/:id",
   organisationActivity: "/api/organisations/:id/activity",
+  organisationLogsExport: "/api/organisations/:id/logs/export",
   organisationInvites: "/api/organisations/invites",
   organisationInviteAccept: "/api/organisations/invites/:inviteId/accept",
   organisationInviteReject: "/api/organisations/invites/:inviteId/reject",
@@ -439,6 +442,8 @@ export const API_ENDPOINTS = {
   adminCompanyMailboxPurge: "/api/admin/company-mailboxes/purge-from",
   adminCompanyMailboxPreview: "/api/admin/company-mailboxes/:address/preview",
   adminLogs: "/api/admin/logs",
+  adminLogsExport: "/api/admin/logs/export",
+  adminAuditExport: "/api/admin/audit/:uuid/export",
   adminSlowQueries: "/api/admin/slow-queries",
   adminGlobalSearch: "/api/admin/search",
   adminNodes: "/api/admin/nodes",
