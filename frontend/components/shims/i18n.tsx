@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useMemo } from "react";
+import { formatMessage } from "./icu";
 
 type Messages = Record<string, any>;
 
@@ -44,16 +45,14 @@ function useI18n(): I18nContextValue {
 }
 
 export function useTranslations(namespace: string) {
-  const { messages } = useI18n();
+  const { locale, messages } = useI18n();
   const ns = messages[namespace] ?? EMPTY_OBJ;
 
   return useMemo(() => {
     function t(key: string, values?: Record<string, any>): any {
       let val: string = getNested(ns, key) ?? getNested(messages, `${namespace}.${key}`) ?? key;
       if (values) {
-        for (const [k, v] of Object.entries(values)) {
-          val = val.replace(`{${k}}`, String(v));
-        }
+        val = formatMessage(val, values, locale);
       }
       return val;
     }
@@ -68,10 +67,9 @@ export function useTranslations(namespace: string) {
       for (const [k, v] of Object.entries(values)) {
         if (typeof v === "function") {
           tagFns.push([k, v as (chunks: React.ReactNode) => React.ReactNode]);
-        } else {
-          result = result.replace(`{${k}}`, String(v));
         }
       }
+      result = formatMessage(result, values, locale);
 
       const parts: React.ReactNode[] = [];
       const tagRegex = /<(\w+)>(.*?)<\/\1>/g;
@@ -91,7 +89,7 @@ export function useTranslations(namespace: string) {
     };
 
     return t;
-  }, [ns, messages]);
+  }, [ns, messages, locale]);
 }
 
 export function useLocale(): string {

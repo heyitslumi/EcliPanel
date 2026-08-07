@@ -1,4 +1,5 @@
 import { defaultLocale, locales, type AppLocale } from "../../i18n/config";
+import { formatMessage } from "./icu";
 
 function toSupportedLocale(value: string | null | undefined): AppLocale | null {
   if (!value) return null;
@@ -66,9 +67,7 @@ export async function getTranslations(
   return function t(key: string, values?: Record<string, string | number>): string {
     let val: string = getNested(ns, key) ?? getNested(messages, `${namespace}.${key}`) ?? key;
     if (values) {
-      for (const [k, v] of Object.entries(values)) {
-        val = val.replace(`{${k}}`, String(v));
-      }
+      val = formatMessage(val, values, locale);
     }
     return val;
   };
