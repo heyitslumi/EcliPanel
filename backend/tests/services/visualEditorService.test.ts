@@ -86,6 +86,18 @@ describe('visualEditorService', () => {
       expect(code).toContain('console.log("Hello World")');
     });
 
+    it('should generate code for print block with label', () => {
+      const blocks = [makeBlock('print', { message: '"Hello World"', label: 'Score:' })];
+      const code = generateCode(blocks);
+      expect(code).toContain('console.log("Score:", "Hello World")');
+    });
+
+    it('should escape quotes and backslashes in print label', () => {
+      const blocks = [makeBlock('print', { message: '"hi"', label: 'He said "hi" \\ path' })];
+      const code = generateCode(blocks);
+      expect(code).toContain('console.log("He said \\"hi\\" \\\\ path", "hi")');
+    });
+
     it('should generate code for variable creation', () => {
       const blocks = [makeBlock('create_variable', { name: 'myVar', value: '42', type: 'number', global: false })];
       const code = generateCode(blocks);

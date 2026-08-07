@@ -108,7 +108,7 @@ where
                 Ok(req) => break req,
                 Err(ParseError::Incomplete) => {
                     if buf.len() >= MAX_HEADERS {
-                        let _ = error_response(&mut stream, 431).await;
+                        let _ = error_response(&mut stream, 431, None).await;
                         return Ok(());
                     }
                     if try_read_fast(&mut stream, &mut buf)? {
@@ -120,7 +120,7 @@ where
                     }
                 }
                 Err(ParseError::Invalid) => {
-                    let _ = error_response(&mut stream, 400).await;
+                    let _ = error_response(&mut stream, 400, None).await;
                     return Ok(());
                 }
             }
@@ -198,13 +198,13 @@ where
                     Ok(None) => {
                         // Static-only route with no upstreams → 404
                         if route.upstreams.is_empty() {
-                            let _ = error_response(&mut stream, 404).await;
+                            let _ = error_response(&mut stream, 404, Some(&*route)).await;
                             buf.advance(req.headers_end);
                             continue;
                         }
                     }
                     Err(_) => {
-                        let _ = error_response(&mut stream, 500).await;
+                        let _ = error_response(&mut stream, 500, Some(&*route)).await;
                         buf.advance(req.headers_end);
                         continue;
                     }
@@ -216,7 +216,7 @@ where
         // don't consume tokens; only upstream requests do.
         if !handler.limiter.check(handler.peer.ip()) {
             keep_alive = false;
-            let _ = error_response(&mut stream, 429).await;
+            let _ = error_response(&mut stream, 429, Some(&*route)).await;
             buf.advance(req.headers_end);
             continue;
         }
@@ -254,7 +254,7 @@ where
             Some(u) => (u.0.to_owned(), u.1),
             None => {
                 keep_alive = false;
-                let _ = error_response(&mut stream, 502).await;
+                let _ = error_response(&mut stream, 502, Some(&*route)).await;
                 buf.advance(req.headers_end);
                 continue;
             }
@@ -274,7 +274,7 @@ where
                     stats.failures.fetch_add(1, Ordering::Relaxed);
                     warn!(%upstream, "connect: {e}");
                     keep_alive = false;
-                    let _ = error_response(&mut stream, 502).await;
+                    let _ = error_response(&mut stream, 502, Some(&*route)).await;
                     buf.advance(req.headers_end);
                     continue;
                 }
@@ -289,7 +289,7 @@ where
             stats.failures.fetch_add(1, Ordering::Relaxed);
             stats.active_connections.fetch_add(-1, Ordering::Relaxed);
             handler.pool.discard(&upstream, us);
-            let _ = error_response(&mut stream, 502).await;
+            let _ = error_response(&mut stream, 502, Some(&*route)).await;
             buf.advance(req.headers_end);
             continue;
         }
@@ -749,8 +749,9 @@ async fn stream_file_body<S: AsyncRead + AsyncWrite + Unpin>(
 async fn error_response<S: AsyncRead + AsyncWrite + Unpin>(
     w: &mut S,
     status: u16,
+    route: Option<&crate::config::Route>,
 ) -> std::io::Result<()> {
-    error_response_custom(w, status, None).await
+    error_response_custom(w, status, route).await
 }
 
 fn apply_response_filters(buf: &mut BytesMut, hdr_end: usize, route: &crate::config::Route) {

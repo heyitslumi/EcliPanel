@@ -154,7 +154,7 @@ function mkBlock(type: string, defs: BlockDef[]): Block {
 // ─── Guide Templates ────────────────────────────────────────────────────
 function getBlockExample(type: string, cfg: Record<string, unknown>): string {
   const ex: Record<string, (c: Record<string, unknown>) => string> = {
-    print: c => `console.log(${c.label ? `"${c.label}", ` : ''}${c.message ?? '"Hello"'});`,
+    print: c => `console.log(${c.label ? `"${String(c.label).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}", ` : ''}${c.message ?? '"Hello"'});`,
     wait: c => `await new Promise(r => setTimeout(r, ${(Number(c.seconds) || 1) * 1000}));`,
     create_variable: c => `${c.global ? 'const' : 'let'} ${c.name || 'myVar'}${c.type ? `: ${c.type}` : ''} = ${c.value ?? '0'};`,
     change_variable: c => `${c.name || 'myVar'} = ${c.value ?? 'newValue'};`,

@@ -709,6 +709,11 @@ function generateCondition(left: unknown, comparison: string, right: unknown): s
   }
 }
 
+/** Wrap a plain string as a double-quoted JS string literal, escaping backslashes and quotes. */
+function quoteStringLiteral(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
 const MAX_PROJECT_SIZE = 10 * 1024 * 1024;
 
 function renderChildren(children: Block[], indentLevel: number, _depth: number, placeholder?: string): string {
@@ -729,7 +734,7 @@ function generateBlock(block: Block, indentLevel: number, _depth = 0): string {
     case 'print': {
       const msg = config.message ?? '"Hello!"';
       const label = String(config.label || '');
-      return label ? `${ind}console.log(${label}, ${msg});` : `${ind}console.log(${msg});`;
+      return label ? `${ind}console.log(${quoteStringLiteral(label)}, ${msg});` : `${ind}console.log(${msg});`;
     }
     case 'comment':
       return `${ind}// ${config.text || 'add a note here'}`;
@@ -739,6 +744,7 @@ function generateBlock(block: Block, indentLevel: number, _depth = 0): string {
     }
     case 'create_variable': {
       const name = config.name || 'myVar';
+      
       const value = config.value ?? 'null';
       const type = config.type ? `: ${config.type}` : '';
       const keyword = config.global ? 'const' : 'let';
