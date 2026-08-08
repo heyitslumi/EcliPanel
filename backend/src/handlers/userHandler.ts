@@ -398,6 +398,14 @@ export async function userRoutes(app: any, prefix = '') {
         console.warn('Failed to provision Mailcow mailbox for user:', errObj.message || err);
       }
 
+      void (async () => {
+        try {
+          await runFraudScanForUser(user);
+        } catch (e: any) {
+          console.warn('[registration:fraudScan]', e?.message || e);
+        }
+      })();
+
       const logRepo = AppDataSource.getRepository(UserLog);
       await logRepo.save(
         logRepo.create({ userId: user.id, action: 'register', timestamp: new Date() })

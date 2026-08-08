@@ -105,6 +105,7 @@
     "maxSelfieAttempts": "已达到自拍验证的最大尝试次数。",
     "noFaceDetected": "无法在自拍中检测到人脸。请重试。",
     "selfieRequired": "需要自拍",
+    "fraudCheckoutBlocked": "您的账户因账单异常正在审查中。请联系支持以继续操作。",
     "fraudScanFailed": "欺诈扫描失败。",
     "registrationDisabled": "根据地理封锁政策，您的国家/地区不允许注册",
     "serverCreationDisabled": "根据地理封锁政策，您的国家/地区已禁用服务器创建；您仍可使用子用户访问。",

@@ -130,6 +130,16 @@ export async function paymentRoutes(app: any, prefix = '') {
       const f = await requireFeature(ctx, 'billing');
       if (f !== true) return f;
       const user = ctx.user as any;
+
+      if (user.suspended) {
+        ctx.set.status = 403;
+        return { error: user.fraudReason || ctx.t('user.accountSuspended'), suspended: true };
+      }
+      if (user.fraudFlag) {
+        ctx.set.status = 403;
+        return { error: ctx.t('user.fraudCheckoutBlocked'), fraudFlagged: true };
+      }
+
       const orderId = Number(ctx.params.id);
       const { paymentMethodId, activateMode } = ctx.body as any;
 

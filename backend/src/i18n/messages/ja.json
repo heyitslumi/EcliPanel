@@ -105,6 +105,7 @@
     "maxSelfieAttempts": "自撮り確認の最大試行回数に達しました。",
     "noFaceDetected": "自撮り画像から顔を検出できませんでした。再度お試しください。",
     "selfieRequired": "自撮り画像が必要です",
+    "fraudCheckoutBlocked": "お客様のアカウントは請求に関する不正の審査中です。続行するにはサポートにお問い合わせください。",
     "fraudScanFailed": "不正検出スキャンに失敗しました。",
     "registrationDisabled": "ジオブロックポリシーにより、お住まいの国からの登録は許可されていません",
     "serverCreationDisabled": "ジオブロックポリシーにより、お住まいの国ではサーバー作成が無効です。サブユーザーアクセスは引き続きご利用いただけます。",

@@ -3,6 +3,7 @@ import { AIModel } from '../models/aiModel.entity';
 import { User } from '../models/user.entity';
 import { httpRequest } from '../utils/http';
 import { tForUser } from '../i18n';
+import { isTempEmail } from '../repositories/tempEmailRepository';
 
 export type FraudScanResult =
   | {
@@ -216,6 +217,14 @@ function getDefaultSignals(): FraudSignals {
   };
 }
 
+function runDeterministicPreScan(billingInfo: ReturnType<typeof buildBillingInfo>): string | null {
+  const email = billingInfo.identity.email;
+  if (email && isTempEmail(email)) {
+    return `Email domain is a known disposable provider: ${email.split('@')[1]}`;
+  }
+  return null;
+}
+
 function parseFraudResult(aiReply: string): {
   fraudScore: number;
   isSuspicious: boolean;
@@ -254,10 +263,10 @@ function parseFraudResult(aiReply: string): {
     return { fraudScore, isSuspicious, riskCategory, reasons, signals };
   } catch {
     return {
-      fraudScore: 0,
-      isSuspicious: false,
-      riskCategory: 'low',
-      reasons: [`AI response could not be parsed: ${cleaned.slice(0, 200)}`],
+      fraudScore: 60,
+      isSuspicious: true,
+      riskCategory: 'high',
+      reasons: ['AI fraud analysis failed: response could not be parsed; flagging for manual review'],
       signals: getDefaultSignals(),
     };
   }
@@ -282,6 +291,24 @@ export async function runFraudScanForUser(user: User): Promise<FraudScanResult> 
   }
 
   const billingInfo = buildBillingInfo(current);
+
+  const preReason = runDeterministicPreScan(billingInfo);
+  if (preReason) {
+    current.fraudFlag = true;
+    current.fraudReason = preReason;
+    current.fraudDetectedAt = new Date();
+    await userRepo.save(current);
+    return {
+      success: true,
+      userId: current.id,
+      fraudScore: 95,
+      isSuspicious: true,
+      riskCategory: 'critical',
+      reasons: [preReason],
+      signals: { identityRisk: 100, addressRisk: 0, contactRisk: 0, patternRisk: 0, businessRisk: 0 },
+    };
+  }
+
   const systemPrompt = buildFraudSystemPrompt();
   const userPrompt = buildFraudUserPrompt(billingInfo);
 
@@ -316,7 +343,7 @@ export async function runFraudScanForUser(user: User): Promise<FraudScanResult> 
           current.fraudReason = result.reasons.join('; ') || t('fraud.suspiciousBilling');
           current.fraudDetectedAt = new Date();
           await userRepo.save(current);
-        } else if (current.fraudFlag) {
+        } else if (current.fraudFlag && result.fraudScore < 25) {
           current.fraudFlag = false;
           current.fraudReason = undefined;
           current.fraudDetectedAt = undefined;

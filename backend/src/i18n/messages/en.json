@@ -106,6 +106,7 @@
     "noFaceDetected": "Could not detect a face in the selfie. Please try again.",
     "selfieRequired": "selfie_required",
     "fraudScanFailed": "Fraud scan failed.",
+    "fraudCheckoutBlocked": "Your account is under review for billing irregularities. Please contact support to proceed.",
     "registrationDisabled": "Registration is not allowed from your country under geo-block policy",
     "serverCreationDisabled": "Server creation is disabled for your country under geo-block policy; you may still use subuser access.",
     "geoBlocked": "ID verification is not available for your country under geo-block policy",
