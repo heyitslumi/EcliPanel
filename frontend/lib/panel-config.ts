@@ -166,6 +166,9 @@ export const API_ENDPOINTS = {
   geoblockPublic: "/public/geoblock",
   contributorsPublic: "/public/contributors",
   nodeGenerateToken: "/api/nodes/generate-token",
+  aegisMetrics: "/api/nodes/aegis/metrics",
+  aegisHistory: "/api/nodes/aegis/history",
+  aegisAttacks: "/api/nodes/aegis/attacks",
   nodeAssignOrg: "/api/nodes/:id/assign-org",
   nodeCreds: "/api/nodes/:id/credentials",
   nodeToken: "/api/nodes/:id/token",
@@ -953,6 +956,7 @@ export const ADMIN_NAVIGATION: NavSection[] = [
     title: "Infrastructure",
     items: [
       { label: "Nodes", href: "/dashboard/admin?tab=nodes", icon: HardDrive },
+      { label: "Aegis DDoS", href: "/dashboard/admin?tab=aegis", icon: Shield },
       { label: "Eggs", href: "/dashboard/admin?tab=eggs", icon: Package },
       { label: "Databases", href: "/dashboard/admin?tab=databases", icon: Database },
       { label: "Tunnels", href: "/dashboard/admin?tab=tunnels", icon: Share2 },

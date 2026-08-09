@@ -7230,5 +7230,11 @@
       "loadFailed": "アプリケーションの詳細を読み込めませんでした。",
       "submitFailed": "決定を送信できませんでした。"
     }
+  },
+  "aegis": {
+    "title": "Aegis DDoS プロテクション",
+    "description": "保護ノードからのリアルタイム XDP/eBPF メトリクス",
+    "noData": "まだノードからの報告がありません。ノードの ecliaegis.yaml に report セクションを追加してください。",
+    "loading": "読み込み中…"
   }
 }

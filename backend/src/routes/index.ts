@@ -18,6 +18,7 @@ import { scheduleRoutes } from '../handlers/scheduleHandler';
 import { backupGroupRoutes } from '../handlers/backupGroupHandler';
 import { backupConfigRoutes } from '../handlers/backupConfigHandler';
 import { nodeRoutes } from '../handlers/nodeHandler';
+import { aegisRoutes } from '../handlers/aegisHandler';
 import { apiKeyRoutes } from '../handlers/apiKeyHandler';
 import { ticketRoutes } from '../handlers/ticketHandler';
 import { adminRoutes } from '../handlers/adminHandler';
@@ -155,6 +156,7 @@ export function registerRoutes(app: any) {
   backupConfigRoutes(app, '/api');
   sharedFileRoutes(app, '/api');
   nodeRoutes(app, '/api');
+  aegisRoutes(app, '/api');
   apiKeyRoutes(app, '/api');
   ticketRoutes(app, '/api');
   adminRoutes(app, '/api');

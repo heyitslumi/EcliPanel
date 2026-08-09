@@ -7223,5 +7223,11 @@
     "purgeToggle": "Purge spam",
     "purgeHide": "Hide",
     "purgeQueued": "Purge started in the background. You'll get a notification when it finishes."
+  },
+  "aegis": {
+    "title": "Aegis DDoS Protection",
+    "description": "Live XDP/eBPF metrics from protected nodes",
+    "noData": "No nodes reporting yet. Add the report section to ecliaegis.yaml on your nodes.",
+    "loading": "Loading…"
   }
 }

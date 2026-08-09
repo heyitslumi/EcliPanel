@@ -163,6 +163,11 @@ const NodesTab = dynamic(() => import("./tabs/NodesTab"), {
   loading: () => <div className="text-sm text-muted-foreground p-4">Loading nodes tab...</div>,
 })
 
+const AegisTab = dynamic(() => import("./tabs/AegisTab"), {
+  ssr: false,
+  loading: () => <div className="text-sm text-muted-foreground p-4">Loading aegis tab...</div>,
+})
+
 const TunnelsTab = dynamic(() => import("./tabs/TunnelsTab"), {
   ssr: false,
   loading: () => <div className="text-sm text-muted-foreground p-4">Loading tunnels tab...</div>,
@@ -1001,6 +1006,7 @@ export default function AdminPanel() {
     { value: 'servers', label: t('tabs.servers'), category: 'servers', permissions: ['servers:read'] },
     { value: 'transfers', label: 'Transfers', category: 'servers', permissions: ['admin:read'] },
     { value: 'nodes', label: t('tabs.nodes'), category: 'infrastructure', permissions: ['nodes:read'] },
+    { value: 'aegis', label: 'Aegis DDoS', category: 'infrastructure', permissions: ['nodes:read'] },
     { value: 'eggs', label: t('tabs.eggs'), category: 'infrastructure', permissions: ['eggs:read'] },
     { value: 'databases', label: t('tabs.databases'), category: 'infrastructure', permissions: ['databases:read'] },
     { value: 'tunnels', label: t('tabs.tunnels'), category: 'infrastructure', feature: 'tunnels', permissions: ['tunnels:read', 'admin:tunnels:read'] },
@@ -6046,6 +6052,10 @@ remote: ${panelUrl}`
                   }}
                 />
               ) : null}
+            </TabsContent>
+            {/* ═══════════════ AEGIS DDoS ═════════════════════════════════════ */}
+            <TabsContent value="aegis" className="mt-4">
+              {activeTab === "aegis" ? <AegisTab /> : null}
             </TabsContent>
             <TabsContent value="tunnels" className="mt-4">
               {activeTab === "tunnels" ? <TunnelsTab /> : null}

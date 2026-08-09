@@ -1,0 +1,280 @@
+import { AppDataSource } from '../config/typeorm';
+import { Node } from '../models/node.entity';
+import { authenticate } from '../middleware/auth';
+import { hasPermissionSync } from '../middleware/authorize';
+import { t } from 'elysia';
+import type { BaseHandlerContext, NodeApp } from '../types';
+
+/** 
+ * Welcome to hell!
+ * This is home for Ecli Aegis (XDP Daemon) metrics that pushes its metrics here every N seconds
+ * POST /api/v1/nodes/aegis/metrics (daemon to panel)
+ * GET  /api/v1/nodes/aegis/metrics (aadmin get latest snapshot)
+ * GET  /api/v1/nodes/aegis/history (admin get time series for graphs)
+ * GET  /api/v1/nodes/aegis/attacks (admin get attack events log)
+ */
+
+const latestMetrics = new Map<number, { nodeName: string; receivedAt: number; data: any }>();
+const MAX_AGE_MS = 10 * 60 * 1000;
+
+interface Sample {
+  ts: number;
+  rps: number;
+  bps: number;
+  dropRps: number;
+  dropBps: number;
+  methods: Record<string, number>;
+}
+const HISTORY = new Map<number, Sample[]>();
+const HISTORY_MAX = 8640; // 24 hours at 10s pushes
+
+interface AttackEvent {
+  nodeId: number;
+  startTs: number;
+  endTs: number | null;
+  durationSec: number;
+  method: string;
+  peakDropPps: number;
+  peakDropBps: number;
+  avgDropPps: number;
+  avgDropBps: number;
+  peakNetPps: number;
+  samples: number;
+}
+const ATTACKS = new Map<number, AttackEvent[]>();
+const OPEN_ATTACK = new Map<number, AttackEvent>();
+const ATTACKS_MAX = 200;
+
+const ATTACK_THRESHOLD_PPS = 1000;
+const ATTACK_COOLDOWN_SAMPLES = 2;
+
+const METHOD_KEYS = [
+  'drop_tcp_syn',
+  'drop_udp_pps',
+  'drop_icmp_pps',
+  'drop_global_pps',
+  'drop_mc_invalid',
+  'drop_ssh_invalid',
+  'drop_blocklist',
+  'drop_other',
+] as const;
+
+const METHOD_LABELS: Record<string, string> = {
+  drop_tcp_syn: 'SYN flood',
+  drop_udp_pps: 'UDP flood',
+  drop_icmp_pps: 'ICMP flood',
+  drop_global_pps: 'PPS flood',
+  drop_mc_invalid: 'Minecraft invalid',
+  drop_ssh_invalid: 'SSH invalid',
+  drop_blocklist: 'Blocklist',
+  drop_other: 'Other',
+};
+
+function dominantMethod(prev: any, cur: any): { key: string; label: string } {
+  let bestKey = 'drop_other';
+  let bestDelta = -1;
+  for (const k of METHOD_KEYS) {
+    const a = Number(prev?.packets?.[k] ?? 0);
+    const b = Number(cur?.packets?.[k] ?? 0);
+    const delta = Math.max(0, b - a);
+    if (delta > bestDelta) {
+      bestDelta = delta;
+      bestKey = k;
+    }
+  }
+  return { key: bestKey, label: METHOD_LABELS[bestKey] ?? bestKey };
+}
+
+function processPush(nodeId: number, data: any) {
+  const now = Date.now();
+  const prev = latestMetrics.get(nodeId)?.data;
+
+  const methods: Record<string, number> = {};
+  let dominant = 'drop_other';
+  let bestDelta = -1;
+  for (const k of METHOD_KEYS) {
+    const a = Number(prev?.packets?.[k] ?? 0);
+    const b = Number(data?.packets?.[k] ?? 0);
+    const delta = Math.max(0, b - a);
+    methods[k] = delta;
+    if (delta > bestDelta) {
+      bestDelta = delta;
+      dominant = k;
+    }
+  }
+
+  const sample: Sample = {
+    ts: now,
+    rps: Number(data?.traffic?.rps ?? 0),
+    bps: Number(data?.traffic?.bps ?? 0),
+    dropRps: Number(data?.traffic?.drop_rps ?? 0),
+    dropBps: Number(data?.traffic?.drop_bps ?? 0),
+    methods,
+  };
+
+  const hist = HISTORY.get(nodeId) ?? [];
+  hist.push(sample);
+  if (hist.length > HISTORY_MAX) hist.shift();
+  HISTORY.set(nodeId, hist);
+
+  const open = OPEN_ATTACK.get(nodeId);
+  const underAttack = sample.dropRps >= ATTACK_THRESHOLD_PPS;
+
+  if (underAttack) {
+    if (!open) {
+      OPEN_ATTACK.set(nodeId, {
+        nodeId,
+        startTs: now,
+        endTs: null,
+        durationSec: 0,
+        method: METHOD_LABELS[dominant] ?? dominant,
+        peakDropPps: sample.dropRps,
+        peakDropBps: sample.dropBps,
+        avgDropPps: sample.dropRps,
+        avgDropBps: sample.dropBps,
+        peakNetPps: sample.rps,
+        samples: 1,
+      });
+    } else {
+      open.peakDropPps = Math.max(open.peakDropPps, sample.dropRps);
+      open.peakDropBps = Math.max(open.peakDropBps, sample.dropBps);
+      open.peakNetPps = Math.max(open.peakNetPps, sample.rps);
+      open.samples += 1;
+      open.durationSec = Math.round((now - open.startTs) / 1000);
+      open.avgDropPps =
+        open.avgDropPps + (sample.dropRps - open.avgDropPps) / open.samples;
+      open.avgDropBps =
+        open.avgDropBps + (sample.dropBps - open.avgDropBps) / open.samples;
+    }
+  } else if (open) {
+    open.endTs = now;
+    open.durationSec = Math.round((now - open.startTs) / 1000);
+    const list = ATTACKS.get(nodeId) ?? [];
+    list.unshift(open);
+    if (list.length > ATTACKS_MAX) list.pop();
+    ATTACKS.set(nodeId, list);
+    OPEN_ATTACK.delete(nodeId);
+  }
+}
+
+function adminOk(ctx: BaseHandlerContext): boolean {
+  const ctxAny = ctx as unknown as Record<string, unknown>;
+  const apiKey = ctxAny.apiKey as { type: string } | undefined;
+  const user = ctxAny.user as { id: number } | undefined;
+  if (apiKey?.type !== 'admin' && !user) return false;
+  if (!apiKey && !hasPermissionSync(ctx, 'nodes:read')) return false;
+  return true;
+}
+
+export async function aegisRoutes(app: NodeApp, prefix = '') {
+  const nodeRepo = () => AppDataSource.getRepository(Node);
+
+  app.post(
+    prefix + '/nodes/aegis/metrics',
+    async (ctx) => {
+      const auth = ctx.request.headers.get('authorization') || '';
+      const nodeName = ctx.request.headers.get('x-node-name') || '';
+      const match = /^Bearer (.+)$/i.exec(auth);
+      if (!match) {
+        ctx.set.status = 401;
+        return { error: 'unauthorized' };
+      }
+
+      const node = await nodeRepo().findOneBy({ token: match[1] });
+      if (!node) {
+        ctx.set.status = 401;
+        return { error: 'unauthorized' };
+      }
+
+      const data = ctx.body as any;
+      latestMetrics.set(node.id, {
+        nodeName: nodeName || node.name,
+        receivedAt: Date.now(),
+        data,
+      });
+      processPush(node.id, data);
+
+      return { success: true };
+    },
+    {
+      body: t.Any(),
+      response: {
+        200: t.Object({ success: t.Boolean() }),
+        401: t.Object({ error: t.String() }),
+      },
+      detail: { summary: 'Node agent pushes EcliAegis DDoS metrics', tags: ['Nodes'] },
+    },
+  );
+
+  app.get(
+    prefix + '/nodes/aegis/metrics',
+    async (ctx: BaseHandlerContext) => {
+      if (!adminOk(ctx)) {
+        ctx.set.status = 403;
+        return { error: 'forbidden' };
+      }
+      const now = Date.now();
+      const out: Record<number, { nodeName: string; receivedAt: number; data: unknown }> = {};
+      for (const [id, m] of latestMetrics) {
+        if (now - m.receivedAt < MAX_AGE_MS) out[id] = m;
+      }
+      return out;
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 403: t.Object({ error: t.String() }) },
+      detail: { summary: 'Get latest EcliAegis metrics for all nodes', tags: ['Nodes'] },
+    },
+  );
+
+  app.get(
+    prefix + '/nodes/aegis/history',
+    async (ctx: BaseHandlerContext) => {
+      if (!adminOk(ctx)) {
+        ctx.set.status = 403;
+        return { error: 'forbidden' };
+      }
+      const q = ctx.query as Record<string, string>;
+      const nodeId = q.nodeId ? Number(q.nodeId) : undefined;
+      const out: Record<number, Sample[]> = {};
+      for (const [id, hist] of HISTORY) {
+        if (nodeId !== undefined && id !== nodeId) continue;
+        out[id] = hist;
+      }
+      return out;
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 403: t.Object({ error: t.String() }) },
+      detail: { summary: 'Get EcliAegis time-series history', tags: ['Nodes'] },
+    },
+  );
+
+  app.get(
+    prefix + '/nodes/aegis/attacks',
+    async (ctx: BaseHandlerContext) => {
+      if (!adminOk(ctx)) {
+        ctx.set.status = 403;
+        return { error: 'forbidden' };
+      }
+      const q = ctx.query as Record<string, string>;
+      const nodeId = q.nodeId ? Number(q.nodeId) : undefined;
+      const out: Record<number, AttackEvent[]> = {};
+      for (const [id, list] of ATTACKS) {
+        if (nodeId !== undefined && id !== nodeId) continue;
+        out[id] = list;
+      }
+      for (const [id, open] of OPEN_ATTACK) {
+        if (nodeId !== undefined && id !== nodeId) continue;
+        const list = out[id] ?? [];
+        out[id] = [{ ...open, endTs: Date.now() }, ...list];
+      }
+      return out;
+    },
+    {
+      beforeHandle: authenticate,
+      response: { 200: t.Any(), 403: t.Object({ error: t.String() }) },
+      detail: { summary: 'Get EcliAegis attack event log', tags: ['Nodes'] },
+    },
+  );
+}

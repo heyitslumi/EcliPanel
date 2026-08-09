@@ -86,3 +86,6 @@ AGENTS.md
 /halo/target/
 /halo/bench-results/
 /halo/config.yml
+
+# Aegis Internal Development
+/aegis/
