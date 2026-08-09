@@ -4,7 +4,7 @@ import { ShortUrl } from '../models/shortUrl.entity';
 import { In, MoreThanOrEqual } from 'typeorm';
 import { Node } from '../models/node.entity';
 import { NodeHeartbeat } from '../models/nodeHeartbeat.entity';
-import { getCountryAgeRules, getGeoBlockRulesWithDefaults } from '../utils/eu';
+import { getCountryAgeRules, getGeoBlockRulesWithDefaults, getKycRequiredCountries } from '../utils/eu';
 import { User } from '../models/user.entity';
 import { Feedback } from '../models/feedback.entity';
 import { ApiRequestLog } from '../models/apiRequestLog.entity';
@@ -337,6 +337,8 @@ export async function publicRoutes(app: any, prefix = '') {
     async () => {
       return withRedisCache('public:geoblock:v1', 300, async () => {
         const rules = await getGeoBlockRulesWithDefaults();
+        const kycSet = await getKycRequiredCountries();
+        const kycCountries = Array.from(kycSet).sort();
         const notes = [] as string[];
         if ((process.env.EU_ID_DISABLED || '').toLowerCase() === 'true') {
           notes.push(
@@ -370,6 +372,7 @@ export async function publicRoutes(app: any, prefix = '') {
           generatedAt: new Date().toISOString(),
           notes,
           rules: countries,
+          kycRequiredCountries: kycCountries,
         };
       });
     },
@@ -379,6 +382,7 @@ export async function publicRoutes(app: any, prefix = '') {
           source: t.String(),
           generatedAt: t.String(),
           notes: t.Array(t.String()),
+          kycRequiredCountries: t.Array(t.String()),
           rules: t.Array(
             t.Object({
               country: t.String(),

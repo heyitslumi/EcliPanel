@@ -101,7 +101,16 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               Identity verification data, when requested, for security, fraud
-              prevention, or compliance.
+              prevention, or regulatory compliance. Users in certain
+              jurisdictions are required to complete identity verification
+              (KYC) to access services. See our{" "}
+              <Link
+                className="font-medium text-indigo-400 hover:text-indigo-500 transition-colors"
+                href="/geoblock"
+              >
+                restricted jurisdictions
+              </Link>{" "}
+              page for the current list of countries where KYC is mandatory.
             </li>
           </ul>
         </section>

@@ -35,6 +35,7 @@ const blockedServicesByLevel = (level: number): string[] => {
 export default function GeoblockPage() {
   const [rules, setRules] = useState<GeoRule[]>([]);
   const [notes, setNotes] = useState<string[]>([]);
+  const [kycCountries, setKycCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export default function GeoblockPage() {
           : [];
         setRules(items);
         setNotes(Array.isArray(data?.notes) ? data.notes.map(String) : []);
+        setKycCountries(Array.isArray(data?.kycRequiredCountries) ? data.kycRequiredCountries.map(String) : []);
         setUpdatedAt(data?.generatedAt ? String(data.generatedAt) : null);
       } catch (err: any) {
         setError(err?.message || "Unable to load geoblock data.");
@@ -100,11 +102,11 @@ export default function GeoblockPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-3xl border border-border bg-card p-6">
             <p className="text-sm font-semibold text-foreground">How this is sourced</p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              The list is populated from the panel setting key <span className="font-medium">geoBlockCountries</span> in the backend database.
+              The geoblock list is populated from the panel setting key <span className="font-medium">geoBlockCountries</span> and the KYC list from <span className="font-medium">kycRequiredCountries</span> in the backend database.
             </p>
           </div>
           <div className="rounded-3xl border border-border bg-card p-6">
@@ -116,12 +118,6 @@ export default function GeoblockPage() {
               <li><span className="font-medium">Level 4:</span> Paid services are blocked; access may be limited to subusers only.</li>
               <li><span className="font-medium">Level 5:</span> Registration is blocked completely.</li>
             </ul>
-          </div>
-          <div className="rounded-3xl border border-border bg-card p-6">
-            <p className="text-sm font-semibold text-foreground">Why this exists</p>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              Geoblocking protects the platform against regulatory, compliance, or provider restrictions. It also gives clear transparency for customers in restricted jurisdictions.
-            </p>
           </div>
         </section>
 
@@ -183,6 +179,33 @@ export default function GeoblockPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-border bg-card p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Countries requiring identity verification (KYC)</p>
+              <p className="text-sm text-muted-foreground">
+                Users from these jurisdictions must complete identity verification before accessing certain services.
+              </p>
+            </div>
+            <div className="rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-sm font-medium text-amber-400">
+              {kycCountries.length} jurisdiction{kycCountries.length === 1 ? "" : "s"}
+            </div>
+          </div>
+          <div className="mt-4 overflow-hidden rounded-3xl border border-border bg-secondary/30">
+            {kycCountries.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">No jurisdictions currently require mandatory identity verification.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4">
+                {kycCountries.map((code) => (
+                  <div key={code} className="rounded-xl border border-border bg-card px-3 py-2 text-center text-sm font-medium text-foreground">
+                    {code.toUpperCase()}
+                  </div>
+                ))}
               </div>
             )}
           </div>

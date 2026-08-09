@@ -131,7 +131,15 @@ export default function TermsOfServicePage() {
             </li>
             <li>
               We may request identity verification for security, fraud
-              prevention, or compliance.
+              prevention, or regulatory compliance. Certain jurisdictions
+              require mandatory identity verification (KYC) see{" "}
+              <Link
+                className="font-medium text-indigo-400 hover:text-indigo-500 transition-colors"
+                href="/geoblock"
+              >
+                restricted jurisdictions
+              </Link>{" "}
+              for the current list.
             </li>
             <li>
               We do not provide services to users in restricted jurisdictions.
