@@ -159,7 +159,7 @@ export default function AegisTab({ ctx }: { ctx: any }) {
       </div>
 
       {(() => {
-        const chartData: any[] = []
+        let chartData: any[] = []
         Object.values(history).forEach((samples) => {
           samples.forEach((s) => {
             chartData.push({
@@ -174,6 +174,11 @@ export default function AegisTab({ ctx }: { ctx: any }) {
           })
         })
         chartData.sort((a, b) => (a.time < b.time ? -1 : 1))
+        
+        if (chartData.length > 600) {
+          const step = Math.ceil(chartData.length / 600)
+          chartData = chartData.filter((_, i) => i % step === 0)
+        }
 
         if (chartData.length === 0) {
           return (
@@ -225,7 +230,7 @@ export default function AegisTab({ ctx }: { ctx: any }) {
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#22c55e" }} /> Legit pps</span>
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#22d3ee" }} /> Net pps</span>
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#f43f5e" }} /> Blocked pps</span>
-                <span className="ml-auto">2h window</span>
+                <span className="ml-auto">24h window</span>
               </div>
 
               <div className="mt-4 h-40 w-full">
