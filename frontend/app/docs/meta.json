@@ -36,6 +36,21 @@
           "name": "EcliHalo Proxy",
           "href": "/docs/eclihalo",
           "icon": "Zap"
+        },
+        {
+          "name": "Self-host EcliPanel",
+          "href": "/docs/eclipanel",
+          "icon": "Sparkles"
+        },
+        {
+          "name": "Wings",
+          "href": "/docs/wings",
+          "icon": "Zap"
+        },
+        {
+          "name": "Environment (.env)",
+          "href": "/docs/environment",
+          "icon": "BookOpen"
         }
       ]
     },

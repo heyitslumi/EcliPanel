@@ -20,6 +20,9 @@ Learn how to set up your account, deploy servers, manage resources, and get help
 - [Server management](/docs/server-management) — Console access, file management, databases, port forwarding, power controls, and troubleshooting guides.
 - [KVM & Linux beginner guide](/docs/kvm) — Deploy the Debian 13 VM, set up SSH, harden security, configure the firewall, and learn essential Linux commands.
 - [Deploying apps & games](/docs/deploying-apps) — Every available template explained, how to choose the right one, and step-by-step deployment workflows.
+- [Self-host EcliPanel](/docs/eclipanel) — Production-oriented setup for backend, frontend, database, Redis, and node orchestration.
+- [Wings](/docs/wings) — Patch/build/deploy workflow for the required wings-rs integration.
+- [Environment variables](/docs/environment) — Clear backend/frontend `.env` reference and required keys.
 - [Sunset policy](/docs/sunset) — How inactivity notices work, grace periods, what happens to idle accounts and servers, and how to stay active.
 - [Support & policies](/docs/support) — Open tickets, track responses, and access the full legal center for terms, privacy, and acceptable use.
 
