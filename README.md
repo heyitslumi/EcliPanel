@@ -16,7 +16,7 @@ EcliPanel v3 is a complete rewrite of the original EcliPanel v1, which itself wa
 The goal of this iteration is to provide a fully in‑house backend and modernized frontend while keeping the codebase open source for non commercial use.
 
 # You're already interested?
-Want to see more than code? Check out showcase [by clicking here](/SHOWCASE.md) or by visiting [hosting that uses EcliPanel v3 in production](https://ecli.app/).
+Want to see more than code? Check out [hosting that uses EcliPanel v3 in production](https://ecli.app/).
 
 # Structure
 This repository contains three folders:
