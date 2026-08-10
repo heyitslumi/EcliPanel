@@ -83,12 +83,8 @@ More docs:
 > reverse proxy like EcliHalo or Nginx.
 
 ## Notes
-
 - The backend uses the `.env` file in `backend/`.
 - The frontend uses `.env` in `frontend/`.
-
-## Notes
-
 - The API routes are documented in `example.com/openapi` and should be used by the
   frontend code.
 - You might need to run `npm rebuild @tensorflow/tfjs-node --build-from-source` on backend to make selfie verification work!
