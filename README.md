@@ -19,14 +19,15 @@ The goal of this iteration is to provide a fully in‑house backend and moderniz
 Want to see more than code? Check out [hosting that uses EcliPanel v3 in production](https://ecli.app/).
 
 # Structure
-This repository contains three folders:
+This repository contains seven folders:
 
-- `/backend` – Elysia/Bun panel API interacting with Wings nodes and
-  MariaDB.
-- `/frontend` – Astro + React application. Pages communicate with the
-  backend (and optionally directly with Wings) via the helper and etc.
-- `/antiabuse` – Rust based anti-abuse (abuse detection) system daemon that is run on every node to stop DDoS, port scanning, crypto mining and nezha proxies.
+- `/backend` – Elysia/Bun panel API interacting with Wings nodes and MariaDB.
+- `/eggs` - Contains Debian 13 VM Egg used in [ecli.app](https://ecli.app).
+- `/frontend` – Astro + React application. Pages communicate with the backend (and optionally directly with Wings) via the helper and etc.
+- `/halo` - Lightweight reverse proxy for EcliPanel and its systems.
 - `/systemd` – Systemd unit files.
+- `/tunnel` - Expose local services via public tunnel endpoints managed by EcliPanel.
+- `/wings` - Our custom modified wings-rs with embedded security & anti-abuse.
 
 ## Documentation
 
@@ -43,14 +44,11 @@ hardening.
 Side Note: EcliAegis (DDoS protection) is closed source as of now and therefore is not covered there.
 
 More docs:
-- [EcliHalo (reverse proxy)](/docs/eclihalo)
+- [EcliHalo (reverse proxy)](https://ecli.app/docs/eclihalo)
 
 ## Quick start
 
-1. **Install Wings** — EcliPanel is built around
-   [wings-rs](https://github.com/calagopus/wings). You may **NOT** use
-   wings-go (Pterodactyl stock); most features will not work.
-   AntiAbuse ships inside Wings — nothing extra to install.
+1. **Install Wings** — EcliPanel is built around [wings-rs](https://github.com/calagopus/wings). You may **NOT** use wings-go (Pterodactyl stock); most features will not work. AntiAbuse ships inside Wings — nothing extra to install. View build instructions [here](https://ecli.app/docs/eclipanel#2-build-wings-first).
 
 2. **Backend**
    ```bash
@@ -70,13 +68,13 @@ More docs:
    ./start.sh --port 3000      # or: ./dev.sh --port 3000 (dev)
    ```
 
-4. **Reverse proxy** — EcliHalo (see [docs](/docs/eclihalo)) or any
+4. **Reverse proxy** — EcliHalo (see [docs](https://ecli.app/docs/eclihalo) or any
    proxy. Point it at the frontend (3000) and backend.
 
 5. **Mailcow (optional)** — dockerised mail server for mailboxes:
    deploy Mailcow, create an API key, set the `MAILCOW_*`,
    `MAILBOX_*`, `DOVECOT_*` and SMTP variables in backend `.env`.
-   Full steps in the [setup guide](/docs/eclipanel).
+   Full steps in the [setup guide](https://ecli.app/docs/eclipanel).
 
 > ⚠️ Remember to set `.env` variables for production (database, auth
 > secrets, API base URL, etc.). For production deployments use a
