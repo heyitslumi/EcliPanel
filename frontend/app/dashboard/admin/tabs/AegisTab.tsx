@@ -31,6 +31,9 @@ interface AegisMetrics {
     pass: number
     drop_blocklist: number
     drop_tcp_syn: number
+    drop_tcp_conn: number
+    drop_mc_conn: number
+    drop_ssh_conn: number
     drop_udp_pps: number
     drop_icmp_pps: number
     drop_global_pps: number
@@ -39,6 +42,8 @@ interface AegisMetrics {
     drop_mc_rate: number
     drop_ssh_invalid: number
     drop_ssh_rate: number
+    drop_http_invalid: number
+    drop_http_rate: number
     drop_other: number
   }
   learned_ports?: Array<{ port: number; proto: string }>
@@ -294,11 +299,19 @@ export default function AegisTab({ ctx }: { ctx: any }) {
             const drops =
               (p?.drop_blocklist ?? 0) +
               (p?.drop_tcp_syn ?? 0) +
+              (p?.drop_tcp_conn ?? 0) +
+              (p?.drop_mc_conn ?? 0) +
+              (p?.drop_ssh_conn ?? 0) +
               (p?.drop_udp_pps ?? 0) +
               (p?.drop_icmp_pps ?? 0) +
               (p?.drop_global_pps ?? 0) +
+              (p?.drop_verified_pps ?? 0) +
               (p?.drop_mc_invalid ?? 0) +
+              (p?.drop_mc_rate ?? 0) +
               (p?.drop_ssh_invalid ?? 0) +
+              (p?.drop_ssh_rate ?? 0) +
+              (p?.drop_http_invalid ?? 0) +
+              (p?.drop_http_rate ?? 0) +
               (p?.drop_other ?? 0)
             const up = d?.up === 1
 
@@ -350,14 +363,24 @@ export default function AegisTab({ ctx }: { ctx: any }) {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                     <span className="text-muted-foreground">SYN flood</span>
                     <span className="font-mono text-right">{fmt(p?.drop_tcp_syn)}</span>
+                    <span className="text-muted-foreground">Conn cap (TCP)</span>
+                    <span className="font-mono text-right">{fmt(p?.drop_tcp_conn)}</span>
+                    <span className="text-muted-foreground">Conn cap (MC)</span>
+                    <span className="font-mono text-right">{fmt(p?.drop_mc_conn)}</span>
+                    <span className="text-muted-foreground">Conn cap (SSH)</span>
+                    <span className="font-mono text-right">{fmt(p?.drop_ssh_conn)}</span>
                     <span className="text-muted-foreground">UDP flood</span>
                     <span className="font-mono text-right">{fmt(p?.drop_udp_pps)}</span>
                     <span className="text-muted-foreground">Global PPS</span>
                     <span className="font-mono text-right">{fmt(p?.drop_global_pps)}</span>
                     <span className="text-muted-foreground">MC invalid</span>
                     <span className="font-mono text-right">{fmt(p?.drop_mc_invalid)}</span>
+                    <span className="text-muted-foreground">MC rate</span>
+                    <span className="font-mono text-right">{fmt(p?.drop_mc_rate)}</span>
                     <span className="text-muted-foreground">SSH invalid</span>
                     <span className="font-mono text-right">{fmt(p?.drop_ssh_invalid)}</span>
+                    <span className="text-muted-foreground">HTTP invalid</span>
+                    <span className="font-mono text-right">{fmt(p?.drop_http_invalid)}</span>
                     <span className="text-muted-foreground">Verified</span>
                     <span className="font-mono text-right">{d?.verified_count ?? 0}</span>
                   </div>
