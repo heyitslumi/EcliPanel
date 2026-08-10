@@ -2,155 +2,286 @@
   <img src="./eclipanel.png" alt="EcliPanel" width="640" />
 </p>
 
-# What is EcliPanel?
-EcliPanel is an enterprise grade server management platform with built in DNS management for organisations,
-team control, Docker support, and KVM (QEMU) virtualization.
+# EcliPanel v3
 
-It also includes integrated applications for staff workflows, feedback collection, and abuse reporting.
-On top of that, EcliPanel offers AI assisted features and a powerful anti-abuse detection system.
+EcliPanel is an in-house game/server hosting platform with:
+- Panel backend API (Bun + Elysia)
+- Modern frontend dashboard
+- Wings-based node orchestration
+- Built-in SOC/security workflows
+- Optional mail, proxy, and tunneling subsystems
 
-# Why was EcliPanel v3 made?
-EcliPanel v3 is a complete rewrite of the original EcliPanel v1, which itself was built on top of the Jexactyl panel. Maintenance of EcliPanel v1 was not possible due of its size and architecture.
+## Why v3?
 
-# What is our goal?
-The goal of this iteration is to provide a fully in‑house backend and modernized frontend while keeping the codebase open source for non commercial use.
+v3 is a full rewrite of the original EcliPanel stack to provide a cleaner architecture, better performance, and fully in-house control over backend + frontend + infrastructure integrations.
 
-# You're already interested?
-Want to see more than code? Check out showcase [by clicking here](/SHOWCASE.md) or by visiting [hosting that uses EcliPanel v3 in production](https://ecli.app/).
+## Repository structure
 
-# Structure
-This repository contains three folders:
+- `/backend` — API, auth, billing, orchestration, SOC, jobs
+- `/frontend` — user/admin dashboard UI
+- `/wings` — patched wings-rs source + patch/build workflow
+- `/halo` — EcliHalo reverse proxy
+- `/tunnel` — EcliTunnel client/server agents
+- `/systemd` — service examples
+- `/eggs` — example templates/eggs
 
-- `/backend` – Elysia/Bun panel API interacting with Wings nodes and
-  MariaDB.
-- `/frontend` – Next.js (React) application. Pages communicate with the
-  backend (and optionally directly with Wings) via the helper and etc.
-- `/antiabuse` – Rust based anti-abuse (abuse detection) system daemon that is run on every node to stop DDoS, port scanning, crypto mining and nezha proxies.
-- `/systemd` – Systemd unit files.
+## Documentation quick links
 
-## Running the stack
+- Main showcase: [`/SHOWCASE.md`](/SHOWCASE.md)
+- Security policy: [`/SECURITY.md`](/SECURITY.md)
+- Wings patch/build guide: [`/wings/README.md`](/wings/README.md)
+- EcliTunnel guide: [`/tunnel/README.md`](/tunnel/README.md)
+- EcliHalo guide: [`/halo/README.md`](/halo/README.md)
 
-1. **Install Wings**
-We use wings-rs (https://github.com/calagopus/wings) and develop around them.
-You may **NOT** use wings-go (pterodactyl stock) as most features will not work!
+---
 
-After installing wings complete backend and frontend setup then start them again.
+## Self-hosting guide (full stack)
 
-2. **Start backend**
-   ```powershell
-   cd backend
-   # Bun is recommended since it runs the TypeScript directly, but..
-   bun install      # or `pnpm install`/`npm install` if you prefer
-   sudo apt install ffmpeg #if using captcha
-   sudo apt install espeak #if using captcha
-    bun run gen:jwt-secret    # generate all secrets needed by .env and set them manually!
-    bun run gen:pq-jwt-seed   # generate PQ_JWT_SEED for ML-DSA-65 signed tokens
-    bun -e "console.log((await import('crypto')).randomBytes(64).toString('base64'))" # generate NODE_PQ_ENCRYPTION_SEED
-   nano .env              # edit .env (see .env.example)
-   bun run gen:default-role # create default role
-   # for development you can simply run:
-   bun src/index.ts
-   # or use the helper scripts which choose Bun when available:
-   ./build.sh      # compiles TS for Node if needed (Skip if using bun/node is untested!)
-   ./start.sh      # launches the server (Do this directly if using bun)
-   ```
-   Backend listens on specified port (see `.env`).
-   It will serve the REST API, handle multi node mapping, and proxy websocket connections to Wings servers, etc..
+This section is the recommended production-oriented setup order for self-hosting EcliPanel with dependencies like Wings, Dockerized Mailcow, EcliHalo, and EcliTunnel.
 
-3. **Start frontend**
-   ```bash
-   cd frontend
-   pnpm install
-   nano .env # edit .env (see .env.example)
-   nano lib/panel-config.ts # edit panel config branding etc
-   ./dev.sh --port 3000 # start in dev mode (--port is optional)
-   ./start.sh --port 3000 # start in production mode (--port is optional)
-   ```
-   Frontend will run on http://localhost:3000 and automatically proxy
-   `/api/*` requests to the backend and `/wings/*` to the Wings node(s)
-   via the `next.config.mjs` rewrites. Set environment variables to function properly!!
+## 1) Deployment topology
 
-> ⚠️ Remember to set `.env` variables for production (database, auth secrets, API base URL, etc.).
->     For production deployments use reverse proxy like Nginx.
+Use separate hostnames at minimum:
+- `panel.example.com` → frontend
+- `backend.example.com` → backend API
+- `tunnel.example.com` (or node FQDN) → EcliTunnel public host
 
-### Backend scripts
+Core dependencies:
+- MariaDB/MySQL/PostgreSQL (MariaDB recommended)
+- Redis
+- Bun (backend runtime)
+- Bun + frontend build/runtime requirements
+- One or more Wings nodes
 
-The backend includes a couple of helper scripts used during setup.
+Optional but common in production:
+- Dockerized Mailcow (mailbox provisioning + mail workflows)
+- EcliHalo (TLS termination/reverse proxy)
+- EcliTunnel server agent (public tunnel ingress)
 
-- **Seed default permissions** - creates the `rootAdmin` role and grants full permissions (including `*`).
+## 2) Host prerequisites
 
-  ```bash
-  cd backend
-  bun run seed
-  ```
-
-- **Generate PQ_JWT_SEED** — creates a 64-byte seed for deterministic ML-DSA-65 key generation (post-quantum signed tokens).
-
-  ```bash
-  cd backend
-  bun run gen:pq-jwt-seed
-  ```
-
-  Add the output `PQ_JWT_SEED` to your `.env`. Without it, a random keypair is generated at each startup (invalidating all existing tokens on restart).
-
-- **Promote a user** - set an existing user to `rootAdmin` (or another role).
-
-  ```bash
-  cd backend
-  bun run promote -- <email> [role]
-  ```
-
-  Examples:
-
-  ```bash
-  bun run promote -- admin@example.com
-  bun run promote -- admin@example.com rootAdmin
-  bun run promote -- admin@example.com admin
-  ```
-
-### Useful commands
+Install base tools on your panel host:
 
 ```bash
-# run backend locally
-cd backend && ./start.sh
-
-# run frontend locally (dev)
-cd frontend && bun run dev
-
-# run frontend locally (prod)
-cd frontend && bun run build # build
-bun run start # start
+sudo apt update
+sudo apt install -y curl git unzip ca-certificates ffmpeg espeak redis-server mariadb-server
+curl -fsSL https://bun.sh/install | bash
 ```
 
-### Optional: systemd setup
+> If DB/Redis run on other hosts or containers, skip local package install and use remote endpoints in `.env`.
 
-I have included system files inside of /systemd folder that are used for https://ecli.app/ production deployment, feel free to use them for production deployment but change patches!
+## 3) Clone and bootstrap
 
-### Notes
+```bash
+cd /opt
+git clone https://github.com/heyitslumi/EcliPanel.git
+cd /opt/EcliPanel
+```
 
-- The backend uses the `.env` file in `backend/`.
-- The frontend uses `.env` in `frontend/`.
+### Backend install
 
-## Notes
+```bash
+cd /opt/EcliPanel/backend
+bun install
+cp .env.example .env
+bun run gen:jwt-secret
+bun run gen:pq-jwt-seed
+bun run gen:default-role
+```
 
-- The API routes are documented in `example.com/openapi` and should be used by the
-  frontend code.
-- You might need to run `npm rebuild @tensorflow/tfjs-node --build-from-source` on backend to make selfie verification work!
+Generate `NODE_PQ_ENCRYPTION_SEED`:
 
-> You may view API routes without deploying at https://backend.ecli.app/openapi for production or https://backend.canary.ecli.app/openapi for canary.
-> Canary version of EcliPanel are offline during non developmet periods.
+```bash
+bun -e "console.log((await import('crypto')).randomBytes(64).toString('base64'))"
+```
 
-## Optimization
-Here is some small overview about optimisation we have done!
-- `frontend/lib/api-client.ts`
-  - We have implemented in memory GET caching with `API_CACHE_TTL = 60s`.
-  - Cache hit avoid repeated REST downloads for frequent read operations.
-- `frontend/app/dashboard/servers/[id]/page.tsx`
-  - Added `useMemo` around stats history data (`chartData`) to avoid recomputing on every render..
-  - Already existing lazy loading of heavy dependencies (`@monaco-editor/react`, `recharts`) is now leveraged more aggressively in tab use patterns, so the app initial bundle reduces first paint cost.
+### Frontend install
 
-Happy exploring!
->Side note: 
-> This project took part in [Flavortown](https://flavortown.hackclub.com/projects/15802?ref=eclipsesystems) and in [Macondo](https://macondo.hackclub.com/projects/506?ref=HHDFS)!
-> I do not get paid for developing this and entire hosting is not profitable enough to cover development costs,
-> if you really liked panel atleast star the repo or go order something from us https://ecli.app/
+```bash
+cd /opt/EcliPanel/frontend
+bun install
+cp .env.example .env
+```
+
+## 4) Configure backend environment
+
+Edit `/opt/EcliPanel/backend/.env` and set at least:
+
+- Database: `DB_TYPE`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`
+- Redis: `REDIS_URL`
+- Auth/security: `JWT_SECRET`, `PQ_JWT_SEED`, `NODE_ENCRYPTION_KEY`, `NODE_PQ_ENCRYPTION_SEED`
+- URL/CORS: `FRONTEND_URL`, `PANEL_URL`, `BACKEND_URL`, `ORIGIN`, `RP_ID`
+- SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`
+
+Recommended for tunnels:
+- `TUNNEL_PUBLIC_HOST=tunnel.example.com`
+- `TUNNEL_PORT_RANGE=20000-29999`
+
+## 5) Configure frontend environment
+
+Edit `/opt/EcliPanel/frontend/.env`:
+
+- `BACKEND_URL=https://backend.example.com`
+- `NEXT_PUBLIC_API_BASE=https://backend.example.com`
+- `NEXT_PUBLIC_WINGS_BASE=` (optional direct wings base)
+
+## 6) Start backend + frontend
+
+### Development mode
+
+```bash
+cd /opt/EcliPanel/backend
+bun run dev
+
+cd /opt/EcliPanel/frontend
+./dev.sh --port 3000
+```
+
+### Production mode
+
+```bash
+cd /opt/EcliPanel/backend
+./start.sh
+
+cd /opt/EcliPanel/frontend
+bun run build
+./start.sh
+```
+
+## 7) Wings setup (required for server orchestration)
+
+EcliPanel requires **wings-rs** (not wings-go).
+
+### Build patched wings in-repo
+
+```bash
+cd /opt/EcliPanel/wings
+./manage.sh patch
+./manage.sh build
+```
+
+### Deploy wings binary to nodes
+
+Option A (from your panel API once deployed):
+
+```bash
+curl -fsSL https://backend.example.com/api/wings/download -o /usr/local/bin/wings
+chmod +x /usr/local/bin/wings
+```
+
+Option B: copy built binary from `wings/target/release/wings-rs`.
+
+Then install/configure a systemd service on each node and register node credentials in EcliPanel admin.
+
+## 8) Dockerized Mailcow integration (recommended)
+
+Mailcow is used for mailbox automation/features in EcliPanel.
+
+### Deploy Mailcow
+
+```bash
+cd /opt
+git clone https://github.com/mailcow/mailcow-dockerized
+cd mailcow-dockerized
+./generate_config.sh
+
+docker compose pull
+docker compose up -d
+```
+
+### Create Mailcow API key
+
+In Mailcow UI, create an API key with mailbox/domain management access.
+
+### Wire Mailcow to EcliPanel
+
+Set in `/opt/EcliPanel/backend/.env`:
+
+- `MAILCOW_API_URL=https://mail.example.com`
+- `MAILCOW_API_KEY=<mailcow-api-key>`
+- `MAILBOX_DOMAIN=example.com`
+- `MAIL_DOMAIN=example.com`
+- `MAILBOX_INBOUND_SECRET=<long-random-secret>`
+- `MAILBOX_SMTP_HOST=mail.example.com`
+- `MAILBOX_SMTP_PORT=587`
+- `MAILBOX_IMAP_HOST=mail.example.com`
+- `MAILBOX_IMAP_PORT=993`
+
+If using Dovecot master auth for sync/fetch:
+- `DOVECOT_MASTER_USER`, `DOVECOT_MASTER_PASS`, `DOVECOT_MASTER_DOMAIN`
+
+## 9) EcliHalo reverse proxy (recommended)
+
+EcliHalo can terminate TLS and route panel/backend traffic.
+
+```bash
+cd /opt/EcliPanel/halo
+cargo build --release
+sudo cp target/release/eclihalo /usr/local/bin/
+sudo mkdir -p /etc/eclihalo
+sudo cp config.example.yml /etc/eclihalo/config.yml
+```
+
+Generate service unit:
+
+```bash
+sudo sh -c 'eclihalo systemd > /etc/systemd/system/eclihalo.service'
+sudo systemctl daemon-reload
+sudo systemctl enable --now eclihalo
+```
+
+Update `/etc/eclihalo/config.yml` routes for your domains and upstreams (frontend/backend hosts + ports), then reload:
+
+```bash
+sudo systemctl reload eclihalo
+```
+
+## 10) EcliTunnel setup (optional public tunneling)
+
+### Tunnel server agent (public ingress host)
+
+```bash
+curl -fsSL https://backend.example.com/api/tunnel/deploy.sh | bash -s -- server-service --token <server-device-token> --backend https://backend.example.com --domain tunnel.example.com
+```
+
+Open firewall range for tunnel ports (default):
+- `20000-29999/tcp`
+
+### Tunnel client usage
+
+```bash
+curl -fsSL https://backend.example.com/api/tunnel/deploy.sh | bash -s -- enroll --backend https://backend.example.com
+curl -fsSL https://backend.example.com/api/tunnel/deploy.sh | bash -s -- run --port 8080 --backend https://backend.example.com
+```
+
+## 11) Systemd for panel services
+
+This repo includes baseline units in `/systemd`:
+- `eclipanel-backend.service`
+- `eclipanel-frontend.service`
+
+Copy, adjust `WorkingDirectory`, user, and startup commands to your environment before enabling.
+
+## 12) Validation checklist
+
+After setup, verify:
+
+- Frontend loads at `https://panel.example.com`
+- Backend health endpoint returns OK: `https://backend.example.com/health`
+- OpenAPI is reachable: `https://backend.example.com/openapi`
+- Backend can connect to DB + Redis (no boot errors)
+- At least one Wings node is online in admin
+- Mailcow API actions succeed (if enabled)
+- Tunnel server is connected (if enabled)
+
+## 13) Troubleshooting
+
+- **Auth sessions invalid after restart**: ensure stable `PQ_JWT_SEED` and `JWT_SECRET` in backend `.env`.
+- **CORS/login issues**: validate `FRONTEND_URL`, `PANEL_URL`, `BACKEND_URL`, `ORIGIN`, `RP_ID`.
+- **Mail features not working**: verify `MAILCOW_API_URL` + API key permissions.
+- **Wings actions failing**: confirm you are using wings-rs and correct node URL/cert settings.
+- **Tunnel allocation failures**: set `TUNNEL_PUBLIC_HOST`, open tunnel port range, and confirm server agent is connected.
+
+---
+
+If you want to contribute or evaluate the UI/features before deployment, check the showcase: [SHOWCASE.md](/SHOWCASE.md).
