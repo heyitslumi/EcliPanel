@@ -21,6 +21,8 @@ This guide covers a full deployment on a brand new Linux server, including backe
 - Redis
 - Bun runtime
 - Git, curl, unzip, ffmpeg, espeak
+- Docker + Docker Compose (if using Mailcow)
+- Rust + Cargo (if building EcliHalo)
 
 Example base install:
 
@@ -72,7 +74,7 @@ Required minimum:
 - Redis: \`REDIS_URL\`
 - Auth/encryption: \`JWT_SECRET\`, \`PQ_JWT_SEED\`, \`NODE_ENCRYPTION_KEY\`, \`NODE_PQ_ENCRYPTION_SEED\`
 - URL/origin: \`FRONTEND_URL\`, \`PANEL_URL\`, \`BACKEND_URL\`, \`ORIGIN\`, \`RP_ID\`
-- SMTP: \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASS\`, \`MAIL_FROM\`
+- SMTP: \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASS\`, \`SMTP_FROM\` (and optionally \`MAIL_FROM\`)
 
 Recommended for tunnels:
 

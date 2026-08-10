@@ -22,7 +22,7 @@ This reference documents the backend and frontend environment variables used by 
 
 ## Backend: mail and mailbox
 
-- \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASS\`, \`SMTP_SECURE\`, \`SMTP_FROM\`
+- \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASS\`, \`SMTP_SECURE\`, \`SMTP_FROM\`, \`MAIL_FROM\`
 - \`MAILBOX_DOMAIN\`, \`MAIL_DOMAIN\`, \`MAILBOX_INBOUND_SECRET\`
 - \`MAILCOW_API_URL\`, \`MAILCOW_API_KEY\`, \`MAILCOW_API_SECRET\`
 
