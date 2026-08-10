@@ -1400,7 +1400,7 @@
       "eloUpdated": "ELO scores updated immediately.",
       "eloChange": "ELO change: {delta}",
       "nextPair": "Next Pair",
-      "hackClubBonus": " (+Student bonus applied)",
+      "studentBonus": " (+Student bonus applied)",
       "voteFailed": "Vote failed",
       "feedbackRequired": "Feedback is required to vote.",
       "feedbackWordCount": "Feedback must be at least 20 words (currently {count}).",
@@ -1456,7 +1456,7 @@
       "notFoundDescription": "This ELO participant doesn't exist.",
       "backToDashboard": "Back to ELO Dashboard",
       "joined": "Joined {date}",
-      "hackClub": "Student",
+      "student": "Student",
       "projectsStat": "Projects",
       "votesCast": "Votes Cast",
       "highestElo": "Highest ELO",
@@ -3654,8 +3654,7 @@
       "theme": "Theme",
       "editor": "Editor",
       "ai": "AI",
-      "calendar": "Calendar",
-      "slack": "Slack Bot"
+      "calendar": "Calendar"
     },
     "calendar": {
       "title": "Calendar settings",
@@ -4044,52 +4043,6 @@
       "dateOfBirthHint": "Enter your birth date to verify eligibility before managing servers.",
       "dateOfBirthLocked": "Your date of birth is locked after identity verification and can only be changed by support.",
       "ageVerificationNotice": "Please enter your date of birth below to complete age verification and continue using server management."
-    },
-    "slack": {
-      "setupTitle": "Slack Bot Setup",
-      "setupDescription": "Link your Slack account, GitHub, and custom MCP tools. AI provider uses your <strong>Settings → AI</strong> tab config automatically.",
-      "userIdLabel": "Your Slack User ID",
-      "userIdPlaceholder": "U0123456789",
-      "userIdHint": "Slack → your profile → Profile → ••• → Copy member ID",
-      "githubTitle": "GitHub Integration",
-      "githubDescription": "Link GitHub to let the bot read, edit, and create PRs on your repos.",
-      "linkedAs": "Linked as <strong>{login}</strong>",
-      "unlink": "Unlink",
-      "linkGithub": "Link GitHub Account",
-      "mcpTitle": "Custom MCP Tools",
-      "mcpDescription": "Add MCP servers the bot can use in addition to built-in EcliPanel tools.",
-      "toolName": "Tool name",
-      "endpointUrl": "Endpoint URL",
-      "descriptionOptional": "Description (optional)",
-      "apiKeyOptional": "API Key (optional)",
-      "addTool": "Add Tool",
-      "ownBotTitle": "Your Own Slack Bot",
-      "ownBotDescription": "Create your own Slack app and connect it here, it runs in <strong>your</strong> workspace as your personal EcliPanel assistant. No need to rely on a shared bot.",
-      "howToTitle": "How to create your Slack app",
-      "step1": "1. Go to <mono>api.slack.com/apps</mono> → <strong>Create New App</strong> → <strong>From scratch</strong>.",
-      "step2": "2. Under <strong>Features → Socket Mode</strong>, enable it and create an <strong>App-Level Token</strong> with the <mono>connections:write</mono> scope.",
-      "step3": "3. Under <strong>OAuth & Permissions</strong>, add Bot Token Scopes: <mono>chat:write</mono>, <mono>commands</mono>, <mono>app_mentions:read</mono>, <mono>reactions:write</mono>, <mono>im:history</mono>, <mono>channels:history</mono>, <mono>groups:history</mono>, <mono>users:read</mono>. Then <strong>Install to Workspace</strong> and copy the <strong>Bot User OAuth Token</strong> (starts with <mono>xoxb-</mono>).",
-      "step4": "4. Optional: under <strong>Basic Information</strong>, copy the <strong>Signing Secret</strong>.",
-      "step5": "5. Paste the tokens below and hit <strong>Connect</strong>.",
-      "botNameLabel": "Bot name",
-      "botNamePlaceholder": "My Server Assistant",
-      "botTokenLabel": "Bot User OAuth Token (xoxb-…)",
-      "botTokenPlaceholder": "xoxb-…",
-      "appTokenLabel": "App-Level Token (xapp-…)",
-      "appTokenPlaceholder": "xapp-…",
-      "signingSecretLabel": "Signing Secret (optional)",
-      "signingSecretPlaceholder": "…",
-      "requiredError": "Name, Bot Token and App Level Token are required.",
-      "connectFailed": "Failed to connect bot",
-      "connect": "Connect Slack Bot",
-      "unknownWorkspace": "Unknown workspace",
-      "active": "active",
-      "paused": "paused",
-      "pause": "Pause",
-      "activate": "Activate",
-      "remove": "Remove",
-      "saveConfiguration": "Save Configuration",
-      "confirmRemove": "Remove Slack bot \"{name}\"?"
     }
   },
   "studentBenefits": {
@@ -4104,13 +4057,6 @@
       "unverifiedDesc": "Verify your student status to unlock free servers, bonus resources, and more.",
       "active": "Active",
       "viewBenefits": "View Benefits"
-    },
-    "oauth": {
-      "title": "Quick Verification",
-      "description": "Instantly verify using your existing student accounts.",
-      "hackclub": "Verify with Hack Club",
-      "github": "Verify with GitHub",
-      "noneAvailable": "No automatic verification methods are currently available. Please use manual verification below."
     },
     "manual": {
       "title": "Manual Verification",
@@ -4151,7 +4097,6 @@
       "activePlan": "Your educational plan is active and student benefits are applied."
     },
     "errors": {
-      "oauthFailed": "Failed to start verification flow",
       "submitFailed": "Failed to submit"
     }
   },
@@ -4169,8 +4114,6 @@
       "uploading": "Uploading...",
       "submitForVerification": "Submit for Verification",
       "verifySelfieAge": "Verify selfie age",
-      "connectHackClub": "Verify with Hack Club",
-      "connectGithub": "Verify with GitHub",
       "verifyStudent": "Verify Student Status",
       "viewBenefits": "View Benefits"
     },
@@ -4179,9 +4122,7 @@
     },
     "errors": {
       "selectBothFiles": "Please select both files",
-      "failed": "Failed",
-      "failedHackClubFlow": "Failed to start student verification flow",
-      "failedGithubFlow": "Failed to start GitHub verification flow"
+      "failed": "Failed"
     },
     "banner": {
       "completeTitle": "Verification Complete",
@@ -6599,7 +6540,6 @@
       "pay": "Pay"
     },
     "errors": {
-      "failedStudentVerification": "Failed to start student verification flow",
       "failedFetchInvoice": "Failed to fetch invoice",
       "unableDownloadInvoice": "Unable to download invoice",
       "orderCreateFailed": "Failed to create order"

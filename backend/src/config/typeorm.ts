@@ -172,8 +172,6 @@ export const AppDataSource = new DataSource({
     require('../models/eloVote.entity').EloVote,
     require('../models/eloDevlog.entity').EloDevlog,
     require('../models/eloReport.entity').EloReport,
-    require('../models/slackUserLink.entity').SlackUserLink,
-    require('../models/slackBot.entity').SlackBot,
     require('../models/regionalPrice.entity').RegionalPrice,
     require('../models/calendarEvent.entity').CalendarEvent,
     require('../models/todoItem.entity').TodoItem,

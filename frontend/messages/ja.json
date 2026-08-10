@@ -3357,8 +3357,7 @@
       "theme": "テーマ",
       "editor": "エディタ",
       "ai": "AI",
-      "calendar": "カレンダー",
-      "slack": "Slack Bot"
+      "calendar": "カレンダー"
     },
     "calendar": {
       "title": "カレンダー設定",
@@ -3723,52 +3722,6 @@
       "dateOfBirthHint": "サーバーを管理する前に、生年月日を入力して資格を確認してください。",
       "dateOfBirthLocked": "本人確認後、生年月日はロックされ、サポートのみが変更できます。",
       "ageVerificationNotice": "年齢確認を完了し、サーバー管理を続行するには、以下に生年月日を入力してください。"
-    },
-    "slack": {
-      "setupTitle": "Slack ボットのセットアップ",
-      "setupDescription": "Slack アカウント、GitHub、カスタム MCP ツールを連携します。AI プロバイダーは <strong>設定 → AI</strong> タブの設定を自動的に使用します。",
-      "userIdLabel": "あなたの Slack ユーザー ID",
-      "userIdPlaceholder": "U0123456789",
-      "userIdHint": "Slack → あなたのプロフィール → プロフィール → ••• → メンバー ID をコピー",
-      "githubTitle": "GitHub 連携",
-      "githubDescription": "GitHub を連携すると、ボットがリポジトリの読み取り、編集、PR の作成を行えるようになります。",
-      "linkedAs": "<strong>{login}</strong> として連携済み",
-      "unlink": "連携解除",
-      "linkGithub": "GitHub アカウントを連携",
-      "mcpTitle": "カスタム MCP ツール",
-      "mcpDescription": "内蔵の EcliPanel ツールに加えてボットが使用できる MCP サーバーを追加します。",
-      "toolName": "ツール名",
-      "endpointUrl": "エンドポイント URL",
-      "descriptionOptional": "説明（任意）",
-      "apiKeyOptional": "API キー（任意）",
-      "addTool": "ツールを追加",
-      "ownBotTitle": "あなた専用の Slack ボット",
-      "ownBotDescription": "独自の Slack アプリを作成してここに接続すると、<strong>あなたの</strong>ワークスペースで個人用 EcliPanel アシスタントとして動作します。共有ボットに頼る必要はありません。",
-      "howToTitle": "Slack アプリの作成方法",
-      "step1": "1. <mono>api.slack.com/apps</mono> にアクセス → <strong>Create New App</strong> → <strong>From scratch</strong>。",
-      "step2": "2. <strong>Features → Socket Mode</strong> で有効にし、<mono>connections:write</mono> スコープの <strong>App-Level Token</strong> を作成します。",
-      "step3": "3. <strong>OAuth & Permissions</strong> で Bot Token Scopes を追加: <mono>chat:write</mono>、<mono>commands</mono>、<mono>app_mentions:read</mono>、<mono>reactions:write</mono>、<mono>im:history</mono>、<mono>channels:history</mono>、<mono>groups:history</mono>、<mono>users:read</mono>。次に <strong>Install to Workspace</strong> して <strong>Bot User OAuth Token</strong>（<mono>xoxb-</mono> で始まる）をコピーします。",
-      "step4": "4. 任意: <strong>Basic Information</strong> で <strong>Signing Secret</strong> をコピーします。",
-      "step5": "5. 以下の欄にトークンを貼り付けて <strong>Connect</strong> を押します。",
-      "botNameLabel": "ボット名",
-      "botNamePlaceholder": "マイサーバーアシスタント",
-      "botTokenLabel": "Bot User OAuth Token (xoxb-…)",
-      "botTokenPlaceholder": "xoxb-…",
-      "appTokenLabel": "App-Level Token (xapp-…)",
-      "appTokenPlaceholder": "xapp-…",
-      "signingSecretLabel": "Signing Secret（任意）",
-      "signingSecretPlaceholder": "…",
-      "requiredError": "名前、Bot Token、App Level Token は必須です。",
-      "connectFailed": "ボットの接続に失敗しました",
-      "connect": "Slack ボットを接続",
-      "unknownWorkspace": "不明なワークスペース",
-      "active": "アクティブ",
-      "paused": "一時停止中",
-      "pause": "一時停止",
-      "activate": "アクティブ化",
-      "remove": "削除",
-      "saveConfiguration": "設定を保存",
-      "confirmRemove": "Slack ボット「{name}」を削除しますか？"
     }
   },
   "studentBenefits": {
@@ -3783,13 +3736,6 @@
       "unverifiedDesc": "学生ステータスを確認して無料サーバーとボーナスリソースを利用しましょう。",
       "active": "有効",
       "viewBenefits": "特典を見る"
-    },
-    "oauth": {
-      "title": "クイック確認",
-      "description": "既存の学生アカウントを使用して即座に確認。",
-      "hackclub": "Hack Clubで確認",
-      "github": "GitHubで確認",
-      "noneAvailable": "現在、自動確認方法は利用できません。以下の手動確認をご利用ください。"
     },
     "manual": {
       "title": "手動確認",
@@ -3830,7 +3776,6 @@
       "activePlan": "教育プランが有効で、学生特典が適用されています。"
     },
     "errors": {
-      "oauthFailed": "確認フローの開始に失敗しました",
       "submitFailed": "送信に失敗しました"
     }
   },
@@ -3848,8 +3793,6 @@
       "uploading": "アップロード中...",
       "submitForVerification": "確認を送信",
       "verifySelfieAge": "自撮り年齢確認",
-      "connectHackClub": "Hack Clubで確認",
-      "connectGithub": "GitHubで確認",
       "verifyStudent": "学生ステータスを確認",
       "viewBenefits": "特典を表示"
     },
@@ -3858,9 +3801,7 @@
     },
     "errors": {
       "selectBothFiles": "両方のファイルを選択してください",
-      "failed": "失敗",
-      "failedHackClubFlow": "Hack Clubフローの開始に失敗しました",
-      "failedGithubFlow": "GitHubフローの開始に失敗しました"
+      "failed": "失敗"
     },
     "banner": {
       "completeTitle": "確認完了",
@@ -3898,8 +3839,6 @@
       "student": {
         "title": "学生特典",
         "verified": "学生ステータスが確認されました",
-        "connectHackClub": "Hack Clubで確認して学生特典を利用",
-        "connectGithub": "GitHubで確認して学生特典を利用",
         "comingSoon": "学生確認は近日公開予定です",
         "uploadProof": "在学証明書をアップロードして学生ステータスを確認",
         "verifyPrompt": "無料サーバーとボーナスリソースを解放するには学生ステータスを確認してください"
@@ -4778,7 +4717,7 @@
       "eloUpdated": "ELOスコアが即時に更新されました。",
       "eloChange": "ELO変動: {delta}",
       "nextPair": "次のペア",
-      "hackClubBonus": "（+学生ボーナス適用）",
+      "studentBonus": "（+学生ボーナス適用）",
       "voteFailed": "投票に失敗しました",
       "feedbackRequired": "投票にはフィードバックが必要です。",
       "feedbackWordCount": "フィードバックは最低20単語必要です（現在{count}単語）。",
@@ -4834,7 +4773,7 @@
       "notFoundDescription": "このELO参加者は存在しません。",
       "backToDashboard": "ELOダッシュボードに戻る",
       "joined": "{date}に参加",
-      "hackClub": "学生",
+      "student": "学生",
       "projectsStat": "プロジェクト",
       "votesCast": "投票数",
       "highestElo": "最高ELO",
@@ -6512,7 +6451,6 @@
       "pay": "支払う"
     },
     "errors": {
-      "failedStudentVerification": "学生確認フローの開始に失敗しました",
       "failedFetchInvoice": "請求書の取得に失敗しました",
       "unableDownloadInvoice": "請求書をダウンロードできません",
       "orderCreateFailed": "注文の作成に失敗しました"

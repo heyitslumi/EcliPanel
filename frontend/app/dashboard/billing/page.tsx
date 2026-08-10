@@ -27,9 +27,6 @@ import {
   AlertTriangle,
 } from "lucide-react"
 
-const HACKCLUB_STUDENT_ENABLED = process.env.NEXT_PUBLIC_HACKCLUB_STUDENT_ENABLED === 'true'
-const GITHUB_STUDENT_ENABLED = process.env.NEXT_PUBLIC_GITHUB_STUDENT_ENABLED === 'true'
-
 export default function BillingPage() {
   const t = useTranslations("billingPage")
   const { user } = useAuth()
@@ -567,25 +564,6 @@ export default function BillingPage() {
                         {t("currentSubscription.currentPlan")}
                       </div>
                     )}
-                    {!planCard.isActive && planCard.type === 'educational' && currentUser?.portalType !== 'educational' && (HACKCLUB_STUDENT_ENABLED || GITHUB_STUDENT_ENABLED) && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const endpoint = HACKCLUB_STUDENT_ENABLED
-                              ? API_ENDPOINTS.hackclubStudentStart
-                              : API_ENDPOINTS.githubStudentStart
-                            const res:any = await apiFetch(endpoint, { method: 'GET' })
-                            if (res?.redirect) window.location.href = res.redirect
-                          } catch (e:any) {
-                            alert(e?.message || t("errors.failedStudentVerification"))
-                          }
-                        }}
-                        className="mt-4 flex w-full items-center justify-center gap-2 border border-border bg-secondary/50 py-2 text-xs text-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
-                       data-telemetry="billing:async">
-                        {t("currentSubscription.verifyStudent")}
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    )}
                     {!planCard.isActive && planCard.type === 'enterprise' && (
                       <a
                         href="mailto:sales@ecli.app"
@@ -595,7 +573,7 @@ export default function BillingPage() {
                         <ArrowRight className="h-3 w-3" />
                       </a>
                     )}
-                    {!planCard.isActive && livePlanCards.length > 0 && planCard.type !== 'enterprise' && !(planCard.type === 'educational' && (HACKCLUB_STUDENT_ENABLED || GITHUB_STUDENT_ENABLED)) && (
+                    {!planCard.isActive && livePlanCards.length > 0 && planCard.type !== 'enterprise' && (
                       planCard.type === 'educational' && !currentUser?.studentVerified ? (
                         <a
                           href="/dashboard/student-benefits"

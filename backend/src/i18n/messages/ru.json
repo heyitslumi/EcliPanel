@@ -577,11 +577,6 @@
     "mailboxRefreshFailed": "Не удалось обновить почтовый ящик",
     "mailboxDeleteFailed": "Не удалось удалить сообщение почты удалённо",
     "mailboxSendFailed": "Не удалось определить исходящий адрес для вашего почтового ящика",
-    "githubOauthNotConfigured": "GitHub OAuth не настроен",
-    "githubClientIdNotConfigured": "GitHub client id не настроен",
-    "hackclubOauthNotConfigured": "Студенческий OAuth не настроен",
-    "hackclubClientIdNotConfigured": "ID клиента студенческого OAuth не настроен",
-    "studentAuthDisabled": "Студенческая проверка этим методом в настоящее время отключена",
     "captchaDisabled": "Функция 'captcha' отключена",
     "captchaInvisibleDisabled": "Функция 'captchaInvisible' отключена",
     "tunnelsNotAvailable": "Функция туннелей пока вам недоступна",
@@ -1057,11 +1052,6 @@
     "invalid_country_code": "Invalid country code",
     "invalid_price": "Invalid price",
     "regional_price_not_found": "Regional price not found"
-  },
-  "slack": {
-    "missing_code_or_state": "Missing code or state",
-    "missing_slackuserid": "Missing slackUserId",
-    "no_eclipanel_account_linked_to_this_slack_user": "No EcliPanel account linked to this Slack user"
   },
   "oauth": {
     "unsupported_response_type": "unsupported_response_type",

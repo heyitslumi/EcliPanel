@@ -577,11 +577,6 @@
     "mailboxRefreshFailed": "Failed to refresh mailbox",
     "mailboxDeleteFailed": "Failed to delete mailbox message remotely",
     "mailboxSendFailed": "Unable to determine outgoing sender address for your mailbox",
-    "githubOauthNotConfigured": "GitHub OAuth not configured",
-    "githubClientIdNotConfigured": "GitHub client id not configured",
-    "hackclubOauthNotConfigured": "Student OAuth not configured",
-    "hackclubClientIdNotConfigured": "Student OAuth client id not configured",
-    "studentAuthDisabled": "Student verification via this method is currently disabled",
     "captchaDisabled": "Feature 'captcha' is disabled",
     "captchaInvisibleDisabled": "Feature 'captchaInvisible' is disabled",
     "tunnelsNotAvailable": "Tunnels feature is not yet available to you",
@@ -1054,11 +1049,6 @@
     "invalid_country_code": "Invalid country code",
     "invalid_price": "Invalid price",
     "regional_price_not_found": "Regional price not found"
-  },
-  "slack": {
-    "missing_code_or_state": "Missing code or state",
-    "missing_slackuserid": "Missing slackUserId",
-    "no_eclipanel_account_linked_to_this_slack_user": "No EcliPanel account linked to this Slack user"
   },
   "oauth": {
     "unsupported_response_type": "unsupported_response_type",

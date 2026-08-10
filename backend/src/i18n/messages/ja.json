@@ -577,11 +577,6 @@
     "mailboxRefreshFailed": "メールボックスの更新に失敗しました",
     "mailboxDeleteFailed": "メールボックスメッセージのリモート削除に失敗しました",
     "mailboxSendFailed": "メールボックスの送信元アドレスを特定できません",
-    "githubOauthNotConfigured": "GitHub OAuthが設定されていません",
-    "githubClientIdNotConfigured": "GitHubクライアントIDが設定されていません",
-    "hackclubOauthNotConfigured": "学生OAuthが設定されていません",
-    "hackclubClientIdNotConfigured": "学生OAuthクライアントIDが設定されていません",
-    "studentAuthDisabled": "この方法での学生確認は現在無効です",
     "captchaDisabled": "CAPTCHA機能は無効です",
     "captchaInvisibleDisabled": "不可視CAPTCHA機能は無効です",
     "tunnelsNotAvailable": "トンネル機能はまだご利用いただけません",
@@ -1054,11 +1049,6 @@
     "invalid_country_code": "無効な国コード",
     "invalid_price": "無効な価格",
     "regional_price_not_found": "地域別価格が見つかりません"
-  },
-  "slack": {
-    "missing_code_or_state": "コードまたはstateがありません",
-    "missing_slackuserid": "slackUserIdがありません",
-    "no_eclipanel_account_linked_to_this_slack_user": "このSlackユーザーにリンクされたEcliPanelアカウントはありません"
   },
   "oauth": {
     "unsupported_response_type": "サポートされていないレスポンスタイプ",

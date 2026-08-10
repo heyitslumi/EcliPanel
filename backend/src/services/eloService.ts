@@ -27,7 +27,7 @@ const MAX_RESOURCES = { memory: 24576, disk: 512000, cpu: 1200 };
 
 export function calculateEloResources(
   eloScore: number,
-  isHackClub: boolean = false,
+  isStudent: boolean = false,
   isWellMade: boolean = false,
   isDisqualified: boolean = false,
 ): { memory: number; disk: number; cpu: number } {
@@ -39,7 +39,7 @@ export function calculateEloResources(
 
   const apply = (base: number, min: number, max: number) => {
     let val = Math.round(base * multiplier);
-    if (isHackClub) val = Math.round(val * 1.2);
+    if (isStudent) val = Math.round(val * 1.2);
     if (isWellMade) val = Math.round(val * 1.25);
     return Math.max(min, Math.min(max, val));
   };

@@ -577,11 +577,6 @@
     "mailboxRefreshFailed": "刷新邮箱失败",
     "mailboxDeleteFailed": "远程删除邮箱消息失败",
     "mailboxSendFailed": "无法确定您邮箱的外发发件人地址",
-    "githubOauthNotConfigured": "GitHub OAuth未配置",
-    "githubClientIdNotConfigured": "GitHub客户端ID未配置",
-    "hackclubOauthNotConfigured": "学生OAuth未配置",
-    "hackclubClientIdNotConfigured": "学生OAuth客户端ID未配置",
-    "studentAuthDisabled": "此方法的学生验证当前已禁用",
     "captchaDisabled": "验证码功能已禁用",
     "captchaInvisibleDisabled": "无感验证码功能已禁用",
     "tunnelsNotAvailable": "隧道功能尚不可用",
@@ -1054,11 +1049,6 @@
     "invalid_country_code": "国家代码无效",
     "invalid_price": "价格无效",
     "regional_price_not_found": "区域价格未找到"
-  },
-  "slack": {
-    "missing_code_or_state": "缺少code或state",
-    "missing_slackuserid": "缺少slackUserId",
-    "no_eclipanel_account_linked_to_this_slack_user": "此Slack用户没有关联的EcliPanel账户"
   },
   "oauth": {
     "unsupported_response_type": "不支持的响应类型",

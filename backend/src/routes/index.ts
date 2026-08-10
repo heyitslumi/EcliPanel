@@ -42,7 +42,6 @@ import { visualEditorRoutes } from '../handlers/visualEditorHandler';
 import { sharedFileRoutes, publicSharedFileRoutes } from '../handlers/sharedFileHandler';
 import { paymentRoutes } from '../handlers/paymentHandler';
 import { eloRoutes } from '../handlers/eloHandler';
-import { slackRoutes } from '../handlers/slackHandler';
 import { proxyRoutes } from '../handlers/proxyHandler';
 import { telemetryIngestRoutes, telemetryAdminRoutes } from '../handlers/telemetryHandler';
 import { blogRoutes } from '../handlers/blogHandler';
@@ -180,7 +179,6 @@ export function registerRoutes(app: any) {
   visualEditorRoutes(app, '/api');
   paymentRoutes(app, '/api');
   eloRoutes(app, '/api');
-  slackRoutes(app, '/api');
   calendarRoutes(app, '/api');
   chatRoutes(app, '/api');
   proxyRoutes(app, '/api');

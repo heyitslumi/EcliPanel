@@ -16,12 +16,8 @@ import {
   AlertTriangle,
   Loader2,
   Upload,
-  ExternalLink,
   Clock,
 } from "lucide-react"
-
-const HACKCLUB_ENABLED = process.env.NEXT_PUBLIC_HACKCLUB_STUDENT_ENABLED === 'true'
-const GITHUB_ENABLED = process.env.NEXT_PUBLIC_GITHUB_STUDENT_ENABLED === 'true'
 
 export default function StudentBenefitsPage() {
   const t = useTranslations("studentBenefits")
@@ -31,7 +27,6 @@ export default function StudentBenefitsPage() {
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [proofType, setProofType] = useState("enrollment_doc")
   const [submitting, setSubmitting] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState<string | null>(null)
   const [eduPlan, setEduPlan] = useState<any>(null)
   const [showPlanInfo, setShowPlanInfo] = useState(false)
   const [emailCode] = useState(() =>
@@ -64,20 +59,6 @@ export default function StudentBenefitsPage() {
   const reverifyDaysLeft = verifiedAt
     ? Math.max(0, Math.ceil((verifiedAt.getTime() + 365 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000)))
     : null
-  async function startOAuth(provider: 'hackclub' | 'github') {
-    setOauthLoading(provider)
-    try {
-      const endpoint = provider === 'hackclub'
-        ? API_ENDPOINTS.hackclubStudentStart
-        : API_ENDPOINTS.githubStudentStart
-      const res: any = await apiFetch(endpoint, { method: 'GET' })
-      if (res?.redirect) window.location.href = res.redirect
-    } catch (e: any) {
-      alert(e?.message || t("errors.oauthFailed"))
-    } finally {
-      setOauthLoading(null)
-    }
-  }
 
   async function submitEmailCode() {
     setSubmitting(true)
@@ -164,46 +145,6 @@ export default function StudentBenefitsPage() {
               </a>
             )}
           </div>
-
-          {/* OAuth verification methods */}
-          {!isVerified && !isPending && (
-            <div className="border border-border bg-card p-6">
-              <SectionHeader title={t("oauth.title")} description={t("oauth.description")} />
-              <div className="mt-4 flex flex-col gap-3">
-                {HACKCLUB_ENABLED && (
-                  <button
-                    disabled={oauthLoading !== null}
-                    onClick={() => startOAuth('hackclub')}
-                    className="flex items-center justify-between border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all disabled:opacity-50"
-                  >
-                    <span>{t("oauth.hackclub")}</span>
-                    {oauthLoading === 'hackclub' ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                )}
-                {GITHUB_ENABLED && (
-                  <button
-                    disabled={oauthLoading !== null}
-                    onClick={() => startOAuth('github')}
-                    className="flex items-center justify-between border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all disabled:opacity-50"
-                  >
-                    <span>{t("oauth.github")}</span>
-                    {oauthLoading === 'github' ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                )}
-                {!HACKCLUB_ENABLED && !GITHUB_ENABLED && (
-                  <p className="text-sm text-muted-foreground">{t("oauth.noneAvailable")}</p>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Manual verification */}
           {!isVerified && !isPending && (

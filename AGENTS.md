@@ -39,7 +39,6 @@ v3/
 │   │   ├── workers/            # Bun workers (crypto, image, PDF, SFTP)
 │   │   ├── utils/              # Utilities (~30 files)
 │   │   ├── mcp/                # Model Context Protocol server
-│   │   ├── slack/              # Slack bot (Bolt SDK)
 │   │   ├── i18n/               # en/ru translations
 │   │   ├── emails/             # React Email templates (15)
 │   │   ├── repositories/       # Custom TypeORM repositories
@@ -157,9 +156,8 @@ v3/
 10. Route registration (`registerRoutes`)
 11. MCP endpoints (`/api/mcp/messages`, `/api/mcp/sse`)
 12. Scheduled jobs (18 cron jobs including `securityScanJob`)
-13. Slack bot init
-14. Static file routes (`/uploads/*`, `/uploads/id-docs/*`, `/uploads/mailbox/*`)
-15. Health check endpoint (`/health`)
+13. Static file routes (`/uploads/*`, `/uploads/id-docs/*`, `/uploads/mailbox/*`)
+14. Health check endpoint (`/health`)
 
 ### 3.3 Request Lifecycle
 

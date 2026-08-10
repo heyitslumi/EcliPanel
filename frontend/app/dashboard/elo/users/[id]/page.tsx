@@ -108,7 +108,7 @@ export default function DashboardEloUserProfile() {
                       </span>
                       {data.user.studentVerified && (
                         <Badge variant="outline" className="text-success border-success/30 text-[10px]">
-                          {t("profile.hackClub")}
+                          {t("profile.student")}
                         </Badge>
                       )}
                     </div>

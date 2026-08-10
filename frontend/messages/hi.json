@@ -3357,8 +3357,7 @@
       "theme": "थीम",
       "editor": "एडिटर",
       "ai": "AI",
-      "calendar": "कैलेंडर",
-      "slack": "Slack Bot"
+      "calendar": "कैलेंडर"
     },
     "calendar": {
       "title": "कैलेंडर सेटिंग्स",
@@ -3723,52 +3722,6 @@
       "dateOfBirthHint": "सर्वर प्रबंधन से पहले पात्रता सत्यापित करने के लिए अपनी जन्म तिथि दर्ज करें।",
       "dateOfBirthLocked": "पहचान सत्यापन के बाद आपकी जन्म तिथि लॉक हो गई है और केवल सहायता द्वारा बदली जा सकती है।",
       "ageVerificationNotice": "आयु सत्यापन पूरा करने और सर्वर प्रबंधन जारी रखने के लिए कृपया नीचे अपनी जन्म तिथि दर्ज करें।"
-    },
-    "slack": {
-      "setupTitle": "Slack बॉट सेटअप",
-      "setupDescription": "अपना Slack खाता, GitHub और कस्टम MCP टूल लिंक करें। AI प्रदाता आपके <strong>सेटिंग्स → AI</strong> टैब कॉन्फ़िगरेशन का स्वचालित रूप से उपयोग करता है।",
-      "userIdLabel": "आपका Slack उपयोगकर्ता ID",
-      "userIdPlaceholder": "U0123456789",
-      "userIdHint": "Slack → आपकी प्रोफ़ाइल → प्रोफ़ाइल → ••• → सदस्य ID कॉपी करें",
-      "githubTitle": "GitHub एकीकरण",
-      "githubDescription": "GitHub लिंक करें ताकि बॉट आपके रेपो को पढ़, संपादित कर सके और PR बना सके।",
-      "linkedAs": "<strong>{login}</strong> के रूप में लिंक किया गया",
-      "unlink": "अनलिंक करें",
-      "linkGithub": "GitHub खाता लिंक करें",
-      "mcpTitle": "कस्टम MCP टूल",
-      "mcpDescription": "बिल्ट-इन EcliPanel टूल के अलावा बॉट उपयोग कर सकने वाले MCP सर्वर जोड़ें।",
-      "toolName": "टूल का नाम",
-      "endpointUrl": "एंडपॉइंट URL",
-      "descriptionOptional": "विवरण (वैकल्पिक)",
-      "apiKeyOptional": "API कुंजी (वैकल्पिक)",
-      "addTool": "टूल जोड़ें",
-      "ownBotTitle": "आपका अपना Slack बॉट",
-      "ownBotDescription": "अपना स्वयं का Slack ऐप बनाएं और इसे यहां कनेक्ट करें, यह <strong>आपके</strong> वर्कस्पेस में आपके व्यक्तिगत EcliPanel सहायक के रूप में चलेगा। साझा बॉट पर निर्भर रहने की आवश्यकता नहीं है।",
-      "howToTitle": "अपना Slack ऐप कैसे बनाएं",
-      "step1": "1. <mono>api.slack.com/apps</mono> पर जाएं → <strong>Create New App</strong> → <strong>From scratch</strong>।",
-      "step2": "2. <strong>Features → Socket Mode</strong> के अंतर्गत इसे सक्षम करें और <mono>connections:write</mono> स्कोप के साथ एक <strong>App-Level Token</strong> बनाएं।",
-      "step3": "3. <strong>OAuth & Permissions</strong> के अंतर्गत Bot Token Scopes जोड़ें: <mono>chat:write</mono>, <mono>commands</mono>, <mono>app_mentions:read</mono>, <mono>reactions:write</mono>, <mono>im:history</mono>, <mono>channels:history</mono>, <mono>groups:history</mono>, <mono>users:read</mono>। फिर <strong>Install to Workspace</strong> करें और <strong>Bot User OAuth Token</strong> (<mono>xoxb-</mono> से शुरू) कॉपी करें।",
-      "step4": "4. वैकल्पिक: <strong>Basic Information</strong> के अंतर्गत <strong>Signing Secret</strong> कॉपी करें।",
-      "step5": "5. नीचे टोकन पेस्ट करें और <strong>Connect</strong> दबाएं।",
-      "botNameLabel": "बॉट का नाम",
-      "botNamePlaceholder": "मेरा सर्वर सहायक",
-      "botTokenLabel": "Bot User OAuth Token (xoxb-…)",
-      "botTokenPlaceholder": "xoxb-…",
-      "appTokenLabel": "App-Level Token (xapp-…)",
-      "appTokenPlaceholder": "xapp-…",
-      "signingSecretLabel": "Signing Secret (वैकल्पिक)",
-      "signingSecretPlaceholder": "…",
-      "requiredError": "नाम, Bot Token और App Level Token आवश्यक हैं।",
-      "connectFailed": "बॉट कनेक्ट करने में विफल",
-      "connect": "Slack बॉट कनेक्ट करें",
-      "unknownWorkspace": "अज्ञात वर्कस्पेस",
-      "active": "सक्रिय",
-      "paused": "रोका गया",
-      "pause": "रोकें",
-      "activate": "सक्रिय करें",
-      "remove": "हटाएं",
-      "saveConfiguration": "कॉन्फ़िगरेशन सहेजें",
-      "confirmRemove": "Slack बॉट \"{name}\" हटाएं?"
     }
   },
   "studentBenefits": {
@@ -3783,13 +3736,6 @@
       "unverifiedDesc": "मुफ्त सर्वर, बोनस संसाधन और अधिक प्राप्त करने के लिए अपनी छात्र स्थिति सत्यापित करें।",
       "active": "सक्रिय",
       "viewBenefits": "लाभ देखें"
-    },
-    "oauth": {
-      "title": "त्वरित सत्यापन",
-      "description": "अपने मौजूदा छात्र खातों का उपयोग करके तुरंत सत्यापन करें।",
-      "hackclub": "Hack Club से सत्यापित करें",
-      "github": "GitHub से सत्यापित करें",
-      "noneAvailable": "अभी कोई स्वचालित सत्यापन विधि उपलब्ध नहीं है। कृपया नीचे मैन्युअल सत्यापन का उपयोग करें।"
     },
     "manual": {
       "title": "मैन्युअल सत्यापन",
@@ -3830,7 +3776,6 @@
       "activePlan": "शैक्षिक योजना सक्रिय है और छात्र लाभ लागू हैं।"
     },
     "errors": {
-      "oauthFailed": "सत्यापन प्रवाह शुरू करने में विफल",
       "submitFailed": "जमा करने में विफल"
     }
   },
@@ -3848,8 +3793,6 @@
       "uploading": "अपलोड हो रहा है...",
       "submitForVerification": "सत्यापन के लिए जमा करें",
       "verifySelfieAge": "सेल्फ़ी आयु सत्यापित करें",
-      "connectHackClub": "Hack Club से सत्यापित करें",
-      "connectGithub": "GitHub से सत्यापित करें",
       "verifyStudent": "छात्र स्थिति सत्यापित करें",
       "viewBenefits": "लाभ देखें"
     },
@@ -3858,9 +3801,7 @@
     },
     "errors": {
       "selectBothFiles": "कृपया दोनों फ़ाइलें चुनें",
-      "failed": "विफल",
-      "failedHackClubFlow": "Hack Club फ़्लो शुरू करने में विफल",
-      "failedGithubFlow": "GitHub फ़्लो शुरू करने में विफल"
+      "failed": "विफल"
     },
     "banner": {
       "completeTitle": "सत्यापन पूर्ण",
@@ -3898,8 +3839,6 @@
       "student": {
         "title": "छात्र लाभ",
         "verified": "छात्र स्थिति पुष्टि",
-        "connectHackClub": "छात्र लाभ के लिए Hack Club से सत्यापित करें",
-        "connectGithub": "छात्र लाभ के लिए GitHub से सत्यापित करें",
         "comingSoon": "छात्र सत्यापन जल्द आ रहा है",
         "uploadProof": "छात्र स्थिति सत्यापित करने के लिए नामांकन प्रमाण अपलोड करें",
         "verifyPrompt": "मुफ़्त सर्वर और बोनस संसाधन अनलॉक करने के लिए अपनी छात्र स्थिति सत्यापित करें"
@@ -4778,7 +4717,7 @@
       "eloUpdated": "ELO स्कोर तुरंत अपडेट हो गए।",
       "eloChange": "ELO परिवर्तन: {delta}",
       "nextPair": "अगली जोड़ी",
-      "hackClubBonus": " (+छात्र बोनस लागू)",
+      "studentBonus": " (+छात्र बोनस लागू)",
       "voteFailed": "वोट विफल",
       "feedbackRequired": "वोट करने के लिए प्रतिक्रिया आवश्यक है।",
       "feedbackWordCount": "प्रतिक्रिया कम से कम 20 शब्दों की होनी चाहिए (वर्तमान में {count})।",
@@ -4834,7 +4773,7 @@
       "notFoundDescription": "यह ELO प्रतिभागी मौजूद नहीं है।",
       "backToDashboard": "ELO डैशबोर्ड पर वापस जाएं",
       "joined": "शामिल हुए {date}",
-      "hackClub": "छात्र",
+      "student": "छात्र",
       "projectsStat": "परियोजनाएं",
       "votesCast": "डाले गए वोट",
       "highestElo": "उच्चतम ELO",
@@ -6512,7 +6451,6 @@
       "pay": "भुगतान करें"
     },
     "errors": {
-      "failedStudentVerification": "छात्र सत्यापन प्रवाह शुरू करने में विफल",
       "failedFetchInvoice": "चालान प्राप्त करने में विफल",
       "unableDownloadInvoice": "चालान डाउनलोड करने में असमर्थ",
       "orderCreateFailed": "ऑर्डर बनाने में विफल"

@@ -1,4 +1,4 @@
-export function calculateEloResources(eloScore: number, isHackClub = false, isWellMade = false, isDisqualified = false): {
+export function calculateEloResources(eloScore: number, isStudent = false, isWellMade = false, isDisqualified = false): {
   memory: number
   disk: number
   cpu: number
@@ -8,7 +8,7 @@ export function calculateEloResources(eloScore: number, isHackClub = false, isWe
 
   const apply = (base: number, min: number, max: number) => {
     let val = Math.round(base * multiplier);
-    if (isHackClub) val = Math.round(val * 1.2);
+    if (isStudent) val = Math.round(val * 1.2);
     if (isWellMade) val = Math.round(val * 1.25);
     return Math.max(min, Math.min(max, val));
   };

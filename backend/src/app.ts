@@ -41,7 +41,6 @@ import { scheduleWingsSyncJob } from './jobs/wingsSyncJob';
 import { scheduleCalendarNotificationJob } from './jobs/calendarNotificationJob';
 import { scheduleSecurityScanJob } from './jobs/securityScanJob';
 import { scheduleAutoPartitionMaintenance } from './utils/autoPartition';
-import { initSlackBot } from './slack/index';
 import path from 'path';
 import { decryptBuffer } from './utils/crypto';
 import { openapi } from '@elysia/openapi';
@@ -914,19 +913,6 @@ export async function initApp() {
     scheduleMailboxPasswordRotation();
   } catch (e) {
     console.error('Failed to schedule mailbox password rotation job:', e);
-  }
-  try {
-    initSlackBot();
-  } catch (e) {
-    console.error('Failed to initialize Slack bot:', e);
-  }
-  try {
-    const { initUserSlackBots } = require('./slack/manager');
-    initUserSlackBots().catch((e: unknown) => {
-      console.error('Failed to initialize user owned slack bots:', e);
-    });
-  } catch (e) {
-    console.error('Failed to initialize user owned slack bots:', e);
   }
   try {
     scheduleCalendarNotificationJob();

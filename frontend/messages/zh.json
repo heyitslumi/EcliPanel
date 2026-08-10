@@ -1371,7 +1371,7 @@
       "eloUpdated": "ELO 分数已立即更新。",
       "eloChange": "ELO 变化：{delta}",
       "nextPair": "下一对",
-      "hackClubBonus": "（+学生加成已应用）",
+      "studentBonus": "（+学生加成已应用）",
       "voteFailed": "投票失败",
       "feedbackRequired": "投票需要填写反馈。",
       "feedbackWordCount": "反馈至少需要 20 个字（当前 {count} 字）。",
@@ -1427,7 +1427,7 @@
       "notFoundDescription": "此 ELO 参与者不存在。",
       "backToDashboard": "返回 ELO 仪表盘",
       "joined": "加入于 {date}",
-      "hackClub": "学生",
+      "student": "学生",
       "projectsStat": "项目",
       "votesCast": "已投票数",
       "highestElo": "最高 ELO",
@@ -3625,8 +3625,7 @@
       "theme": "主题",
       "editor": "编辑器",
       "ai": "AI",
-      "calendar": "日历",
-      "slack": "Slack Bot"
+      "calendar": "日历"
     },
     "calendar": {
       "title": "日历设置",
@@ -3991,52 +3990,6 @@
       "dateOfBirthHint": "输入您的出生日期以验证资格，然后才能管理服务器。",
       "dateOfBirthLocked": "身份验证后，您的出生日期已锁定，只能由支持人员更改。",
       "ageVerificationNotice": "请在下方输入您的出生日期以完成年龄验证并继续使用服务器管理。"
-    },
-    "slack": {
-      "setupTitle": "Slack 机器人设置",
-      "setupDescription": "关联您的 Slack 账户、GitHub 和自定义 MCP 工具。AI 提供商会自动使用您的 <strong>设置 → AI</strong> 标签页配置。",
-      "userIdLabel": "您的 Slack 用户 ID",
-      "userIdPlaceholder": "U0123456789",
-      "userIdHint": "Slack → 您的个人资料 → 个人资料 → ••• → 复制成员 ID",
-      "githubTitle": "GitHub 集成",
-      "githubDescription": "关联 GitHub，让机器人能够读取、编辑您的仓库并创建 PR。",
-      "linkedAs": "已关联为 <strong>{login}</strong>",
-      "unlink": "取消关联",
-      "linkGithub": "关联 GitHub 账户",
-      "mcpTitle": "自定义 MCP 工具",
-      "mcpDescription": "添加机器人可使用的 MCP 服务器，作为内置 EcliPanel 工具的补充。",
-      "toolName": "工具名称",
-      "endpointUrl": "端点 URL",
-      "descriptionOptional": "描述（可选）",
-      "apiKeyOptional": "API 密钥（可选）",
-      "addTool": "添加工具",
-      "ownBotTitle": "您自己的 Slack 机器人",
-      "ownBotDescription": "创建您自己的 Slack 应用并在此连接，它将作为您的个人 EcliPanel 助手在<strong>您的</strong>工作区中运行。无需依赖共享机器人。",
-      "howToTitle": "如何创建您的 Slack 应用",
-      "step1": "1. 前往 <mono>api.slack.com/apps</mono> → <strong>Create New App</strong> → <strong>From scratch</strong>。",
-      "step2": "2. 在 <strong>Features → Socket Mode</strong> 下启用它，并创建具有 <mono>connections:write</mono> 权限的 <strong>App-Level Token</strong>。",
-      "step3": "3. 在 <strong>OAuth & Permissions</strong> 下添加 Bot Token Scopes: <mono>chat:write</mono>、<mono>commands</mono>、<mono>app_mentions:read</mono>、<mono>reactions:write</mono>、<mono>im:history</mono>、<mono>channels:history</mono>、<mono>groups:history</mono>、<mono>users:read</mono>。然后 <strong>Install to Workspace</strong> 并复制 <strong>Bot User OAuth Token</strong>（以 <mono>xoxb-</mono> 开头）。",
-      "step4": "4. 可选：在 <strong>Basic Information</strong> 下复制 <strong>Signing Secret</strong>。",
-      "step5": "5. 在下方粘贴令牌，然后点击 <strong>Connect</strong>。",
-      "botNameLabel": "机器人名称",
-      "botNamePlaceholder": "我的服务器助手",
-      "botTokenLabel": "Bot User OAuth Token (xoxb-…)",
-      "botTokenPlaceholder": "xoxb-…",
-      "appTokenLabel": "App-Level Token (xapp-…)",
-      "appTokenPlaceholder": "xapp-…",
-      "signingSecretLabel": "Signing Secret（可选）",
-      "signingSecretPlaceholder": "…",
-      "requiredError": "名称、Bot Token 和 App Level Token 为必填项。",
-      "connectFailed": "连接机器人失败",
-      "connect": "连接 Slack 机器人",
-      "unknownWorkspace": "未知工作区",
-      "active": "活跃",
-      "paused": "已暂停",
-      "pause": "暂停",
-      "activate": "激活",
-      "remove": "删除",
-      "saveConfiguration": "保存配置",
-      "confirmRemove": "删除 Slack 机器人“{name}”？"
     }
   },
   "studentBenefits": {
@@ -4051,13 +4004,6 @@
       "unverifiedDesc": "验证学生身份，解锁免费服务器、奖励资源等。",
       "active": "有效",
       "viewBenefits": "查看特惠"
-    },
-    "oauth": {
-      "title": "快速验证",
-      "description": "使用现有学生账户即时验证。",
-      "hackclub": "通过 Hack Club 验证",
-      "github": "通过 GitHub 验证",
-      "noneAvailable": "目前没有可用的自动验证方式，请使用下方的手动验证。"
     },
     "manual": {
       "title": "手动验证",
@@ -4098,7 +4044,6 @@
       "activePlan": "教育套餐已激活，学生特惠已生效。"
     },
     "errors": {
-      "oauthFailed": "验证流程启动失败",
       "submitFailed": "提交失败"
     }
   },
@@ -4116,8 +4061,6 @@
       "uploading": "上传中...",
       "submitForVerification": "提交验证",
       "verifySelfieAge": "验证自拍年龄",
-      "connectHackClub": "通过 Hack Club 验证",
-      "connectGithub": "通过 GitHub 验证",
       "verifyStudent": "验证学生身份",
       "viewBenefits": "查看福利"
     },
@@ -4126,9 +4069,7 @@
     },
     "errors": {
       "selectBothFiles": "请选择两个文件",
-      "failed": "失败",
-      "failedHackClubFlow": "启动 Hack Club 流程失败",
-      "failedGithubFlow": "启动 GitHub 流程失败"
+      "failed": "失败"
     },
     "banner": {
       "completeTitle": "验证完成",
@@ -4166,8 +4107,6 @@
       "student": {
         "title": "学生特惠",
         "verified": "学生身份已确认",
-        "connectHackClub": "通过 Hack Club 验证以获取学生特惠",
-        "connectGithub": "通过 GitHub 验证以获取学生特惠",
         "comingSoon": "学生验证即将推出",
         "uploadProof": "上传在学证明以验证学生身份",
         "verifyPrompt": "验证您的学生身份以解锁免费服务器和额外资源"
@@ -6513,7 +6452,6 @@
       "pay": "付款"
     },
     "errors": {
-      "failedStudentVerification": "Failed to start student verification flow",
       "failedFetchInvoice": "Failed to fetch invoice",
       "unableDownloadInvoice": "Unable to download invoice",
       "orderCreateFailed": "Failed to create order"

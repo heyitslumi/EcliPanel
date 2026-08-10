@@ -3,7 +3,6 @@
 import { PanelHeader } from "@/components/panel/header"
 import { PageLayout } from "@/components/panel/shared"
 import { FeedbackSettingsCard } from "@/components/panel/feedback-settings-card"
-import { SlackBotSettings } from "@/components/panel/slack-bot-settings"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
@@ -1750,7 +1749,6 @@ export default function SettingsPage() {
     { value: "editor", icon: Settings, label: t("tabs.editor"), guideId: "settings-editor" },
     { value: "ai", icon: Sparkles, label: t("tabs.ai") || "AI", guideId: "settings-ai" },
     { value: "calendar", icon: Calendar, label: t("tabs.calendar"), guideId: "settings-calendar" },
-    { value: "slack", icon: MessageSquare, label: t("tabs.slack"), guideId: "settings-slack" },
   ]
 
   return (
@@ -3019,12 +3017,6 @@ export default function SettingsPage() {
                   </SettingsCard>
                 </>
               )}
-            </div>
-          )}
-
-          {activeTab === "slack" && (
-            <div className="space-y-6">
-              <SlackBotSettings />
             </div>
           )}
 

@@ -83,12 +83,12 @@ function StatCard({ icon: Icon, label, children }: { icon: any; label: string; c
 }
 
 
-function EloProgression({ eloScore, isHackClub, averageElo }: { eloScore: number; isHackClub?: boolean; averageElo?: number }) {
+function EloProgression({ eloScore, isStudent, averageElo }: { eloScore: number; isStudent?: boolean; averageElo?: number }) {
   const t = useTranslations("eloPage")
-  const current = calculateEloResources(eloScore, isHackClub);
-  const atPlus100 = calculateEloResources(eloScore + 100, isHackClub);
-  const atPlus250 = calculateEloResources(eloScore + 250, isHackClub);
-  const atPlus500 = calculateEloResources(eloScore + 500, isHackClub);
+  const current = calculateEloResources(eloScore, isStudent);
+  const atPlus100 = calculateEloResources(eloScore + 100, isStudent);
+  const atPlus250 = calculateEloResources(eloScore + 250, isStudent);
+  const atPlus500 = calculateEloResources(eloScore + 500, isStudent);
   const maxScore = 12000;
   const minScore = 200;
   const normalized = Math.max(0, Math.min(1, (eloScore - minScore) / (maxScore - minScore)));
@@ -583,7 +583,7 @@ export default function EloDashboard() {
                   <div className="p-4 sm:p-5">
                     <EloProgression
                       eloScore={Math.max(...myProjects.projects.map((p: any) => p.eloScore))}
-                      isHackClub={myProjects.isHackClub}
+                      isStudent={myProjects.isStudent}
                       averageElo={eloStats?.averageElo}
                     />
                     <p className="text-[10px] text-muted-foreground mt-3">

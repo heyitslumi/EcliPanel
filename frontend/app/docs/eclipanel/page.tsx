@@ -98,11 +98,9 @@ will actually bite you if wrong:
 
 Only relevant if you use the feature:
 
-- \`MAILCOW_API_URL\` / \`MAILCOW_API_KEY\` / \`MAILCOW_API_SECRET\` + \`MAILBOX_DOMAIN\` / \`MAIL_DOMAIN\` — mailboxes (section 6)
+- \`MAILCOW_API_URL\` / \`MAILCOW_API_KEY\` + \`MAILBOX_DOMAIN\` / \`MAIL_DOMAIN\` — mailboxes (section 6)
 - \`DOVECOT_MASTER_USER\` / \`DOVECOT_MASTER_PASS\` — panel reading any mailbox over IMAP
 - \`TUNNEL_PUBLIC_HOST\` (default \`n2.ecli.app\`) / \`TUNNEL_PORT_RANGE\` (e.g. \`20000-29999\`) — tunnels
-- \`GITHUB_CLIENT_ID\` / \`GITHUB_CLIENT_SECRET\` — GitHub auth
-- \`HACKCLUB_CLIENT_ID\` / \`HACKCLUB_CLIENT_SECRET\` — student verification
 - \`CLOUDFLARE_API_TOKEN\` / \`CLOUDFLARE_BASE_ZONE\` / \`CLOUDFLARE_ACCOUNT_ID\` — panel-managed DNS subzones
 - \`CAPTCHA_SECRET\` / \`CAPTCHA_INVISIBLE_SECRET\` — audio captcha (\`openssl rand -hex 32\`)
 - \`COMPANY_NAME\` + the \`INVOICE_*\` block — invoice branding
@@ -232,7 +230,6 @@ key** with read/write. Wire it into the backend \`.env\`:
 \`\`\`bash
 MAILCOW_API_URL=https://mail.example.com   # must be https — mailcow rejects http API calls
 MAILCOW_API_KEY=<key>
-MAILCOW_API_SECRET=<secret>
 MAILBOX_DOMAIN=example.com
 MAIL_DOMAIN=example.com
 MAILBOX_INBOUND_SECRET=$(openssl rand -hex 32)

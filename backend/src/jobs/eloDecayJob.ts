@@ -46,8 +46,8 @@ async function processEloDecay() {
     if (!cfg) continue;
 
     const owner = await userRepo.findOneBy({ id: project.userId });
-    const isHackClub = owner?.studentVerified || false;
-    const resources = calculateEloResources(newElo, isHackClub, project.isWellMade);
+    const isStudent = owner?.studentVerified || false;
+    const resources = calculateEloResources(newElo, isStudent, project.isWellMade);
 
     cfg.memory = resources.memory;
     cfg.disk = resources.disk;

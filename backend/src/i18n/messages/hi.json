@@ -577,11 +577,6 @@
     "mailboxRefreshFailed": "मेलबॉक्स रीफ़्रेश करने में विफल",
     "mailboxDeleteFailed": "मेलबॉक्स संदेश दूरस्थ रूप से हटाने में विफल",
     "mailboxSendFailed": "आपके मेलबॉक्स के लिए आउटगोइंग प्रेषक पता निर्धारित करने में असमर्थ",
-    "githubOauthNotConfigured": "GitHub OAuth कॉन्फ़िगर नहीं",
-    "githubClientIdNotConfigured": "GitHub क्लाइंट id कॉन्फ़िगर नहीं",
-    "hackclubOauthNotConfigured": "छात्र OAuth कॉन्फ़िगर नहीं",
-    "hackclubClientIdNotConfigured": "छात्र OAuth क्लाइंट id कॉन्फ़िगर नहीं",
-    "studentAuthDisabled": "इस विधि द्वारा छात्र सत्यापन वर्तमान में अक्षम है",
     "captchaDisabled": "सुविधा 'captcha' अक्षम है",
     "captchaInvisibleDisabled": "सुविधा 'captchaInvisible' अक्षम है",
     "tunnelsNotAvailable": "टनल सुविधा अभी आपके लिए उपलब्ध नहीं है",
@@ -1054,11 +1049,6 @@
     "invalid_country_code": "अमान्य देश कोड",
     "invalid_price": "अमान्य मूल्य",
     "regional_price_not_found": "क्षेत्रीय मूल्य नहीं मिला"
-  },
-  "slack": {
-    "missing_code_or_state": "कोड या state अनुपलब्ध",
-    "missing_slackuserid": "slackUserId अनुपलब्ध",
-    "no_eclipanel_account_linked_to_this_slack_user": "इस Slack उपयोगकर्ता से कोई EcliPanel खाता लिंक नहीं"
   },
   "oauth": {
     "unsupported_response_type": "असमर्थित_प्रतिक्रिया_प्रकार",

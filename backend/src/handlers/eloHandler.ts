@@ -54,9 +54,9 @@ export async function syncEloResources(project: EloProject) {
   if (!cfg) return;
 
   const owner = await AppDataSource.getRepository(User).findOneBy({ id: project.userId });
-  const isHackClub = owner?.studentVerified || false;
+  const isStudent = owner?.studentVerified || false;
   const isDisqualified = project.moderationStatus === 'disqualified';
-  const resources = calculateEloResources(project.eloScore, isHackClub, project.isWellMade, isDisqualified);
+  const resources = calculateEloResources(project.eloScore, isStudent, project.isWellMade, isDisqualified);
 
   cfg.memory = resources.memory;
   cfg.disk = resources.disk;
@@ -799,7 +799,7 @@ export async function eloRoutes(app: any, prefix = '') {
         winnerElo: winner.eloScore,
         loserElo: loser.eloScore,
         delta: { winner: adjustedDelta, loser: result.loserDelta },
-        weightedByHackClub: account?.studentVerified || false,
+        weightedByStudent: account?.studentVerified || false,
       };
     },
     {
@@ -1095,7 +1095,7 @@ export async function eloRoutes(app: any, prefix = '') {
 
       return {
         projects: enriched,
-        isHackClub: ctx.user?.studentVerified || false,
+        isStudent: ctx.user?.studentVerified || false,
         eloServerLimit: eloLimit,
         currentEloSlots: eloLimit,
         votesCast,

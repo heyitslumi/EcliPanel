@@ -153,10 +153,10 @@ export default function EloVotePage() {
       const deltaStr = delta != null
         ? (delta > 0 ? `+${delta}` : `${delta}`)
         : ''
-      const hackClubBonus = res?.weightedByHackClub ? t("vote.hackClubBonus") : ''
+      const studentBonus = res?.weightedByStudent ? t("vote.studentBonus") : ''
       toast({
         title: t("vote.voteSubmitted"),
-        description: t("vote.eloChange", { delta: deltaStr }) + hackClubBonus,
+        description: t("vote.eloChange", { delta: deltaStr }) + studentBonus,
       })
     } catch (e: any) {
       toast({

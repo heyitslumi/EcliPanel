@@ -99,7 +99,7 @@ export default function EloUserProfile() {
                     </span>
                     {data.user.studentVerified && (
                       <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]">
-                        {t("profile.hackClub")}
+                        {t("profile.student")}
                       </Badge>
                     )}
                   </div>
