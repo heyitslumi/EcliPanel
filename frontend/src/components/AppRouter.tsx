@@ -31,6 +31,7 @@ const staticRoutes: Record<string, Loader> = {
   "/docs/sunset": () => import("@/app/docs/sunset/page"),
   "/docs/support": () => import("@/app/docs/support/page"),
   "/docs/eclihalo": () => import("@/app/docs/eclihalo/page"),
+  "/docs/eclipanel": () => import("@/app/docs/eclipanel/page"),
   "/docs/elo": () => import("@/app/docs/elo/page"),
   "/docs/blog-handbook": () => import("@/app/docs/blog-handbook/page"),
   "/legal": () => import("@/app/legal/page"),

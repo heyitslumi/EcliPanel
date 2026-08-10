@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 export PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-${PUBLIC_API_BASE:-https://backend.ecli.app}}
-export PUBLIC_WINGS_BASE=${NEXT_PUBLIC_WINGS_BASE:-${PUBLIC_WINGS_BASE:-}}
 export BACKEND_URL=${BACKEND_URL:-https://backend.ecli.app}
 export PUBLIC_COMMIT_SHA=$(git rev-parse --short HEAD)
 

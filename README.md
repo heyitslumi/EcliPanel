@@ -23,110 +23,66 @@ This repository contains three folders:
 
 - `/backend` – Elysia/Bun panel API interacting with Wings nodes and
   MariaDB.
-- `/frontend` – Next.js (React) application. Pages communicate with the
+- `/frontend` – Astro + React application. Pages communicate with the
   backend (and optionally directly with Wings) via the helper and etc.
 - `/antiabuse` – Rust based anti-abuse (abuse detection) system daemon that is run on every node to stop DDoS, port scanning, crypto mining and nezha proxies.
 - `/systemd` – Systemd unit files.
 
-## Running the stack
+## Documentation
 
-1. **Install Wings**
-We use wings-rs (https://github.com/calagopus/wings) and develop around them.
-You may **NOT** use wings-go (pterodactyl stock) as most features will not work!
+**Full setup & configuration documentation lives on the website:**
 
-After installing wings complete backend and frontend setup then start them again.
+👉 **https://ecli.app/docs/eclipanel**
 
-2. **Start backend**
-   ```powershell
+It covers a complete production install of EcliPanel and every component:
+Wings (wings-rs), backend & frontend configuration with the full
+`.env` reference, EcliHalo reverse proxy, dockerised Mailcow (API key,
+Dovecot master user, SMTP relay), EcliTunnels, and production
+hardening.
+
+Side Note: EcliAegis (DDoS protection) is closed source as of now and therefore is not covered there.
+
+More docs:
+- [EcliHalo (reverse proxy)](/docs/eclihalo)
+
+## Quick start
+
+1. **Install Wings** — EcliPanel is built around
+   [wings-rs](https://github.com/calagopus/wings). You may **NOT** use
+   wings-go (Pterodactyl stock); most features will not work.
+   AntiAbuse ships inside Wings — nothing extra to install.
+
+2. **Backend**
+   ```bash
    cd backend
-   # Bun is recommended since it runs the TypeScript directly, but..
-   bun install      # or `pnpm install`/`npm install` if you prefer
-   sudo apt install ffmpeg #if using captcha
-   sudo apt install espeak #if using captcha
-    bun run gen:jwt-secret    # generate all secrets needed by .env and set them manually!
-    bun run gen:pq-jwt-seed   # generate PQ_JWT_SEED for ML-DSA-65 signed tokens
-    bun -e "console.log((await import('crypto')).randomBytes(64).toString('base64'))" # generate NODE_PQ_ENCRYPTION_SEED
-   nano .env              # edit .env (see .env.example)
-   bun run gen:default-role # create default role
-   # for development you can simply run:
-   bun src/index.ts
-   # or use the helper scripts which choose Bun when available:
-   ./build.sh      # compiles TS for Node if needed (Skip if using bun/node is untested!)
-   ./start.sh      # launches the server (Do this directly if using bun)
+   bun install
+   bun run gen:jwt-secret      # set secrets in .env (see .env.example)
+   bun run gen:pq-jwt-seed
+   bun run gen:default-role
+   ./start.sh                  # or: bun src/index.ts (dev)
    ```
-   Backend listens on specified port (see `.env`).
-   It will serve the REST API, handle multi node mapping, and proxy websocket connections to Wings servers, etc..
 
-3. **Start frontend**
+3. **Frontend (Astro + React)**
    ```bash
    cd frontend
    pnpm install
-   nano .env # edit .env (see .env.example)
-   nano lib/panel-config.ts # edit panel config branding etc
-   ./dev.sh --port 3000 # start in dev mode (--port is optional)
-   ./start.sh --port 3000 # start in production mode (--port is optional)
+   cp .env.example .env        # set BACKEND_URL, branding in lib/panel-config.ts
+   ./start.sh --port 3000      # or: ./dev.sh --port 3000 (dev)
    ```
-   Frontend will run on http://localhost:3000 and automatically proxy
-   `/api/*` requests to the backend and `/wings/*` to the Wings node(s)
-   via the `next.config.mjs` rewrites. Set environment variables to function properly!!
 
-> ⚠️ Remember to set `.env` variables for production (database, auth secrets, API base URL, etc.).
->     For production deployments use reverse proxy like Nginx.
+4. **Reverse proxy** — EcliHalo (see [docs](/docs/eclihalo)) or any
+   proxy. Point it at the frontend (3000) and backend.
 
-### Backend scripts
+5. **Mailcow (optional)** — dockerised mail server for mailboxes:
+   deploy Mailcow, create an API key, set the `MAILCOW_*`,
+   `MAILBOX_*`, `DOVECOT_*` and SMTP variables in backend `.env`.
+   Full steps in the [setup guide](/docs/eclipanel).
 
-The backend includes a couple of helper scripts used during setup.
+> ⚠️ Remember to set `.env` variables for production (database, auth
+> secrets, API base URL, etc.). For production deployments use a
+> reverse proxy like EcliHalo or Nginx.
 
-- **Seed default permissions** - creates the `rootAdmin` role and grants full permissions (including `*`).
-
-  ```bash
-  cd backend
-  bun run seed
-  ```
-
-- **Generate PQ_JWT_SEED** — creates a 64-byte seed for deterministic ML-DSA-65 key generation (post-quantum signed tokens).
-
-  ```bash
-  cd backend
-  bun run gen:pq-jwt-seed
-  ```
-
-  Add the output `PQ_JWT_SEED` to your `.env`. Without it, a random keypair is generated at each startup (invalidating all existing tokens on restart).
-
-- **Promote a user** - set an existing user to `rootAdmin` (or another role).
-
-  ```bash
-  cd backend
-  bun run promote -- <email> [role]
-  ```
-
-  Examples:
-
-  ```bash
-  bun run promote -- admin@example.com
-  bun run promote -- admin@example.com rootAdmin
-  bun run promote -- admin@example.com admin
-  ```
-
-### Useful commands
-
-```bash
-# run backend locally
-cd backend && ./start.sh
-
-# run frontend locally (dev)
-cd frontend && bun run dev
-
-# run frontend locally (prod)
-cd frontend && bun run build # build
-bun run start # start
-```
-
-### Optional: systemd setup
-
-I have included system files inside of /systemd folder that are used for https://ecli.app/ production deployment, feel free to use them for production deployment but change patches!
-
-### Notes
+## Notes
 
 - The backend uses the `.env` file in `backend/`.
 - The frontend uses `.env` in `frontend/`.
