@@ -94,7 +94,11 @@ export const PAGE_SEO: Record<string, PageSeo> = {
   },
   "/docs/eclihalo": {
     title: `EcliHalo — ${BRAND}`,
-    description: `EcliHalo documentation — deploy and manage your services on the EcliHalo network.`,
+    description: `EcliHalo documentation a better alternative to Nginx and Caddy for reverse proxying, load balancing, and TLS termination.`,
+  },
+  "/docs/eclipanel": {
+    title: `EcliPanel — ${BRAND}`,
+    description: `EcliPanel documentation a better hosting panel solution for developers, with a focus on speed, security, and simplicity.`,
   },
   "/docs/elo": {
     title: `ELO Documentation — ${BRAND}`,
