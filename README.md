@@ -27,6 +27,10 @@ v3 is a full rewrite of the original EcliPanel stack to provide a cleaner archit
 
 ## Documentation quick links
 
+- Standalone docs project: [`/docs`](/docs)
+- Self-hosting guide: [`/docs/src/pages/docs/eclipanel.astro`](/docs/src/pages/docs/eclipanel.astro)
+- Wings guide: [`/docs/src/pages/docs/wings.astro`](/docs/src/pages/docs/wings.astro)
+- Environment reference: [`/docs/src/pages/docs/environment.astro`](/docs/src/pages/docs/environment.astro)
 - Main showcase: [`/SHOWCASE.md`](/SHOWCASE.md)
 - Security policy: [`/SECURITY.md`](/SECURITY.md)
 - Wings patch/build guide: [`/wings/README.md`](/wings/README.md)

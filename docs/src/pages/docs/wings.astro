@@ -1,0 +1,34 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Wings documentation">
+  <h1>Wings Guide</h1>
+  <p>EcliPanel uses patched <strong>wings-rs</strong> and not legacy wings-go.</p>
+
+  <h2>Directory model</h2>
+  <table>
+    <tr><th>Path</th><th>Use</th></tr>
+    <tr><td><code>wings/source</code></td><td>Clean upstream source</td></tr>
+    <tr><td><code>wings/patched</code></td><td>Where you edit code</td></tr>
+    <tr><td><code>wings/patches</code></td><td>Generated patch files</td></tr>
+    <tr><td><code>wings/output</code></td><td>Patched build workspace</td></tr>
+  </table>
+
+  <h2>Patch + build flow</h2>
+  <pre><code>cd /opt/EcliPanel/wings
+./manage.sh regen
+./manage.sh patch
+./manage.sh build</code></pre>
+
+  <h2>Deploy binary</h2>
+  <pre><code>curl -fsSL https://backend.example.com/api/wings/download -o /usr/local/bin/wings
+chmod +x /usr/local/bin/wings
+systemctl restart wings</code></pre>
+
+  <h2>Security endpoints available in patched Wings</h2>
+  <ul>
+    <li><code>/api/servers/:id/security/processes</code></li>
+    <li><code>/api/servers/:id/security/connections</code></li>
+    <li><code>/api/servers/:id/security/scan-files</code></li>
+  </ul>
+</DocsLayout>
