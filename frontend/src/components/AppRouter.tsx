@@ -23,6 +23,7 @@ const staticRoutes: Record<string, Loader> = {
   "/elo": () => import("@/app/elo/page"),
   "/changelogs": () => import("@/app/changelogs/page"),
   "/contributors": () => import("@/app/contributors/page"),
+  "/aegis": () => import("@/app/aegis/page"),
   "/docs": () => import("@/app/docs/page"),
   "/docs/getting-started": () => import("@/app/docs/getting-started/page"),
   "/docs/server-management": () => import("@/app/docs/server-management/page"),

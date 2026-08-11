@@ -466,9 +466,35 @@ async function publicAttackSummary() {
     if (a.peakDropPps > peakPps) peakPps = a.peakDropPps;
     if (a.peakDropBps > peakBps) peakBps = a.peakDropBps;
   }
+
+  let passed = 0;
+  let dropped = 0;
+  let dropRps = 0;
+  let rps = 0;
+  let bps = 0;
+  let learnedPorts = 0;
+  let verified = 0;
+  let banned = 0;
+  for (const [, m] of latestMetrics) {
+    if (now - m.receivedAt >= MAX_AGE_MS) continue;
+    const d = m.data ?? {};
+    passed += Number(d?.packets?.pass ?? 0);
+    for (const [k, v] of Object.entries(d?.packets ?? {})) {
+      if (k.startsWith("drop_")) dropped += Number(v ?? 0);
+    }
+    dropRps += Number(d?.traffic?.drop_rps ?? 0);
+    rps += Number(d?.traffic?.rps ?? 0);
+    bps += Number(d?.traffic?.bps ?? 0);
+    learnedPorts = Math.max(
+      learnedPorts,
+      Array.isArray(d?.learned_ports) ? d.learned_ports.length : 0,
+    );
+    verified += Number(d?.verified_count ?? 0);
+    banned += Number(d?.blocklist_count ?? 0);
+  }
+
   return {
     up: true,
-    nodes: new Set(all.map((a) => a.nodeId)).size,
     attacks: all.slice(0, 50),
     totals: {
       attacks: log.length,
@@ -476,6 +502,7 @@ async function publicAttackSummary() {
       peakDropPps: peakPps,
       peakDropBps: peakBps,
     },
+    live: { passed, dropped, dropRps, rps, bps, learnedPorts, verified, banned },
     generatedAt: now,
   };
 }
