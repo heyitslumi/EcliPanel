@@ -443,7 +443,6 @@ async function publicAttackSummary() {
   }
   const norm = (v: unknown): number => Number(v) || 0;
   const log = dbRows.map((r) => ({
-    nodeId: r.nodeId,
     type: r.type,
     method: r.method,
     startTs: norm(r.startTs),
@@ -457,7 +456,10 @@ async function publicAttackSummary() {
     samples: norm(r.samples),
   }));
   const active: AttackEvent[] = [];
-  for (const [, open] of OPEN_ATTACK) active.push({ ...open, endTs: null });
+  for (const [, open] of OPEN_ATTACK) {
+    const { nodeId: _nodeId, ...rest } = open;
+    active.push({ ...rest, endTs: null });
+  }
   const all = [...active, ...log];
   all.sort((a, b) => b.startTs - a.startTs);
   let peakPps = 0;

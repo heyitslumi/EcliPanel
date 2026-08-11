@@ -7291,7 +7291,6 @@
     "loading": "Loading attack log…",
     "empty": "No attacks recorded yet. That is the point.",
     "colVector": "Vector",
-    "colNode": "Node",
     "colStarted": "Started",
     "colDuration": "Duration",
     "colPeakDrop": "Peak drop",

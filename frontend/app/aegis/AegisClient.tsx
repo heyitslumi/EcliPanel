@@ -67,7 +67,6 @@ const FEATURES = [
 ];
 
 interface Attack {
-  nodeId: number;
   type: string;
   method: string;
   startTs: number;
@@ -118,11 +117,10 @@ function fmtCount(n: number) {
 
 function fmtBps(n: number) {
   if (!n) return "0";
-  const bits = n * 8;
-  if (bits >= 1e12) return (bits / 1e12).toFixed(2) + " Tbps";
-  if (bits >= 1e9) return (bits / 1e9).toFixed(2) + " Gbps";
-  if (bits >= 1e6) return (bits / 1e6).toFixed(1) + " Mbps";
-  return Math.round(bits) + " bps";
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + " Tbps";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + " Gbps";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + " Mbps";
+  return Math.round(n) + " bps";
 }
 
 function fmtDur(sec: number) {
@@ -312,7 +310,6 @@ export function AegisClient() {
               <thead>
                 <tr className="text-white/40 text-xs uppercase tracking-widest border-b border-white/10">
                   <th className="px-5 py-3.5 font-medium">{t("colVector")}</th>
-                  <th className="px-5 py-3.5 font-medium">{t("colNode")}</th>
                   <th className="px-5 py-3.5 font-medium">{t("colStarted")}</th>
                   <th className="px-5 py-3.5 font-medium">{t("colDuration")}</th>
                   <th className="px-5 py-3.5 font-medium">{t("colPeakDrop")}</th>
@@ -323,13 +320,13 @@ export function AegisClient() {
               <tbody>
                 {!data ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-10 text-center text-white/40">
+                    <td colSpan={6} className="px-5 py-10 text-center text-white/40">
                       {t("loading")}
                     </td>
                   </tr>
                 ) : attacks.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-10 text-center text-white/40">
+                    <td colSpan={6} className="px-5 py-10 text-center text-white/40">
                       {t("empty")}
                     </td>
                   </tr>
@@ -337,7 +334,6 @@ export function AegisClient() {
                   attacks.slice(0, 25).map((a, i) => (
                     <tr key={i} className="border-b border-white/5 last:border-0">
                       <td className="px-5 py-3.5">{a.method || a.type || "Unknown"}</td>
-                      <td className="px-5 py-3.5 text-white/60">{`Node ${a.nodeId}`}</td>
                       <td className="px-5 py-3.5 text-white/60">{timeAgo(Number(a.startTs) || 0)}</td>
                       <td className="px-5 py-3.5 text-white/60">{fmtDur(Number(a.durationSec) || 0)}</td>
                       <td className="px-5 py-3.5 font-mono">{fmtPps(Number(a.peakDropPps) || 0)}</td>
