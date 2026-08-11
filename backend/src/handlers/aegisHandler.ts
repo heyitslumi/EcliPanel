@@ -455,12 +455,12 @@ async function publicAttackSummary() {
     peakNetPps: norm(r.peakNetPps),
     samples: norm(r.samples),
   }));
-  const active: AttackEvent[] = [];
+  const active: Array<Omit<AttackEvent, "nodeId">> = [];
   for (const [, open] of OPEN_ATTACK) {
     const { nodeId: _nodeId, ...rest } = open;
     active.push({ ...rest, endTs: null });
   }
-  const all = [...active, ...log];
+  const all: Array<Omit<AttackEvent, "nodeId">> = [...active, ...log];
   all.sort((a, b) => b.startTs - a.startTs);
   let peakPps = 0;
   let peakBps = 0;
