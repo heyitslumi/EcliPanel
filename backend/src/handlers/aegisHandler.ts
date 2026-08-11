@@ -40,13 +40,73 @@ interface AttackEvent {
   avgDropBps: number;
   peakNetPps: number;
   samples: number;
+  type?: string;
+  missed?: number;
+}
+
+function mergeClosedAttack(nodeId: number, type: string): AttackEvent | null {
+  const list = ATTACKS.get(nodeId) ?? [];
+  const idx = list.findIndex(
+    (a) =>
+      a.type === type &&
+      a.endTs != null &&
+      Date.now() - a.endTs < ATTACK_MERGE_GAP_MS,
+  );
+  if (idx < 0) return null;
+  const [ev] = list.splice(idx, 1);
+  ATTACKS.set(nodeId, list);
+  return ev;
 }
 const ATTACKS = new Map<number, AttackEvent[]>();
-const OPEN_ATTACK = new Map<number, AttackEvent>();
+const OPEN_ATTACK = new Map<string, AttackEvent>();
 const ATTACKS_MAX = 200;
 
 const ATTACK_THRESHOLD_PPS = 1000;
 const ATTACK_COOLDOWN_SAMPLES = 2;
+const ATTACK_MERGE_GAP_MS = 120_000;
+
+const DAEMON_METHOD_LABELS: Record<string, string> = {
+  syn_flood: 'SYN flood',
+  udp_flood: 'UDP flood',
+  icmp_flood: 'ICMP flood',
+  tcp_conn_exhaustion: 'TCP connection exhaustion',
+  bandwidth_saturation: 'Bandwidth saturation',
+  http_flood: 'HTTP flood',
+  egress_udp_flood: 'Egress UDP flood',
+  egress_icmp_flood: 'Egress ICMP flood',
+  egress_bandwidth: 'Egress bandwidth',
+  dns_amplification: 'DNS amplification',
+  ntp_amplification: 'NTP amplification',
+  cldap_amplification: 'CLDAP amplification',
+  ssdp_amplification: 'SSDP amplification',
+  chargen_amplification: 'Chargen amplification',
+  qotd_amplification: 'QOTD amplification',
+  snmp_amplification: 'SNMP amplification',
+  memcached_amplification: 'Memcached amplification',
+  mssql_amplification: 'MSSQL amplification',
+  ws_discovery_amplification: 'WS-Discovery amplification',
+  coap_amplification: 'CoAP amplification',
+  ipsec_nat_t_amplification: 'IPsec NAT-T amplification',
+};
+
+function daemonMethodLabel(type: string): string {
+  return (
+    DAEMON_METHOD_LABELS[type] ??
+    type.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function closeAttack(key: string) {
+  const open = OPEN_ATTACK.get(key);
+  if (!open) return;
+  open.endTs = Date.now();
+  open.durationSec = Math.round((open.endTs - open.startTs) / 1000);
+  const list = ATTACKS.get(open.nodeId) ?? [];
+  list.unshift(open);
+  if (list.length > ATTACKS_MAX) list.pop();
+  ATTACKS.set(open.nodeId, list);
+  OPEN_ATTACK.delete(key);
+}
 
 const METHOD_KEYS = [
   'drop_tcp_syn',
@@ -117,12 +177,74 @@ function processPush(nodeId: number, data: any) {
   if (hist.length > HISTORY_MAX) hist.shift();
   HISTORY.set(nodeId, hist);
 
-  const open = OPEN_ATTACK.get(nodeId);
+  const daemonAttacks = Array.isArray(data?.attacks) ? data.attacks : [];
+
+  if (Array.isArray(data?.attacks)) {
+    const reported = new Set<string>();
+    for (const at of daemonAttacks) {
+      const type = typeof at?.type === 'string' ? at.type : '';
+      if (!type) continue;
+      const key = `${nodeId}:${type}`;
+      reported.add(key);
+      if (at.active !== 1) {
+        closeAttack(key);
+        continue;
+      }
+
+      const isBps = type === 'bandwidth_saturation';
+      const rateBps = Math.max(0, Number(at.rate_bps ?? 0));
+      let open = OPEN_ATTACK.get(key);
+
+      if (!open) {
+        open = mergeClosedAttack(nodeId, type);
+        if (!open) {
+          open = {
+            nodeId,
+            startTs: now,
+            endTs: null,
+            durationSec: 0,
+            method: daemonMethodLabel(type),
+            type,
+            peakDropPps: 0,
+            peakDropBps: 0,
+            avgDropPps: 0,
+            avgDropBps: 0,
+            peakNetPps: sample.rps,
+            samples: 0,
+          };
+        }
+        OPEN_ATTACK.set(key, open);
+      }
+      open.samples += 1;
+      open.durationSec = Math.round((now - open.startTs) / 1000);
+      open.peakNetPps = Math.max(open.peakNetPps, sample.rps);
+      if (isBps) {
+        open.peakDropBps = Math.max(open.peakDropBps, rate);
+        open.avgDropBps += (rate - open.avgDropBps) / open.samples;
+      } else {
+        open.peakDropPps = Math.max(open.peakDropPps, rate);
+        open.avgDropPps += (rate - open.avgDropPps) / open.samples;
+        if (rateBps > 0) {
+          open.peakDropBps = Math.max(open.peakDropBps, rateBps);
+          open.avgDropBps += (rateBps - open.avgDropBps) / open.samples;
+        }
+      }
+    }
+
+    for (const [key, open] of [...OPEN_ATTACK]) {
+      if (open.nodeId !== nodeId || reported.has(key)) continue;
+      open.missed = (open.missed ?? 0) + 1;
+      if (open.missed >= ATTACK_COOLDOWN_SAMPLES) closeAttack(key);
+    }
+    return;
+  }
+
+  const open = OPEN_ATTACK.get(`${nodeId}:legacy`);
   const underAttack = sample.dropRps >= ATTACK_THRESHOLD_PPS;
 
   if (underAttack) {
     if (!open) {
-      OPEN_ATTACK.set(nodeId, {
+      OPEN_ATTACK.set(`${nodeId}:legacy`, {
         nodeId,
         startTs: now,
         endTs: null,
@@ -147,13 +269,7 @@ function processPush(nodeId: number, data: any) {
         open.avgDropBps + (sample.dropBps - open.avgDropBps) / open.samples;
     }
   } else if (open) {
-    open.endTs = now;
-    open.durationSec = Math.round((now - open.startTs) / 1000);
-    const list = ATTACKS.get(nodeId) ?? [];
-    list.unshift(open);
-    if (list.length > ATTACKS_MAX) list.pop();
-    ATTACKS.set(nodeId, list);
-    OPEN_ATTACK.delete(nodeId);
+    closeAttack(`${nodeId}:legacy`);
   }
 }
 
@@ -264,10 +380,10 @@ export async function aegisRoutes(app: NodeApp, prefix = '') {
         if (nodeId !== undefined && id !== nodeId) continue;
         out[id] = list;
       }
-      for (const [id, open] of OPEN_ATTACK) {
-        if (nodeId !== undefined && id !== nodeId) continue;
-        const list = out[id] ?? [];
-        out[id] = [{ ...open, endTs: Date.now() }, ...list];
+      for (const [key, open] of OPEN_ATTACK) {
+        if (nodeId !== undefined && open.nodeId !== nodeId) continue;
+        const list = out[open.nodeId] ?? [];
+        out[open.nodeId] = [{ ...open, endTs: Date.now() }, ...list];
       }
       return out;
     },

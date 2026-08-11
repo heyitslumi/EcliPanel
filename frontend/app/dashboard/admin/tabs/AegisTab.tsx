@@ -437,8 +437,7 @@ export default function AegisTab({ ctx }: { ctx: any }) {
             </CardHeader>
             {all.length === 0 ? (
               <CardContent className="py-8 text-center text-xs text-muted-foreground">
-                No attacks recorded yet. An attack is logged when the blocked rate
-                exceeds 1000 pps for 2 consecutive reports (10s each).
+                No attacks recorded yet.
               </CardContent>
             ) : (
             <CardContent className="overflow-x-auto">
@@ -465,10 +464,12 @@ export default function AegisTab({ ctx }: { ctx: any }) {
                         <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">{a.method}</span>
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {fmt(a.peakDropPps)} pps · {fmtBytes(a.peakDropBps)}
+                        {fmt(a.peakDropPps)} pps
+                        {a.peakDropBps > 0 ? ` · ${fmtBytes(a.peakDropBps)}` : ""}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {fmt(a.avgDropPps)} pps · {fmtBytes(a.avgDropBps)}
+                        {fmt(a.avgDropPps)} pps
+                        {a.avgDropBps > 0 ? ` · ${fmtBytes(a.avgDropBps)}` : ""}
                       </TableCell>
                     </TableRow>
                   ))}
