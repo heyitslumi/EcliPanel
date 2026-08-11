@@ -1,4 +1,5 @@
 import { AppDataSource } from '../config/typeorm';
+import { AegisAttack } from '../models/aegisAttack.entity';
 import { Node } from '../models/node.entity';
 import { authenticate } from '../middleware/auth';
 import { hasPermissionSync } from '../middleware/authorize';
@@ -106,6 +107,29 @@ function closeAttack(key: string) {
   if (list.length > ATTACKS_MAX) list.pop();
   ATTACKS.set(open.nodeId, list);
   OPEN_ATTACK.delete(key);
+  void AppDataSource.getRepository(AegisAttack)
+    .insert({
+      nodeId: open.nodeId,
+      type: open.type ?? '',
+      method: open.method,
+      startTs: open.startTs,
+      endTs: open.endTs,
+      durationSec: open.durationSec,
+      peakDropPps: open.peakDropPps,
+      peakDropBps: open.peakDropBps,
+      avgDropPps: open.avgDropPps,
+      avgDropBps: open.avgDropBps,
+      peakNetPps: open.peakNetPps,
+      samples: open.samples,
+    })
+    .then(() =>
+      AppDataSource.getRepository(AegisAttack)
+        .createQueryBuilder()
+        .delete()
+        .where('"startTs" < :cut', { cut: Date.now() - 30 * 86400_000 })
+        .execute(),
+    )
+    .catch(() => {});
 }
 
 const METHOD_KEYS = [
@@ -192,6 +216,7 @@ function processPush(nodeId: number, data: any) {
       }
 
       const isBps = type === 'bandwidth_saturation';
+      const ratePps = Math.max(0, Number(at.rate ?? 0));
       const rateBps = Math.max(0, Number(at.rate_bps ?? 0));
       let open = OPEN_ATTACK.get(key);
 
@@ -219,11 +244,11 @@ function processPush(nodeId: number, data: any) {
       open.durationSec = Math.round((now - open.startTs) / 1000);
       open.peakNetPps = Math.max(open.peakNetPps, sample.rps);
       if (isBps) {
-        open.peakDropBps = Math.max(open.peakDropBps, rate);
-        open.avgDropBps += (rate - open.avgDropBps) / open.samples;
+        open.peakDropBps = Math.max(open.peakDropBps, rateBps);
+        open.avgDropBps += (rateBps - open.avgDropBps) / open.samples;
       } else {
-        open.peakDropPps = Math.max(open.peakDropPps, rate);
-        open.avgDropPps += (rate - open.avgDropPps) / open.samples;
+        open.peakDropPps = Math.max(open.peakDropPps, ratePps);
+        open.avgDropPps += (ratePps - open.avgDropPps) / open.samples;
         if (rateBps > 0) {
           open.peakDropBps = Math.max(open.peakDropBps, rateBps);
           open.avgDropBps += (rateBps - open.avgDropBps) / open.samples;
@@ -393,4 +418,64 @@ export async function aegisRoutes(app: NodeApp, prefix = '') {
       detail: { summary: 'Get EcliAegis attack event log', tags: ['Nodes'] },
     },
   );
+
+  app.get(prefix + '/public/aegis/attacks', async () => {
+    const data = await publicAttackSummary();
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }, {
+    response: { 200: t.Any() },
+    detail: { summary: 'Public EcliAegis attack log', tags: ['Nodes'] },
+  });
+}
+
+async function publicAttackSummary() {
+  const now = Date.now();
+  const dbRows: AegisAttack[] = [];
+  try {
+    dbRows.push(...(await AppDataSource.getRepository(AegisAttack).find({
+      order: { startTs: 'DESC' },
+      take: 500,
+    })));
+  } catch {
+    /* idk */
+  }
+  const norm = (v: unknown): number => Number(v) || 0;
+  const log = dbRows.map((r) => ({
+    nodeId: r.nodeId,
+    type: r.type,
+    method: r.method,
+    startTs: norm(r.startTs),
+    endTs: r.endTs == null ? null : norm(r.endTs),
+    durationSec: norm(r.durationSec),
+    peakDropPps: norm(r.peakDropPps),
+    peakDropBps: norm(r.peakDropBps),
+    avgDropPps: norm(r.avgDropPps),
+    avgDropBps: norm(r.avgDropBps),
+    peakNetPps: norm(r.peakNetPps),
+    samples: norm(r.samples),
+  }));
+  const active: AttackEvent[] = [];
+  for (const [, open] of OPEN_ATTACK) active.push({ ...open, endTs: null });
+  const all = [...active, ...log];
+  all.sort((a, b) => b.startTs - a.startTs);
+  let peakPps = 0;
+  let peakBps = 0;
+  for (const a of all) {
+    if (a.peakDropPps > peakPps) peakPps = a.peakDropPps;
+    if (a.peakDropBps > peakBps) peakBps = a.peakDropBps;
+  }
+  return {
+    up: true,
+    nodes: new Set(all.map((a) => a.nodeId)).size,
+    attacks: all.slice(0, 50),
+    totals: {
+      attacks: log.length,
+      active: active.length,
+      peakDropPps: peakPps,
+      peakDropBps: peakBps,
+    },
+    generatedAt: now,
+  };
 }

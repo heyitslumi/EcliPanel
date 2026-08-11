@@ -151,6 +151,7 @@ export const AppDataSource = new DataSource({
     require('../models/mailboxAccount.entity').MailboxAccount,
     require('../models/notification.entity').Notification,
     require('../models/mailMessage.entity').MailMessage,
+    require('../models/aegisAttack.entity').AegisAttack,
     require('../models/outboundEmail.entity').OutboundEmail,
     require('../models/adminBroadcastJob.entity').AdminBroadcastJob,
     require('../models/sshKey.entity').SshKey,
