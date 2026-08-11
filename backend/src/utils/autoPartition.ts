@@ -29,7 +29,100 @@ function partitionName(date: Date): string {
   return `p${y}_${m}`;
 }
 
+type MysqlPartitionMeta = {
+  partitionColumn: string;
+  hasPkOnPartitionColumn: boolean;
+  hasAnyForeignKeys: boolean;
+};
+
+async function getMysqlPartitionMeta(table: string): Promise<MysqlPartitionMeta | null> {
+  const columns: { column_name: string }[] = await AppDataSource.query(
+    `SELECT COLUMN_NAME AS column_name
+       FROM information_schema.columns
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?`,
+    [table],
+  );
+
+  const columnNames = new Set(columns.map(c => c.column_name));
+  const partitionColumn = ['timestamp', 'createdAt', 'created', 'detectedAt'].find(c =>
+    columnNames.has(c),
+  );
+
+  if (!partitionColumn) return null;
+
+  const pkCols: { column_name: string }[] = await AppDataSource.query(
+    `SELECT COLUMN_NAME AS column_name
+       FROM information_schema.key_column_usage
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND CONSTRAINT_NAME = 'PRIMARY'`,
+    [table],
+  );
+
+  const hasPkOnPartitionColumn = pkCols.some(c => c.column_name === partitionColumn);
+
+  const [fkOut] = await AppDataSource.query(
+    `SELECT COUNT(*) AS cnt
+       FROM information_schema.key_column_usage
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND REFERENCED_TABLE_NAME IS NOT NULL`,
+    [table],
+  );
+
+  const [fkIn] = await AppDataSource.query(
+    `SELECT COUNT(*) AS cnt
+       FROM information_schema.key_column_usage
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND REFERENCED_TABLE_NAME = ?`,
+    [table],
+  );
+
+  const hasAnyForeignKeys = Number(fkOut?.cnt ?? 0) > 0 || Number(fkIn?.cnt ?? 0) > 0;
+
+  return {
+    partitionColumn,
+    hasPkOnPartitionColumn,
+    hasAnyForeignKeys,
+  };
+}
+
+async function getMysqlPartitionExpression(table: string): Promise<string | null> {
+  const rows: { partition_expression: string | null }[] = await AppDataSource.query(
+    `SELECT PARTITION_EXPRESSION AS partition_expression
+       FROM information_schema.partitions
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND PARTITION_NAME IS NOT NULL
+      LIMIT 1`,
+    [table],
+  );
+
+  const expr = rows?.[0]?.partition_expression;
+  return expr ? String(expr) : null;
+}
+
 async function ensureMysqlPartitions(table: string, log: any): Promise<void> {
+  const meta = await getMysqlPartitionMeta(table);
+  if (!meta) {
+    log?.info({ table }, 'auto-partition: skipped (no compatible datetime column)');
+    return;
+  }
+
+  if (!meta.hasPkOnPartitionColumn) {
+    log?.info(
+      { table, column: meta.partitionColumn },
+      'auto-partition: skipped (primary key must include partition column)',
+    );
+    return;
+  }
+
+  if (meta.hasAnyForeignKeys) {
+    log?.info({ table }, 'auto-partition: skipped (foreign keys present)');
+    return;
+  }
+
   const now = new Date();
   const startMonth = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const endMonth = new Date(now.getFullYear() + 1, 11, 1);
@@ -53,18 +146,28 @@ async function ensureMysqlPartitions(table: string, log: any): Promise<void> {
   if (missing.length === 0) return;
 
   if (existingNames.size === 0) {
-    await createInitialMysqlPartitions(table, months, log);
+    await createInitialMysqlPartitions(table, meta.partitionColumn, months, log);
     return;
   }
+
+  const partitionExpression = await getMysqlPartitionExpression(table);
+  const useToDays = partitionExpression?.toUpperCase().includes('TO_DAYS(') ?? false;
 
   for (const m of missing) {
     const name = partitionName(m);
     const bound = formatDate(nextMonth(m));
     try {
-      await AppDataSource.query(
-        `ALTER TABLE \`${table}\` ADD PARTITION (PARTITION \`${name}\` VALUES LESS THAN (TO_DAYS(?)))`,
-        [bound],
-      );
+      if (useToDays) {
+        await AppDataSource.query(
+          `ALTER TABLE \`${table}\` ADD PARTITION (PARTITION \`${name}\` VALUES LESS THAN (TO_DAYS(?)))`,
+          [bound],
+        );
+      } else {
+        await AppDataSource.query(
+          `ALTER TABLE \`${table}\` ADD PARTITION (PARTITION \`${name}\` VALUES LESS THAN (?))`,
+          [bound],
+        );
+      }
       log?.info({ table, partition: name, bound }, 'auto-partition: created');
     } catch (err: any) {
       log?.warn({ table, partition: name, err }, 'auto-partition: add failed');
@@ -74,6 +177,7 @@ async function ensureMysqlPartitions(table: string, log: any): Promise<void> {
 
 async function createInitialMysqlPartitions(
   table: string,
+  partitionColumn: string,
   months: Date[],
   log: any,
 ): Promise<void> {
@@ -81,7 +185,7 @@ async function createInitialMysqlPartitions(
     .map(m => {
       const name = partitionName(m);
       const bound = formatDate(nextMonth(m));
-      return `PARTITION \`${name}\` VALUES LESS THAN (TO_DAYS('${bound}'))`;
+      return `PARTITION \`${name}\` VALUES LESS THAN ('${bound}')`;
     })
     .join(',\n');
 
@@ -91,7 +195,7 @@ async function createInitialMysqlPartitions(
     return;
   }
 
-  const sql = `ALTER TABLE \`${table}\` PARTITION BY RANGE (TO_DAYS(timestamp))
+  const sql = `ALTER TABLE \`${table}\` PARTITION BY RANGE COLUMNS(\`${partitionColumn}\`)
 (${parts})`;
 
   try {
