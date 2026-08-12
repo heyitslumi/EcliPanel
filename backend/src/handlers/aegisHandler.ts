@@ -126,10 +126,10 @@ function closeAttack(key: string) {
       AppDataSource.getRepository(AegisAttack)
         .createQueryBuilder()
         .delete()
-        .where('"startTs" < :cut', { cut: Date.now() - 30 * 86400_000 })
+        .where('`startTs` < :cut', { cut: Date.now() - 30 * 86400_000 })
         .execute(),
     )
-    .catch(() => {});
+    .catch((e) => console.error("[aegis] persist attack failed:", e));
 }
 
 const METHOD_KEYS = [
