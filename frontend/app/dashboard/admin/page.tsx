@@ -1620,6 +1620,7 @@ export default function AdminPanel() {
   const [esMemory, setEsMemory] = useState("")
   const [esDisk, setEsDisk] = useState("")
   const [esCpu, setEsCpu] = useState("")
+  const [esThreads, setEsThreads] = useState("")
   const [esSwap, setEsSwap] = useState("")
   const [esDockerImage, setEsDockerImage] = useState("")
   const [esStartup, setEsStartup] = useState("")
@@ -1707,6 +1708,7 @@ export default function AdminPanel() {
     gamblingResourceLuckyChance: number
     gamblingPowerDenyChance: number
     featureToggles: Record<string, boolean>
+    webauthn: any
   }>({
     registrationEnabled: true,
     registrationNotice: "",
@@ -1718,6 +1720,14 @@ export default function AdminPanel() {
     gamblingEnabled: true,
     gamblingResourceLuckyChance: 0.0777,
     gamblingPowerDenyChance: 0.5,
+    webauthn: {
+      enabled: true,
+      allowDiscoverable: false,
+      rpId: "",
+      rpOrigin: "",
+      authenticationTimeoutSeconds: 300,
+      registrationTimeoutSeconds: 300,
+    },
     featureToggles: {
       registration: true,
       gambling: true,
@@ -1881,6 +1891,14 @@ export default function AdminPanel() {
                 dedicatedIps: true,
                 elo: true,
                 ...(data.featureToggles || {}),
+              },
+              webauthn: data.webauthn ?? {
+                enabled: true,
+                allowDiscoverable: false,
+                rpId: "",
+                rpOrigin: "",
+                authenticationTimeoutSeconds: 300,
+                registrationTimeoutSeconds: 300,
               },
             })
           }
@@ -2715,6 +2733,7 @@ export default function AdminPanel() {
     setEsMemory(String(cfgBuild.memory_limit ?? rootBuild.memory_limit ?? mergedAny.memory ?? ""))
     setEsDisk(String(cfgBuild.disk_space ?? rootBuild.disk_space ?? mergedAny.disk ?? ""))
     setEsCpu(String(cfgBuild.cpu_limit ?? rootBuild.cpu_limit ?? mergedAny.cpu ?? ""))
+    setEsThreads(String(cfgBuild.threads ?? rootBuild.threads ?? mergedAny.threads ?? ""))
     setEsSwap(String(cfgBuild.swap ?? rootBuild.swap ?? mergedAny.swap ?? "0"))
     setEsDockerImage(
       cfgDocker.image ||
@@ -2870,6 +2889,7 @@ export default function AdminPanel() {
           memory: esMemory ? Number(esMemory) : undefined,
           disk: esDisk ? Number(esDisk) : undefined,
           cpu: esCpu ? Number(esCpu) : undefined,
+          threads: esThreads.trim() || undefined,
           swap: esSwap !== "" ? Number(esSwap) : undefined,
           dockerImage: esDockerImage || undefined,
           startup: esStartup || undefined,
@@ -4620,6 +4640,8 @@ remote: ${panelUrl}`
                     setEsDisk,
                     esCpu,
                     setEsCpu,
+                    esThreads,
+                    setEsThreads,
                     esSwap,
                     setEsSwap,
                     esDockerImage,

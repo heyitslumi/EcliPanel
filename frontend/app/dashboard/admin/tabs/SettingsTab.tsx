@@ -1123,6 +1123,80 @@ export default function SettingsTab({ ctx }: { ctx: any }) {
         )}
       </div>
 
+      {/* WebAuthn / Passkeys */}
+      <div className="border border-border bg-card p-5 sm:p-6">
+        <h3 className="text-sm font-semibold text-foreground mb-4">WebAuthn / Passkeys</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={panelSettings.webauthn?.enabled !== false}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), enabled: e.target.checked } }))}
+              className="mt-1 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="text-sm font-medium">Enabled</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">Allow passkey registration and login.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={panelSettings.webauthn?.allowDiscoverable === true}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), allowDiscoverable: e.target.checked } }))}
+              className="mt-1 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="text-sm font-medium">Usernameless login (discoverable credentials)</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">Lets users sign in with a passkey without typing their email first. New registrations become resident keys.</span>
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">RP ID</span>
+            <input
+              type="text"
+              value={panelSettings.webauthn?.rpId || ""}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), rpId: e.target.value } }))}
+              placeholder="e.g. panel.example.com"
+              className="mt-1 w-full border border-border bg-muted/30 px-3 py-2 text-sm rounded-md"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">RP Origin</span>
+            <input
+              type="text"
+              value={panelSettings.webauthn?.rpOrigin || ""}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), rpOrigin: e.target.value } }))}
+              placeholder="e.g. https://panel.example.com"
+              className="mt-1 w-full border border-border bg-muted/30 px-3 py-2 text-sm rounded-md"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Authentication timeout (seconds)</span>
+            <input
+              type="number"
+              min={30}
+              value={panelSettings.webauthn?.authenticationTimeoutSeconds ?? 300}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), authenticationTimeoutSeconds: Number(e.target.value) } }))}
+              className="mt-1 w-full border border-border bg-muted/30 px-3 py-2 text-sm rounded-md"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-muted-foreground">Registration timeout (seconds)</span>
+            <input
+              type="number"
+              min={30}
+              value={panelSettings.webauthn?.registrationTimeoutSeconds ?? 300}
+              onChange={(e) => setPanelSettings((s: any) => ({ ...s, webauthn: { ...(s.webauthn || {}), registrationTimeoutSeconds: Number(e.target.value) } }))}
+              className="mt-1 w-full border border-border bg-muted/30 px-3 py-2 text-sm rounded-md"
+            />
+          </label>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Leave RP ID / RP Origin empty to use the RP_ID and ORIGIN environment variables. Changing the RP ID invalidates existing passkeys.
+        </p>
+      </div>
+
       {/* KYC-Required Countries */}
       <div className="border border-border bg-card p-5 sm:p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">KYC-Required Countries</h3>

@@ -20,6 +20,7 @@ import { rowsToCsv, safeFilename, MAX_EXPORT_ROWS } from './logHandler';
 import { AIModel } from '../models/aiModel.entity';
 import { Egg } from '../models/egg.entity';
 import { nodeService } from '../services/nodeService';
+import { loadWebauthnSettings } from '../services/passkeyService';
 import { getConfiguredFraudModels, runFraudScanForUser } from '../services/fraudService';
 import { t } from 'elysia';
 import { createExportJob, getExportJob, listExportJobs } from '../services/exportJobService';
@@ -4625,7 +4626,7 @@ export async function adminRoutes(app: any, prefix = '') {
           hibernated: !!c.hibernated,
           is_suspended: c.suspended,
           resources: null,
-          build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu },
+          build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu, ...(c.threads ? { threads: c.threads } : {}) },
           container: { image: c.dockerImage },
           nodeId: c.nodeId,
           nodeName: node?.name,
@@ -4985,6 +4986,7 @@ export async function adminRoutes(app: any, prefix = '') {
         cpu,
         swap,
         ioWeight,
+        threads,
         oomDisabled,
         dockerImage,
         startup,
@@ -5032,6 +5034,14 @@ export async function adminRoutes(app: any, prefix = '') {
       }
       if (swap !== undefined) cfg.swap = Number(swap);
       if (ioWeight !== undefined) cfg.ioWeight = Number(ioWeight);
+      if (threads !== undefined) {
+        const t = String(threads ?? '').trim();
+        if (t !== '' && !/^[0-9][0-9,\- ]*$/.test(t)) {
+          ctx.set.status = 400;
+          return { error: ctx.t('validation.invalidCpuValue') };
+        }
+        cfg.threads = t === '' ? undefined : t;
+      }
       if (hibernated !== undefined) cfg.hibernated = Boolean(hibernated);
       if (ignoreAntiAbuse !== undefined) cfg.ignoreAntiAbuse = Boolean(ignoreAntiAbuse);
 
@@ -5090,7 +5100,9 @@ export async function adminRoutes(app: any, prefix = '') {
       if (node) {
         const base = (node as any).backendWingsUrl || node.url;
         const svc = new WingsApiService(base, node.token);
-        await svc.syncServer(serverId, {}).catch(() => { });
+        const syncPayload: any = {};
+        if (threads !== undefined && cfg.threads) syncPayload.build = { threads: cfg.threads };
+        await svc.syncServer(serverId, syncPayload).catch(() => { });
       }
       return { success: true, server: cfg };
     },
@@ -5107,6 +5119,7 @@ export async function adminRoutes(app: any, prefix = '') {
           cpu: t.Optional(t.Any()),
           swap: t.Optional(t.Any()),
           ioWeight: t.Optional(t.Any()),
+          threads: t.Optional(t.String()),
           oomDisabled: t.Optional(t.Boolean()),
           dockerImage: t.Optional(t.String()),
           startup: t.Optional(t.String()),
@@ -7045,7 +7058,7 @@ export async function adminRoutes(app: any, prefix = '') {
             hibernated: !!c.hibernated,
             is_suspended: !!c.suspended,
             resources: null,
-            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu },
+            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu, ...(c.threads ? { threads: c.threads } : {}) },
             container: { image: c.dockerImage },
             nodeId: c.nodeId,
             nodeName: node?.name,
@@ -7386,7 +7399,7 @@ export async function adminRoutes(app: any, prefix = '') {
             hibernated: !!c.hibernated,
             is_suspended: !!c.suspended,
             resources: null,
-            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu },
+            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu, ...(c.threads ? { threads: c.threads } : {}) },
             container: { image: c.dockerImage },
             nodeId: c.nodeId,
             nodeName: node?.name,
@@ -8507,6 +8520,7 @@ export async function adminRoutes(app: any, prefix = '') {
         } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
+      const webauthnSettings = await loadWebauthnSettings();
       return {
         registrationEnabled: map['registrationEnabled'] !== 'false',
         registrationNotice: map['registrationNotice'] || '',
@@ -8522,6 +8536,7 @@ export async function adminRoutes(app: any, prefix = '') {
         org_formation_fee: map['org_formation_fee'] || '1',
         org_dns_addon_price: map['org_dns_addon_price'] || '3',
         featureToggles,
+        webauthn: webauthnSettings,
       };
     },
     {
@@ -8539,6 +8554,7 @@ export async function adminRoutes(app: any, prefix = '') {
           gamblingEnabled: t.Boolean(),
           gamblingResourceLuckyChance: t.Number(),
           gamblingPowerDenyChance: t.Number(),
+          webauthn: t.Any(),
         }),
       },
       detail: { summary: 'Fetch public portal settings (no auth)', tags: ['Public'] },
@@ -8549,6 +8565,7 @@ export async function adminRoutes(app: any, prefix = '') {
     prefix + '/public/features',
     async _ctx => {
       const featureToggles = await getPanelFeatureToggles();
+      const webauthnSettings = await loadWebauthnSettings();
       return { featureToggles };
     },
     {
@@ -8575,6 +8592,7 @@ export async function adminRoutes(app: any, prefix = '') {
         } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
+      const webauthnSettings = await loadWebauthnSettings();
       return {
         registrationEnabled: map['registrationEnabled'] !== 'false',
         registrationNotice: map['registrationNotice'] || '',
@@ -8588,6 +8606,7 @@ export async function adminRoutes(app: any, prefix = '') {
         gamblingResourceLuckyChance: gamblingConfig.gamblingResourceLuckyChance,
         gamblingPowerDenyChance: gamblingConfig.gamblingPowerDenyChance,
         featureToggles,
+        webauthn: webauthnSettings,
       };
     },
     {
@@ -8606,6 +8625,7 @@ export async function adminRoutes(app: any, prefix = '') {
           gamblingResourceLuckyChance: t.Number(),
           gamblingPowerDenyChance: t.Number(),
           featureToggles: t.Record(t.String(), t.Boolean()),
+          webauthn: t.Any(),
         }),
         401: t.Object({ error: t.String() }),
         403: t.Object({ error: t.String() }),
@@ -8755,6 +8775,9 @@ export async function adminRoutes(app: any, prefix = '') {
         const merged = { ...current, ...(body.featureToggles || {}) };
         await repo.save({ key: 'panelFeatureToggles', value: JSON.stringify(merged) });
       }
+      if (body.webauthn !== undefined && typeof body.webauthn === 'object') {
+        await repo.save({ key: 'webauthn', value: JSON.stringify(body.webauthn) });
+      }
       const rows = await repo.find();
       const map = parsePanelSettingsMap(rows);
       const gamblingConfig = getGamblingConfigFromMap(map);
@@ -8765,6 +8788,7 @@ export async function adminRoutes(app: any, prefix = '') {
         } catch { }
       }
       const featureToggles = await getPanelFeatureToggles();
+      const webauthnSettings = await loadWebauthnSettings();
       return {
         success: true,
         settings: {
@@ -8780,6 +8804,7 @@ export async function adminRoutes(app: any, prefix = '') {
           gamblingResourceLuckyChance: gamblingConfig.gamblingResourceLuckyChance,
           gamblingPowerDenyChance: gamblingConfig.gamblingPowerDenyChance,
           featureToggles,
+          webauthn: webauthnSettings,
         },
       };
     },
@@ -8798,6 +8823,7 @@ export async function adminRoutes(app: any, prefix = '') {
           gamblingResourceLuckyChance: t.Optional(t.Number()),
           gamblingPowerDenyChance: t.Optional(t.Number()),
           featureToggles: t.Optional(t.Record(t.String(), t.Boolean())),
+          webauthn: t.Optional(t.Any()),
         }),
         response: {
           200: t.Object({ success: t.Boolean(), settings: t.Any() }),
@@ -9461,7 +9487,7 @@ export async function adminRoutes(app: any, prefix = '') {
             hibernated: !!c.hibernated,
             is_suspended: c.suspended,
             resources: null,
-            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu },
+            build: { memory_limit: c.memory, disk_space: c.disk, cpu_limit: c.cpu, ...(c.threads ? { threads: c.threads } : {}) },
             container: { image: c.dockerImage },
             nodeId: c.nodeId,
             nodeName: node?.name,

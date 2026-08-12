@@ -8,7 +8,12 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::{
+    io::AsyncReadExt,
+    sync::{Mutex, RwLock},
+};
+
+use crate::io::SafeSliceExt;
 
 pub mod activity;
 pub mod backup;
@@ -120,7 +125,11 @@ impl Server {
         );
 
         let activity = activity::ActivityManager::new(configuration.uuid, &app_state.config);
-        let collab = collab::manager::CollabManager::new(configuration.uuid, &app_state.config);
+        let collab = collab::manager::CollabManager::new(
+            configuration.uuid,
+            targeted_websocket_tx.clone(),
+            &app_state.config,
+        );
         let diff = diff::manager::DiffManager::new(configuration.uuid, &app_state.config);
         let schedules = Arc::new(schedule::manager::ScheduleManager::new(Arc::clone(
             &app_state.config,
@@ -464,6 +473,18 @@ impl Server {
 
                                     return;
                                 }
+
+                                server.activity.log_activity(activity::Activity {
+                                    event: activity::ActivityEvent::CrashDetected,
+                                    user: None,
+                                    ip: None,
+                                    metadata: Some(json!({
+                                        "exit_code": exit_code,
+                                        "oom_killed": oom_killed,
+                                    })),
+                                    schedule: None,
+                                    timestamp: chrono::Utc::now(),
+                                });
 
                                 server.schedules.execute_crash_trigger().await;
 
@@ -886,18 +907,53 @@ impl Server {
             }
         };
 
+        struct LogsState {
+            reader: Box<dyn tokio::io::AsyncRead + Send + Unpin>,
+            line_buffer: crate::io::line_buffer::LineBuffer,
+            read_buffer: Vec<u8>,
+            eof: bool,
+        }
+
         let stream = futures::stream::try_unfold(
-            tokio::io::BufReader::new(reader),
-            |mut reader| async move {
-                use tokio::io::AsyncBufReadExt;
-                let mut line = String::new();
-                match reader.read_line(&mut line).await {
-                    Ok(0) => Ok(None),
-                    Ok(_) => {
-                        let trimmed = line.trim_end_matches(['\n', '\r']);
-                        Ok(Some((compact_str::CompactString::from(trimmed), reader)))
+            LogsState {
+                reader,
+                line_buffer: crate::io::line_buffer::LineBuffer::new(),
+                read_buffer: vec![0; crate::BUFFER_SIZE],
+                eof: false,
+            },
+            |mut state| async move {
+                loop {
+                    if let Some(line) = state
+                        .line_buffer
+                        .next_line()
+                        .map(compact_str::CompactString::from_utf8_lossy)
+                    {
+                        state.line_buffer.compact();
+
+                        return Ok(Some((line, state)));
                     }
-                    Err(e) => Err(anyhow::Error::from(e)),
+
+                    if state.eof {
+                        return Ok(None);
+                    }
+
+                    match state.reader.read(&mut state.read_buffer).await {
+                        Ok(0) => {
+                            state.eof = true;
+
+                            let line = state
+                                .line_buffer
+                                .flush()
+                                .map(compact_str::CompactString::from_utf8_lossy);
+
+                            return Ok(line.map(|line| (line, state)));
+                        }
+                        Ok(bytes_read) => {
+                            let chunk = state.read_buffer.get_slice(..bytes_read)?;
+                            state.line_buffer.extend(chunk);
+                        }
+                        Err(err) => return Err(anyhow::Error::from(err)),
+                    }
                 }
             },
         );
@@ -1379,7 +1435,6 @@ impl Server {
         crate::server::installation::ServerInstaller::delete_install_logs(self).await;
 
         self.diff.close().await;
-        self.filesystem.close();
 
         tokio::spawn({
             let server = self.clone();
@@ -1387,6 +1442,7 @@ impl Server {
             async move {
                 server.diff.destroy().await;
                 server.filesystem.destroy().await;
+                server.filesystem.close();
 
                 if let Some(installer) = server.installer.read().await.as_ref() {
                     installer.abort();

@@ -871,7 +871,8 @@
     "loginFailed": "Ошибка входа",
     "missingTemporarySession": "Отсутствует временная сессия",
     "failedToSendEmailCode": "Не удалось отправить код на email",
-    "back": "Назад"
+    "back": "Назад",
+    "passkeyUsernamelessHint": "Или введите email и попробуйте снова."
   },
   "register": {
     "steps": {

@@ -2,6 +2,7 @@ use crate::{
     routes::State,
     server::{
         activity::{Activity, ActivityEvent},
+        filesystem::cap::FileType,
         permissions::Permission,
     },
     utils::PortablePermissions,
@@ -15,6 +16,7 @@ use russh_sftp::protocol::{
 use serde_json::json;
 use std::{
     collections::HashMap,
+    io::{Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -27,10 +29,8 @@ mod extended;
 pub struct FileHandle {
     _guard: super::limiter::SshLimiterHandleGuard,
     path: PathBuf,
-    path_components: Vec<String>,
 
-    file: Arc<Mutex<std::fs::File>>,
-    known_size: u64,
+    file: Arc<Mutex<crate::server::filesystem::file::ServerFile>>,
     append: bool,
 
     diff_track: bool,
@@ -163,8 +163,8 @@ impl SftpSession {
     }
 
     #[inline]
-    fn is_ignored(&self, path: &Path, is_dir: bool) -> bool {
-        Self::is_ignored_server(&self.server, self.user_uuid, path, is_dir)
+    async fn async_is_ignored(&self, path: &Path, file_type: FileType) -> bool {
+        Self::async_is_ignored_server(&self.server, self.user_uuid, path, file_type).await
     }
 
     #[inline]
@@ -172,14 +172,39 @@ impl SftpSession {
         server: &crate::server::Server,
         user_uuid: uuid::Uuid,
         path: &Path,
-        is_dir: bool,
+        file_type: FileType,
     ) -> bool {
-        if path == Path::new("/") || path == Path::new(".") || path == Path::new("") {
+        if Self::is_ignored_root(path) {
             return false;
         }
 
-        server.filesystem.is_ignored(path, is_dir)
-            || server.user_permissions.is_ignored(user_uuid, path, is_dir)
+        server.filesystem.is_ignored(path, file_type)
+            || server
+                .user_permissions
+                .is_ignored(server, user_uuid, path, file_type)
+    }
+
+    #[inline]
+    async fn async_is_ignored_server(
+        server: &crate::server::Server,
+        user_uuid: uuid::Uuid,
+        path: &Path,
+        file_type: FileType,
+    ) -> bool {
+        if Self::is_ignored_root(path) {
+            return false;
+        }
+
+        server.filesystem.async_is_ignored(path, file_type).await
+            || server
+                .user_permissions
+                .async_is_ignored(server, user_uuid, path, file_type)
+                .await
+    }
+
+    #[inline]
+    fn is_ignored_root(path: &Path) -> bool {
+        path == Path::new("/") || path == Path::new(".") || path == Path::new("")
     }
 
     #[inline]
@@ -332,7 +357,7 @@ impl russh_sftp::server::Handler for SftpSession {
             Err(_) => return Err(StatusCode::NoSuchFile),
         };
 
-        if self.is_ignored(&path, true) {
+        if self.async_is_ignored(&path, FileType::Dir).await {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -415,7 +440,12 @@ impl russh_sftp::server::Handler for SftpSession {
                         Err(_) => continue,
                     };
 
-                    if Self::is_ignored_server(&server, user_uuid, &path, metadata.is_dir()) {
+                    if Self::is_ignored_server(
+                        &server,
+                        user_uuid,
+                        &path,
+                        metadata.file_type().into(),
+                    ) {
                         continue;
                     }
 
@@ -474,7 +504,10 @@ impl russh_sftp::server::Handler for SftpSession {
                 return Err(StatusCode::NoSuchFile);
             }
 
-            if self.is_ignored(&path, metadata.is_dir()) {
+            if self
+                .async_is_ignored(&path, metadata.file_type().into())
+                .await
+            {
                 return Err(StatusCode::NoSuchFile);
             }
 
@@ -555,7 +588,7 @@ impl russh_sftp::server::Handler for SftpSession {
                 return Err(StatusCode::NoSuchFile);
             }
 
-            if self.is_ignored(&path, true) {
+            if self.async_is_ignored(&path, FileType::Dir).await {
                 return Err(StatusCode::NoSuchFile);
             }
 
@@ -605,7 +638,7 @@ impl russh_sftp::server::Handler for SftpSession {
 
         let path = Path::new(&path);
 
-        if self.is_ignored(path, true) {
+        if self.async_is_ignored(path, FileType::Dir).await {
             return Err(StatusCode::NoSuchFile);
         }
         if self
@@ -706,8 +739,12 @@ impl russh_sftp::server::Handler for SftpSession {
             .async_symlink_metadata(&new_path)
             .await
             .is_ok()
-            || self.is_ignored(&old_path, old_metadata.is_dir())
-            || self.is_ignored(&new_path, old_metadata.is_dir())
+            || self
+                .async_is_ignored(&old_path, old_metadata.file_type().into())
+                .await
+            || self
+                .async_is_ignored(&new_path, old_metadata.file_type().into())
+                .await
         {
             return Err(StatusCode::Failure);
         }
@@ -738,7 +775,7 @@ impl russh_sftp::server::Handler for SftpSession {
             return Err(StatusCode::NoSuchFile);
         }
 
-        let new_path = self.server.filesystem.relative_path(&new_path);
+        let new_path = self.server.filesystem.diff_key(&new_path).await;
         let new_key = new_path.to_string_lossy().to_string();
         let replaced = match self
             .server
@@ -835,7 +872,10 @@ impl russh_sftp::server::Handler for SftpSession {
             Err(_) => return Err(StatusCode::NoSuchFile),
         };
 
-        if self.is_ignored(&path, metadata.is_dir()) {
+        if self
+            .async_is_ignored(&path, metadata.file_type().into())
+            .await
+        {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -902,7 +942,10 @@ impl russh_sftp::server::Handler for SftpSession {
             Err(_) => return Err(StatusCode::NoSuchFile),
         };
 
-        if self.is_ignored(&path, metadata.is_dir()) {
+        if self
+            .async_is_ignored(&path, metadata.file_type().into())
+            .await
+        {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -952,7 +995,10 @@ impl russh_sftp::server::Handler for SftpSession {
             Err(_) => return Err(StatusCode::NoSuchFile),
         };
 
-        if self.is_ignored(path, metadata.is_dir()) {
+        if self
+            .async_is_ignored(path, metadata.file_type().into())
+            .await
+        {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -989,7 +1035,10 @@ impl russh_sftp::server::Handler for SftpSession {
             Err(_) => return Err(StatusCode::NoSuchFile),
         };
 
-        if self.is_ignored(&path, metadata.is_dir()) {
+        if self
+            .async_is_ignored(&path, metadata.file_type().into())
+            .await
+        {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -1046,8 +1095,10 @@ impl russh_sftp::server::Handler for SftpSession {
         };
 
         if !metadata.is_file()
-            || self.is_ignored(&targetpath, metadata.is_dir())
-            || self.is_ignored(&linkpath, false)
+            || self
+                .async_is_ignored(&targetpath, metadata.file_type().into())
+                .await
+            || self.async_is_ignored(&linkpath, FileType::File).await
         {
             return Err(StatusCode::NoSuchFile);
         }
@@ -1124,10 +1175,7 @@ impl russh_sftp::server::Handler for SftpSession {
             return Err(StatusCode::PermissionDenied);
         }
 
-        let path = match self.server.filesystem.async_canonicalize(&filename).await {
-            Ok(path) => path,
-            Err(_) => PathBuf::from(filename.strip_prefix("/").unwrap_or(&filename)),
-        };
+        let path = self.server.filesystem.diff_key(Path::new(&filename)).await;
 
         let pre_size = match self.server.filesystem.async_symlink_metadata(&path).await {
             Ok(metadata) => {
@@ -1146,7 +1194,7 @@ impl russh_sftp::server::Handler for SftpSession {
             }
         };
 
-        if self.is_ignored(&path, false) {
+        if self.async_is_ignored(&path, FileType::File).await {
             return Err(StatusCode::NoSuchFile);
         }
 
@@ -1234,7 +1282,22 @@ impl russh_sftp::server::Handler for SftpSession {
                     open_options.truncate(true);
                 }
 
-                server.filesystem.open_with(path, open_options)
+                let file = server.filesystem.open_with(&path, open_options)?;
+                let initial_size = file.metadata().map(|metadata| metadata.len()).unwrap_or(0);
+
+                let mut file = crate::server::filesystem::file::ServerFile::new_file(
+                    server.clone(),
+                    &path,
+                    file,
+                    initial_size,
+                )
+                .map_err(std::io::Error::other)?;
+
+                if pflags.contains(OpenFlags::APPEND) {
+                    file.seek(SeekFrom::End(0))?;
+                }
+
+                Ok::<_, std::io::Error>(file)
             }
         })
         .await
@@ -1282,13 +1345,7 @@ impl russh_sftp::server::Handler for SftpSession {
                     .open_handle()
                     .map_err(|_| StatusCode::Failure)?,
                 path,
-                path_components,
                 file: Arc::new(Mutex::new(file)),
-                known_size: if pflags.contains(OpenFlags::TRUNCATE) {
-                    0
-                } else {
-                    pre_size.unwrap_or(0)
-                },
                 append: pflags.contains(OpenFlags::APPEND),
                 diff_track,
                 diff_before,
@@ -1361,71 +1418,32 @@ impl russh_sftp::server::Handler for SftpSession {
             return Err(StatusCode::PermissionDenied);
         }
 
-        let end = offset.saturating_add(data.len() as u64);
-        let delta = if handle.append {
-            data.len() as i64
-        } else {
-            end.saturating_sub(handle.known_size) as i64
-        };
-
-        if !self
-            .server
-            .filesystem
-            .async_allocate_in_path_iterator(
-                handle
-                    .path_components
-                    .get(0..handle.path_components.len() - 1)
-                    .ok_or(StatusCode::Failure)?,
-                delta,
-                false,
-            )
-            .await
+        if offset
+            .checked_add(data.len() as u64)
+            .is_none_or(|end| end > i64::MAX as u64)
         {
-            return Err(StatusCode::Failure);
+            return Err(StatusCode::BadMessage);
         }
 
-        match tokio::task::spawn_blocking({
+        tokio::task::spawn_blocking({
             let file = Arc::clone(&handle.file);
+            let append = handle.append;
 
-            move || file.lock().write_all_at(offset, &data)
+            move || {
+                let mut file = file.lock();
+
+                if append {
+                    file.write_all(&data)
+                } else {
+                    file.write_all_at(offset, &data)
+                }
+            }
         })
         .await
-        {
-            Ok(Ok(())) => (),
-            Ok(Err(_)) => {
-                self.server
-                    .filesystem
-                    .async_allocate_in_path_iterator(
-                        handle
-                            .path_components
-                            .get(0..handle.path_components.len() - 1)
-                            .ok_or(StatusCode::Failure)?,
-                        -delta,
-                        true,
-                    )
-                    .await;
-                return Err(StatusCode::Failure);
-            }
-            Err(_) => {
-                self.server
-                    .filesystem
-                    .async_allocate_in_path_iterator(
-                        handle
-                            .path_components
-                            .get(0..handle.path_components.len() - 1)
-                            .ok_or(StatusCode::Failure)?,
-                        -delta,
-                        true,
-                    )
-                    .await;
-                return Err(StatusCode::Failure);
-            }
-        }
+        .map_err(|_| StatusCode::Failure)?
+        .map_err(|_| StatusCode::Failure)?;
 
         handle.diff_dirty = true;
-        if !handle.append {
-            handle.known_size = handle.known_size.max(end);
-        }
 
         Ok(Status {
             id,

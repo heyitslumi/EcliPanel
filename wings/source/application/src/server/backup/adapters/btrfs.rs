@@ -202,7 +202,7 @@ impl BtrfsBackup {
         state: &crate::routes::State,
         archive_format: StreamableArchiveFormat,
         compression_level: crate::io::compression::CompressionLevel,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let subvolume_path = Self::get_subvolume_path(&state.config, self.uuid);
 
         if tokio::fs::metadata(&subvolume_path).await.is_err() {
@@ -219,6 +219,7 @@ impl BtrfsBackup {
         let threads = state.config.load().api.file_compression_threads;
 
         let (reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (reader, signal) = crate::io::fallible_reader::FallibleReader::new(reader);
 
         tokio::spawn(async move {
             let writer = tokio_util::io::SyncIoBridge::new(writer);
@@ -275,9 +276,11 @@ impl BtrfsBackup {
             match result {
                 Ok(mut inner) => {
                     inner.shutdown().await.ok();
+                    signal.succeed();
                 }
                 Err(err) => {
                     tracing::error!("failed to create archive for btrfs backup: {err}");
+                    signal.fail(err);
                 }
             }
         });
@@ -290,15 +293,13 @@ impl BtrfsBackup {
         uuid: uuid::Uuid,
     ) -> Result<ignore::gitignore::Gitignore, anyhow::Error> {
         let ignored_path = Self::get_ignore_path(config, uuid);
-        let mut ignore_builder = ignore::gitignore::GitignoreBuilder::new("");
+        let ignore_content = tokio::fs::read_to_string(&ignored_path)
+            .await
+            .unwrap_or_default();
 
-        if let Ok(ignore_content) = tokio::fs::read_to_string(&ignored_path).await {
-            for line in ignore_content.lines() {
-                ignore_builder.add_line(None, line).ok();
-            }
-        }
-
-        Ok(ignore_builder.build()?)
+        Ok(crate::server::filesystem::build_gitignore_matcher(
+            ignore_content.lines(),
+        )?)
     }
 }
 

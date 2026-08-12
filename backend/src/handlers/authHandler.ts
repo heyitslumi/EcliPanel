@@ -6,7 +6,8 @@ import { comparePassword, hashPassword, isLegacyPasswordHash } from '../utils/pa
 import { getGeoBlockLevel, canPerformIdVerification, requiresKyc, isKycVerified } from '../utils/eu';
 import { authenticate } from '../middleware/auth';
 import { UserLog } from '../models/userLog.entity';
-import { PasskeyService } from '../services/passkeyService';
+import { PasskeyService, loadWebauthnSettings } from '../services/passkeyService';
+import base64url from 'base64url';
 import { generateCaptcha, generateInvisibleCaptcha } from '../utils/captcha';
 import { isFeatureEnabled } from '../utils/featureToggles';
 import { redisSet, redisGet, redisDel, redisDelByPrefix, withRedisCache } from '../config/redis';
@@ -48,7 +49,7 @@ import type { OrganisationMember } from '../models/organisationMember.entity';
 import type { Plan } from '../models/plan.entity';
 import type { JsonObject } from '../types/common';
 import type { UserOrgMembership } from '../types/auth';
-import type { Passkey } from '../models/passkey.entity';
+import { Passkey } from '../models/passkey.entity';
 import type { Locale } from '../i18n/config';
 const speakeasy = require('speakeasy');
 
@@ -1454,9 +1455,20 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
     prefix + '/auth/passkey/authenticate-challenge',
     async (ctx: AuthRouteContext) => {
       const { email } = asEmailBody(ctx.body);
+      const webauthn = await loadWebauthnSettings();
+      if (!webauthn.enabled) {
+        ctx.set.status = 403;
+        return { error: ctx.t('auth.passkeysDisabled') };
+      }
+      const frontendHost = getFrontendHost(ctx);
       if (!email) {
-        ctx.set.status = 400;
-        return { error: ctx.t('validation.missingEmail') };
+        if (!webauthn.allowDiscoverable) {
+          ctx.set.status = 400;
+          return { error: ctx.t('auth.passkeysNotDiscoverable') };
+        }
+        const opts = await PasskeyService.generateAuthentication(null, frontendHost);
+        await redisSet(`passkey:auth-us:${opts.challenge}`, '1', webauthn.authenticationTimeoutSeconds);
+        return opts;
       }
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOneBy({ email });
@@ -1464,17 +1476,16 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
         ctx.set.status = 400;
         return { error: ctx.t('auth.noPasskeys') };
       }
-      const frontendHost = getFrontendHost(ctx);
       const opts = await PasskeyService.generateAuthentication(user.id, frontendHost);
-      await redisSet(`passkey:auth:${user.id}`, opts.challenge, 300);
+      await redisSet(`passkey:auth:${user.id}`, opts.challenge, webauthn.authenticationTimeoutSeconds);
       return opts;
     },
     {
-      body: t.Object({ email: t.String({ format: 'email' }) }),
-      response: { 200: t.Any(), 400: t.Object({ error: t.String() }) },
+      body: t.Object({ email: t.Optional(t.String({ format: 'email' })) }),
+      response: { 200: t.Any(), 400: t.Object({ error: t.String() }), 403: t.Object({ error: t.String() }) },
       detail: {
         summary: 'Start passkey authentication',
-        description: 'Starts the passkey authentication process for the user.',
+        description: 'Starts the passkey authentication process for the user. Omit email for a usernameless (discoverable credential) challenge.',
         tags: ['Auth'],
         operationId: 'postAuthPasskeyAuthenticateChallenge',
       },
@@ -1486,13 +1497,48 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
     async (ctx: AuthRouteContext) => {
       const { email, authenticationResponse } = asPasskeyLoginBody(ctx.body);
       const userRepo = AppDataSource.getRepository(User);
-      const user = await userRepo.findOneBy({ email });
-      if (!user) {
-        ctx.set.status = 401;
-        return { error: ctx.t('common.authenticationFailed') };
+      let user: User | null = null;
+      let expectedChallenge: string | null = null;
+      if (email) {
+        user = await userRepo.findOneBy({ email });
+        if (!user) {
+          ctx.set.status = 401;
+          return { error: ctx.t('common.authenticationFailed') };
+        }
+        expectedChallenge = await redisGet(`passkey:auth:${user.id}`);
+      } else {
+        let challenge = '';
+        try {
+          const clientData = JSON.parse(
+            base64url.decode(String((authenticationResponse as any)?.response?.clientDataJSON ?? ''))
+          );
+          challenge = String(clientData.challenge ?? '');
+          const marker = challenge ? await redisGet(`passkey:auth-us:${challenge}`) : null;
+          if (!marker) {
+            ctx.set.status = 400;
+            return { error: ctx.t('system.noChallenge') };
+          }
+          expectedChallenge = challenge;
+        } catch (e) {
+          ctx.log?.warn?.({ err: e }, 'failed to decode clientDataJSON for usernameless passkey');
+        }
+        if (!expectedChallenge) {
+          ctx.set.status = 400;
+          return { error: ctx.t('system.noChallenge') };
+        }
+        const credID = base64url.encode(String((authenticationResponse as any)?.rawId ?? ''));
+        const passkeyRepo = AppDataSource.getRepository(Passkey);
+        const passkey = await passkeyRepo.findOne({
+          where: [{ credentialID: credID }, { credentialID: String((authenticationResponse as any)?.id ?? '') }],
+          relations: { user: true } as any,
+        });
+        if (!passkey || !passkey.user) {
+          ctx.set.status = 401;
+          return { error: ctx.t('common.authenticationFailed') };
+        }
+        user = passkey.user as User;
       }
-      const expected = await redisGet(`passkey:auth:${user.id}`);
-      if (!expected) {
+      if (!expectedChallenge) {
         ctx.set.status = 400;
         return { error: ctx.t('system.noChallenge') };
       }
@@ -1503,7 +1549,7 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
       const ver = await PasskeyService.verifyAuthenticationResponse({
         userId: user.id,
         authenticationResponse,
-        expectedChallenge: String(expected),
+        expectedChallenge,
         requestHost,
         requestOrigin,
       });
@@ -1551,7 +1597,7 @@ export async function authRoutes(app: AuthRouteApp, prefix = '') {
       }
     },
     {
-      body: t.Object({ email: t.String({ format: 'email' }), authenticationResponse: t.Any() }),
+      body: t.Object({ email: t.Optional(t.String({ format: 'email' })), authenticationResponse: t.Any() }),
       response: {
         200: t.Any(),
         400: t.Object({ error: t.String() }),

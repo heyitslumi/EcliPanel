@@ -11,6 +11,7 @@ export class Passkey {
 
   @Column()
   @Index()
+  @Index('IDX_passkey_credentialID_unique', { unique: true })
   credentialID: string;
 
   @Column({ nullable: true })

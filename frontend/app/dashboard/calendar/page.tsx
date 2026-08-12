@@ -899,7 +899,7 @@ Suggest a concise daily plan for this week, prioritizing high-priority items fir
                 </div>
 
                 {/* ICS import / export */}
-                <div className="hidden sm:flex items-center gap-1">
+                <div className="flex items-center gap-1">
                   <label
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors cursor-pointer"
                     title="Import ICS"
@@ -1347,7 +1347,7 @@ function MonthView({
                       e.stopPropagation()
                       onNewEvent(ds)
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
+                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
                   >
                     <Plus className="h-3 w-3" />
                   </button>

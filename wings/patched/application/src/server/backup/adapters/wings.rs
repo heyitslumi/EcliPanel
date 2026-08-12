@@ -12,6 +12,7 @@ use crate::{
                 ArchiveFormat, StreamableArchiveFormat, multi_reader::MultiReader,
                 zip_entry_get_modified_time,
             },
+            cap::FileType,
             virtualfs::{
                 ByteRange, VirtualReadableFilesystem,
                 archive::{seven_zip::VirtualSevenZipArchive, zip::VirtualZipArchive},
@@ -433,13 +434,13 @@ impl BackupExt for WingsBackup {
                     let mut read_buffer = vec![0; crate::BUFFER_SIZE];
                     for entry in entries {
                         let mut entry = entry?;
-                        let path = entry.path()?;
+                        let path = server.filesystem.relative_path(&entry.path()?);
 
-                        if path.is_absolute() {
+                        if path.as_os_str().is_empty() {
                             continue;
                         }
 
-                        let destination_path = path.as_ref();
+                        let destination_path = path.as_path();
                         let header = entry.header();
 
                         match header.entry_type() {
@@ -585,10 +586,6 @@ impl BackupExt for WingsBackup {
                                         None => continue,
                                     };
 
-                                    if path.is_absolute() {
-                                        continue;
-                                    }
-
                                     if entry.is_dir() {
                                         server.filesystem.create_chowned_dir_all(&path)?;
                                         server.filesystem.set_permissions(
@@ -664,13 +661,9 @@ impl BackupExt for WingsBackup {
                                 None => continue,
                             };
 
-                            if path.is_absolute() {
-                                continue;
-                            }
-
                             if server
                                 .filesystem
-                                .is_ignored(&path, entry.is_dir())
+                                .is_ignored(&path, FileType::from_is_dir(entry.is_dir()))
                             {
                                 continue;
                             }
@@ -752,10 +745,10 @@ impl BackupExt for WingsBackup {
 
                                     let destination_path = Path::new(path);
 
-                                    if server
-                                        .filesystem
-                                        .is_ignored(destination_path, entry.is_directory())
-                                    {
+                                    if server.filesystem.is_ignored(
+                                        destination_path,
+                                        FileType::from_is_dir(entry.is_directory()),
+                                    ) {
                                         return Ok(true);
                                     }
 
@@ -826,10 +819,10 @@ impl BackupExt for WingsBackup {
 
                                 let destination_path = Path::new(path);
 
-                                if server
-                                    .filesystem
-                                    .is_ignored(destination_path, entry.is_directory())
-                                {
+                                if server.filesystem.is_ignored(
+                                    destination_path,
+                                    FileType::from_is_dir(entry.is_directory()),
+                                ) {
                                     continue;
                                 }
 

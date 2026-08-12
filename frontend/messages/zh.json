@@ -871,7 +871,8 @@
     "loginFailed": "登录失败",
     "missingTemporarySession": "缺少临时会话",
     "failedToSendEmailCode": "发送邮件验证码失败",
-    "back": "返回"
+    "back": "返回",
+    "passkeyUsernamelessHint": "或输入邮箱后重试。"
   },
   "register": {
     "steps": {

@@ -65,15 +65,13 @@ impl ZfsBackup {
         uuid: uuid::Uuid,
     ) -> Result<ignore::gitignore::Gitignore, anyhow::Error> {
         let ignored_path = Self::get_ignore_path(config, uuid);
-        let mut ignore_builder = ignore::gitignore::GitignoreBuilder::new("");
+        let ignore_content = tokio::fs::read_to_string(&ignored_path)
+            .await
+            .unwrap_or_default();
 
-        if let Ok(ignore_content) = tokio::fs::read_to_string(&ignored_path).await {
-            for line in ignore_content.lines() {
-                ignore_builder.add_line(None, line).ok();
-            }
-        }
-
-        Ok(ignore_builder.build()?)
+        Ok(crate::server::filesystem::build_gitignore_matcher(
+            ignore_content.lines(),
+        )?)
     }
 
     async fn destroy_snapshot(target: &str) -> Result<(), anyhow::Error> {
@@ -282,6 +280,7 @@ impl BackupExt for ZfsBackup {
         let ignore = Self::get_ignore(&state.config, self.uuid).await?;
 
         let (reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (reader, signal) = crate::io::fallible_reader::FallibleReader::new(reader);
 
         tokio::spawn({
             let config = Arc::clone(&state.config);
@@ -306,12 +305,14 @@ impl BackupExt for ZfsBackup {
                         {
                             Ok(inner) => {
                                 inner.into_inner().shutdown().await.ok();
+                                signal.succeed();
                             }
                             Err(err) => {
                                 tracing::error!(
                                     "failed to create zip archive for zfs backup: {}",
                                     err
                                 );
+                                signal.fail(err);
                             }
                         }
                     }
@@ -333,12 +334,14 @@ impl BackupExt for ZfsBackup {
                         {
                             Ok(inner) => {
                                 inner.into_inner().shutdown().await.ok();
+                                signal.succeed();
                             }
                             Err(err) => {
                                 tracing::error!(
                                     "failed to create tar archive for zfs backup: {}",
                                     err
                                 );
+                                signal.fail(err);
                             }
                         }
                     }
@@ -361,12 +364,14 @@ impl BackupExt for ZfsBackup {
                         {
                             Ok(inner) => {
                                 inner.into_inner().shutdown().await.ok();
+                                signal.succeed();
                             }
                             Err(err) => {
                                 tracing::error!(
                                     "failed to create itaf archive for zfs backup: {}",
                                     err
                                 );
+                                signal.fail(err);
                             }
                         }
                     }

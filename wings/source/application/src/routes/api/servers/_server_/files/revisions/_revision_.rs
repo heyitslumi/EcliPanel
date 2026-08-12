@@ -5,8 +5,19 @@ mod get {
     use crate::{
         response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, api::servers::_server_::GetServer},
+        server::filesystem::cap::FileType,
     };
-    use axum::{extract::Path, http::StatusCode};
+    use axum::{
+        extract::{Path, Query},
+        http::StatusCode,
+    };
+    use serde::Deserialize;
+    use utoipa::ToSchema;
+
+    #[derive(ToSchema, Deserialize)]
+    pub struct Params {
+        file: Option<compact_str::CompactString>,
+    }
 
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = String),
@@ -22,11 +33,46 @@ mod get {
             description = "The revision id",
             example = "1",
         ),
+        (
+            "file" = Option<String>, Query,
+            description = "The file path the revision must belong to, rejected if it does not match",
+            example = "/path/to/file.txt",
+        ),
     ))]
     pub async fn route(
         server: GetServer,
         Path((_server, revision_id)): Path<(uuid::Uuid, i64)>,
+        Query(data): Query<Params>,
     ) -> ApiResponseResult {
+        let Some(revision_path) = server.diff.revision_path(revision_id).await? else {
+            return ApiResponse::error("revision not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok();
+        };
+        let revision_path = std::path::Path::new(&revision_path);
+
+        if server
+            .filesystem
+            .async_is_ignored(revision_path, FileType::File)
+            .await
+        {
+            return ApiResponse::error("revision not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok();
+        }
+
+        if let Some(file) = data.file
+            && server
+                .filesystem
+                .diff_key(std::path::Path::new(&file))
+                .await
+                != revision_path
+        {
+            return ApiResponse::error("revision not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok();
+        }
+
         let Some(contents) = server.diff.get_content(revision_id).await? else {
             return ApiResponse::error("revision not found")
                 .with_status(StatusCode::NOT_FOUND)

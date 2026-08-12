@@ -871,7 +871,8 @@
     "loginFailed": "ログインに失敗しました",
     "missingTemporarySession": "一時セッションが見つかりません",
     "failedToSendEmailCode": "メールコードの送信に失敗しました",
-    "back": "戻る"
+    "back": "戻る",
+    "passkeyUsernamelessHint": "またはメールアドレスを入力してもう一度お試しください。"
   },
   "register": {
     "steps": {

@@ -44,7 +44,7 @@ mod post {
                 .filesystem
                 .resolve_writable_fs(&server, Path::new(&data.root).join(&file))
                 .await;
-            if source == Path::new(&data.root) {
+            if source.as_os_str().is_empty() || source == Path::new(&data.root) {
                 continue;
             }
 
@@ -53,21 +53,9 @@ mod post {
                 Err(_) => continue,
             };
 
-            if filesystem.is_primary_server_fs()
-                && server
-                    .filesystem
-                    .is_ignored(&source, metadata.file_type.is_dir())
-            {
-                continue;
-            }
-
             if if filesystem.is_primary_server_fs() {
                 if metadata.file_type.is_file() {
-                    let path = server
-                        .filesystem
-                        .async_canonicalize(&source)
-                        .await
-                        .unwrap_or_else(|_| server.filesystem.relative_path(&source));
+                    let path = server.filesystem.diff_key(&source).await;
 
                     if let Err(err) = server.diff.forget_file(&path.to_string_lossy(), None).await {
                         tracing::error!("failed to forget file from diff storage: {:?}", err);

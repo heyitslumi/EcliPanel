@@ -871,7 +871,8 @@
     "loginFailed": "Login failed",
     "missingTemporarySession": "Missing temporary session",
     "failedToSendEmailCode": "Failed to send email code",
-    "back": "Back"
+    "back": "Back",
+    "passkeyUsernamelessHint": "Or enter your email and try again."
   },
   "register": {
     "steps": {

@@ -4,6 +4,7 @@ use crate::{
         compression::{CompressionType, reader::CompressionReaderMt},
         counting_writer::CountingWriter,
     },
+    server::filesystem::cap::FileType,
     utils::PortablePermissions,
 };
 use parking_lot::RwLock;
@@ -24,6 +25,23 @@ use utoipa::ToSchema;
 
 pub mod create;
 pub mod multi_reader;
+
+fn resolve_entry_path(destination: &Path, path: &Path) -> Option<PathBuf> {
+    if path.components().any(|component| {
+        matches!(
+            component,
+            std::path::Component::ParentDir
+                | std::path::Component::RootDir
+                | std::path::Component::Prefix(_)
+        )
+    }) {
+        return None;
+    }
+
+    Some(super::cap::CapFilesystem::resolve_path(
+        &destination.join(path),
+    ))
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ArchiveType {
@@ -423,6 +441,16 @@ impl Archive {
                     None => return Err(anyhow::anyhow!("Invalid file name")),
                 };
 
+                if destination_filesystem.is_primary_server_fs()
+                    && self
+                        .server
+                        .filesystem
+                        .async_is_ignored(&file_name, FileType::File)
+                        .await
+                {
+                    return Err(anyhow::anyhow!("Destination file is ignored"));
+                }
+
                 let metadata = self.server.filesystem.async_metadata(&self.path).await?;
 
                 let file = self.file.into_std().await;
@@ -448,10 +476,18 @@ impl Archive {
                     writer.flush()?;
                     drop(writer);
 
-                    destination_filesystem
-                        .set_permissions(&file_name, metadata.permissions().into())?;
+                    destination_filesystem.set_permissions(
+                        &file_name,
+                        FileType::File,
+                        metadata.permissions().into(),
+                    )?;
                     if let Ok(modified) = metadata.modified() {
-                        destination_filesystem.set_times(&file_name, modified.into_std(), None)?;
+                        destination_filesystem.set_times(
+                            &file_name,
+                            FileType::File,
+                            modified.into_std(),
+                            None,
+                        )?;
                     }
 
                     progress.increment_files();
@@ -497,18 +533,18 @@ impl Archive {
                         let mut entry = entry?;
                         let path = entry.path()?;
 
-                        if path.is_absolute() {
+                        let Some(destination_path) =
+                            resolve_entry_path(&destination, path.as_ref())
+                        else {
                             continue;
-                        }
-
-                        let destination_path = destination.join(path.as_ref());
+                        };
                         let header = entry.header();
 
                         if destination_filesystem.is_primary_server_fs()
-                            && self
-                                .server
-                                .filesystem
-                                .is_ignored(&destination_path, header.entry_type().is_dir())
+                            && self.server.filesystem.is_ignored(
+                                &destination_path,
+                                FileType::from_is_dir(header.entry_type().is_dir()),
+                            )
                         {
                             continue;
                         }
@@ -519,8 +555,11 @@ impl Archive {
                                 if let Ok(permissions) =
                                     header.mode().map(PortablePermissions::from_mode_dir)
                                 {
-                                    destination_filesystem
-                                        .set_permissions(&destination_path, permissions)?;
+                                    destination_filesystem.set_permissions(
+                                        &destination_path,
+                                        FileType::Dir,
+                                        permissions,
+                                    )?;
                                 }
 
                                 if let Ok(modified_time) = header.mtime()
@@ -555,12 +594,16 @@ impl Archive {
                                 drop(writer);
 
                                 if let Some(permissions) = permissions {
-                                    destination_filesystem
-                                        .set_permissions(&destination_path, permissions)?;
+                                    destination_filesystem.set_permissions(
+                                        &destination_path,
+                                        FileType::File,
+                                        permissions,
+                                    )?;
                                 }
                                 if let Some(modified_time) = modified_time {
                                     destination_filesystem.set_times(
                                         &destination_path,
+                                        FileType::File,
                                         modified_time,
                                         None,
                                     )?;
@@ -583,6 +626,7 @@ impl Archive {
                                 } else if let Ok(modified_time) = header.mtime() {
                                     destination_filesystem.set_times(
                                         &destination_path,
+                                        FileType::Symlink,
                                         std::time::UNIX_EPOCH
                                             .checked_add(std::time::Duration::from_secs(
                                                 modified_time,
@@ -599,6 +643,7 @@ impl Archive {
                     for (destination_path, modified_time) in directory_entries {
                         destination_filesystem.set_times(
                             &destination_path,
+                            FileType::Dir,
                             std::time::UNIX_EPOCH
                                 .checked_add(std::time::Duration::from_secs(modified_time))
                                 .unwrap_or_else(std::time::SystemTime::now),
@@ -681,16 +726,17 @@ impl Archive {
                                         None => continue,
                                     };
 
-                                    if path.is_absolute() {
+                                    let Some(destination_path) =
+                                        resolve_entry_path(&destination, &path)
+                                    else {
                                         continue;
-                                    }
-
-                                    let destination_path = destination.join(path);
+                                    };
 
                                     if destination_filesystem.is_primary_server_fs()
-                                        && server
-                                            .filesystem
-                                            .is_ignored(&destination_path, entry.is_dir())
+                                        && server.filesystem.is_ignored(
+                                            &destination_path,
+                                            FileType::from_is_dir(entry.is_dir()),
+                                        )
                                     {
                                         continue;
                                     }
@@ -699,6 +745,7 @@ impl Archive {
                                         destination_filesystem.create_dir_all(&destination_path)?;
                                         destination_filesystem.set_permissions(
                                             &destination_path,
+                                            FileType::Dir,
                                             PortablePermissions::from_mode_dir(
                                                 entry.unix_mode().unwrap_or(0o755),
                                             ),
@@ -731,12 +778,16 @@ impl Archive {
                                         drop(writer);
 
                                         if let Some(permissions) = permissions {
-                                            destination_filesystem
-                                                .set_permissions(&destination_path, permissions)?;
+                                            destination_filesystem.set_permissions(
+                                                &destination_path,
+                                                FileType::File,
+                                                permissions,
+                                            )?;
                                         }
                                         if let Some(modified_time) = modified_time {
                                             destination_filesystem.set_times(
                                                 &destination_path,
+                                                FileType::File,
                                                 modified_time,
                                                 None,
                                             )?;
@@ -762,6 +813,7 @@ impl Archive {
                                         {
                                             destination_filesystem.set_times(
                                                 &destination_path,
+                                                FileType::Symlink,
                                                 modified_time,
                                                 None,
                                             )?;
@@ -790,17 +842,17 @@ impl Archive {
                                     None => continue,
                                 };
 
-                                if path.is_absolute() {
+                                let Some(destination_path) =
+                                    resolve_entry_path(&destination, &path)
+                                else {
                                     continue;
-                                }
-
-                                let destination_path = destination.join(path);
+                                };
 
                                 if destination_filesystem.is_primary_server_fs()
-                                    && self
-                                        .server
-                                        .filesystem
-                                        .is_ignored(&destination_path, entry.is_dir())
+                                    && self.server.filesystem.is_ignored(
+                                        &destination_path,
+                                        FileType::from_is_dir(entry.is_dir()),
+                                    )
                                 {
                                     continue;
                                 }
@@ -808,6 +860,7 @@ impl Archive {
                                 if let Some(modified_time) = zip_entry_get_modified_time(&entry) {
                                     destination_filesystem.set_times(
                                         &destination_path,
+                                        FileType::from_is_dir(entry.is_dir()),
                                         modified_time,
                                         None,
                                     )?;
@@ -879,17 +932,18 @@ impl Archive {
                             None => break,
                         };
 
-                        let path = &entry.entry().filename;
-                        if path.is_absolute() {
+                        let Some(destination_path) =
+                            resolve_entry_path(&destination, &entry.entry().filename)
+                        else {
                             archive = entry.skip()?;
                             continue;
-                        }
+                        };
 
                         if destination_filesystem.is_primary_server_fs()
-                            && self
-                                .server
-                                .filesystem
-                                .is_ignored(path, entry.entry().is_directory())
+                            && self.server.filesystem.is_ignored(
+                                &destination_path,
+                                FileType::from_is_dir(entry.entry().is_directory()),
+                            )
                         {
                             archive = entry.skip()?;
                             continue;
@@ -898,8 +952,6 @@ impl Archive {
                         if listener.is_aborted() {
                             return Err(anyhow::anyhow!("operation aborted"));
                         }
-
-                        let destination_path = destination.join(path);
 
                         if entry.entry().is_directory() {
                             destination_filesystem.create_dir_all(&destination_path)?;
@@ -948,6 +1000,7 @@ impl Archive {
                             if let Some(modified_time) = modified_time {
                                 destination_filesystem.set_times(
                                     &destination_path,
+                                    FileType::File,
                                     modified_time,
                                     None,
                                 )?;
@@ -962,6 +1015,7 @@ impl Archive {
                     for (destination_path, modified_time) in directory_entries {
                         destination_filesystem.set_times(
                             &destination_path,
+                            FileType::Dir,
                             std::time::UNIX_EPOCH
                                 .checked_add(std::time::Duration::from_secs(modified_time))
                                 .unwrap_or_else(std::time::SystemTime::now),
@@ -1037,12 +1091,17 @@ impl Archive {
                                         return Ok(true);
                                     }
 
-                                    let destination_path = destination.join(path);
+                                    let Some(destination_path) =
+                                        resolve_entry_path(&destination, Path::new(path))
+                                    else {
+                                        return Ok(true);
+                                    };
 
                                     if destination_filesystem.is_primary_server_fs()
-                                        && server
-                                            .filesystem
-                                            .is_ignored(&destination_path, entry.is_directory())
+                                        && server.filesystem.is_ignored(
+                                            &destination_path,
+                                            FileType::from_is_dir(entry.is_directory()),
+                                        )
                                     {
                                         return Ok(true);
                                     }
@@ -1092,7 +1151,12 @@ impl Archive {
 
                                         if let Some(modified_time) = modified_time {
                                             destination_filesystem
-                                                .set_times(&destination_path, modified_time, None)
+                                                .set_times(
+                                                    &destination_path,
+                                                    FileType::File,
+                                                    modified_time,
+                                                    None,
+                                                )
                                                 .map_err(|e| {
                                                     std::io::Error::other(e.to_string())
                                                 })?;
@@ -1119,19 +1183,24 @@ impl Archive {
                                     continue;
                                 }
 
-                                let destination_path = destination.join(path);
+                                let Some(destination_path) =
+                                    resolve_entry_path(&destination, Path::new(path))
+                                else {
+                                    continue;
+                                };
 
                                 if destination_filesystem.is_primary_server_fs()
-                                    && self
-                                        .server
-                                        .filesystem
-                                        .is_ignored(&destination_path, entry.is_directory())
+                                    && self.server.filesystem.is_ignored(
+                                        &destination_path,
+                                        FileType::from_is_dir(entry.is_directory()),
+                                    )
                                 {
                                     continue;
                                 }
 
                                 destination_filesystem.set_times(
                                     &destination_path,
+                                    FileType::from_is_dir(entry.is_directory()),
                                     entry.last_modified_date.into(),
                                     None,
                                 )?;
@@ -1198,11 +1267,17 @@ impl Archive {
                             return Ok(());
                         }
 
-                        let destination_path = destination.join(entry.name());
+                        let Some(destination_path) =
+                            resolve_entry_path(destination, Path::new(entry.name()))
+                        else {
+                            return Ok(());
+                        };
+
                         if destination_filesystem.is_primary_server_fs()
-                            && server
-                                .filesystem
-                                .is_ignored(&destination_path, entry.is_directory())
+                            && server.filesystem.is_ignored(
+                                &destination_path,
+                                FileType::from_is_dir(entry.is_directory()),
+                            )
                         {
                             return Ok(());
                         }
@@ -1216,6 +1291,7 @@ impl Archive {
                                 destination_filesystem.create_dir_all(&destination_path)?;
                                 destination_filesystem.set_permissions(
                                     &destination_path,
+                                    FileType::Dir,
                                     PortablePermissions::from_mode_dir(dir.mode.bits()),
                                 )?;
 
@@ -1234,6 +1310,7 @@ impl Archive {
 
                                 destination_filesystem.set_times(
                                     &destination_path,
+                                    FileType::Dir,
                                     dir.mtime,
                                     None,
                                 )?;
@@ -1259,10 +1336,19 @@ impl Archive {
                                         writer.flush()?;
 
                                         destination_filesystem
-                                            .set_permissions(&destination_path, permissions)
+                                            .set_permissions(
+                                                &destination_path,
+                                                FileType::File,
+                                                permissions,
+                                            )
                                             .map_err(|e| std::io::Error::other(e.to_string()))?;
                                         destination_filesystem
-                                            .set_times(&destination_path, mtime, None)
+                                            .set_times(
+                                                &destination_path,
+                                                FileType::File,
+                                                mtime,
+                                                None,
+                                            )
                                             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
                                         progress.increment_files();
@@ -1293,6 +1379,7 @@ impl Archive {
                                 } else {
                                     destination_filesystem.set_times(
                                         &destination_path,
+                                        FileType::Symlink,
                                         link.mtime,
                                         None,
                                     )?;
@@ -1370,11 +1457,17 @@ impl Archive {
                             Ok(relative) if !relative.as_os_str().is_empty() => relative,
                             _ => continue,
                         };
-                        let destination_path = destination.join(relative);
+                        let Some(destination_path) = resolve_entry_path(&destination, relative)
+                        else {
+                            continue;
+                        };
 
                         let is_dir = matches!(entry.kind(), pbs_client::pxar::EntryKind::Directory);
                         if destination_filesystem.is_primary_server_fs()
-                            && self.server.filesystem.is_ignored(&destination_path, is_dir)
+                            && self
+                                .server
+                                .filesystem
+                                .is_ignored(&destination_path, FileType::from_is_dir(is_dir))
                         {
                             continue;
                         }
@@ -1387,8 +1480,11 @@ impl Archive {
                             pbs_client::pxar::EntryKind::Directory => {
                                 let permissions = PortablePermissions::from_mode_dir(stat.mode);
                                 destination_filesystem.create_dir_all(&destination_path)?;
-                                destination_filesystem
-                                    .set_permissions(&destination_path, permissions)?;
+                                destination_filesystem.set_permissions(
+                                    &destination_path,
+                                    FileType::Dir,
+                                    permissions,
+                                )?;
                                 if directory_entries.len() < Self::MAX_DIRECTORY_MTIME_ENTRIES {
                                     directory_entries.push((destination_path, modified_time));
                                 }
@@ -1415,10 +1511,14 @@ impl Archive {
                                 writer.flush()?;
                                 drop(writer);
 
-                                destination_filesystem
-                                    .set_permissions(&destination_path, permissions)?;
+                                destination_filesystem.set_permissions(
+                                    &destination_path,
+                                    FileType::File,
+                                    permissions,
+                                )?;
                                 destination_filesystem.set_times(
                                     &destination_path,
+                                    FileType::File,
                                     modified_time,
                                     None,
                                 )?;
@@ -1439,6 +1539,7 @@ impl Archive {
                                 } else {
                                     destination_filesystem.set_times(
                                         &destination_path,
+                                        FileType::Symlink,
                                         modified_time,
                                         None,
                                     )?;
@@ -1448,7 +1549,12 @@ impl Archive {
                     }
 
                     for (destination_path, modified_time) in directory_entries {
-                        destination_filesystem.set_times(&destination_path, modified_time, None)?;
+                        destination_filesystem.set_times(
+                            &destination_path,
+                            FileType::Dir,
+                            modified_time,
+                            None,
+                        )?;
                     }
 
                     Ok(())
@@ -1460,5 +1566,64 @@ impl Archive {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // resolve_entry_path
+
+    #[test]
+    fn resolve_entry_path_resolves_plain_entries_under_the_destination() {
+        assert_eq!(
+            resolve_entry_path(Path::new("logs"), Path::new("a/b.txt")),
+            Some(PathBuf::from("logs/a/b.txt"))
+        );
+        assert_eq!(
+            resolve_entry_path(Path::new(""), Path::new("a/b.txt")),
+            Some(PathBuf::from("a/b.txt"))
+        );
+    }
+
+    #[test]
+    fn resolve_entry_path_strips_current_dir_components_that_tar_writers_emit() {
+        assert_eq!(
+            resolve_entry_path(Path::new("logs"), Path::new("./a/./b.txt")),
+            Some(PathBuf::from("logs/a/b.txt"))
+        );
+        assert_eq!(
+            resolve_entry_path(Path::new(""), Path::new("./server.properties")),
+            Some(PathBuf::from("server.properties"))
+        );
+    }
+
+    #[test]
+    fn resolve_entry_path_rejects_parent_dir_escapes() {
+        assert_eq!(
+            resolve_entry_path(Path::new("logs"), Path::new("../config/secrets.yml")),
+            None
+        );
+        assert_eq!(
+            resolve_entry_path(Path::new("logs"), Path::new("a/../../config/secrets.yml")),
+            None
+        );
+        assert_eq!(
+            resolve_entry_path(Path::new(""), Path::new("x/../config/config.yml")),
+            None
+        );
+    }
+
+    #[test]
+    fn resolve_entry_path_rejects_absolute_entries() {
+        assert_eq!(
+            resolve_entry_path(Path::new("logs"), Path::new("/config/secrets.yml")),
+            None
+        );
+        assert_eq!(
+            resolve_entry_path(Path::new(""), Path::new("/etc/passwd")),
+            None
+        );
     }
 }

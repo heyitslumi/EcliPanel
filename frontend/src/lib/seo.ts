@@ -333,6 +333,38 @@ const PREFIX_FALLBACKS: Array<{ prefix: string; seo: PageSeo }> = [
     },
   },
   {
+    prefix: "/dashboard/servers",
+    seo: {
+      title: `Server — ${BRAND}`,
+      description: `Manage your server's console, files, schedules, backups, and more on ${BRAND}.`,
+      noindex: true,
+    },
+  },
+  {
+    prefix: "/dashboard/billing",
+    seo: {
+      title: `Billing — ${BRAND}`,
+      description: `Manage your ${BRAND} billing, invoices, and payment methods.`,
+      noindex: true,
+    },
+  },
+  {
+    prefix: "/dashboard/tickets",
+    seo: {
+      title: `Support Tickets — ${BRAND}`,
+      description: `Manage your ${BRAND} support tickets.`,
+      noindex: true,
+    },
+  },
+  {
+    prefix: "/dashboard/nodes",
+    seo: {
+      title: `Nodes — ${BRAND}`,
+      description: `Infrastructure and node overview for you server at ${BRAND}.`,
+      noindex: true,
+    },
+  },
+  {
     prefix: "/blog",
     seo: {
       title: `Blog — ${BRAND}`,

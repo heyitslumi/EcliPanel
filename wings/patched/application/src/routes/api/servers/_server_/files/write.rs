@@ -5,6 +5,7 @@ mod post {
     use crate::{
         response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::servers::_server_::GetServer},
+        server::filesystem::cap::FileType,
     };
     use axum::{
         body::Body,
@@ -89,7 +90,14 @@ mod post {
         if filesystem.is_primary_server_fs()
             && server
                 .filesystem
-                .is_ignored(&path, metadata.as_ref().is_ok_and(|m| m.file_type.is_dir()))
+                .async_is_ignored(
+                    &path,
+                    metadata
+                        .as_ref()
+                        .map(|m| m.file_type)
+                        .unwrap_or(FileType::File),
+                )
+                .await
         {
             return ApiResponse::error("file not found")
                 .with_status(StatusCode::NOT_FOUND)
@@ -108,7 +116,12 @@ mod post {
             0
         };
 
-        if filesystem.is_primary_server_fs() && server.filesystem.is_ignored(parent, true) {
+        if filesystem.is_primary_server_fs()
+            && server
+                .filesystem
+                .async_is_ignored(parent, FileType::Dir)
+                .await
+        {
             return ApiResponse::error("parent directory not found")
                 .with_status(StatusCode::EXPECTATION_FAILED)
                 .ok();
@@ -127,11 +140,7 @@ mod post {
                 .ok();
         }
 
-        let diff_key = server
-            .filesystem
-            .async_canonicalize(&path)
-            .await
-            .unwrap_or_else(|_| server.filesystem.relative_path(&path));
+        let diff_key = server.filesystem.diff_key(&path).await;
         let diff_key = diff_key.to_string_lossy();
         let config_guard = state.config.load();
         let history = &config_guard.system.file_history;

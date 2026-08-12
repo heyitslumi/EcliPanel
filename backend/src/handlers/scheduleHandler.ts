@@ -73,6 +73,14 @@ function validateAction(action: unknown): string | null {
   if (a.type === 'send_command' && typeof a.command !== 'string') {
     return 'Command must be a string';
   }
+  if (a.type === 'http_request') {
+    const validMethods = ['get','post','put','patch','delete','head'];
+    if (!validMethods.includes(a.method)) return 'Invalid http request method';
+    if (typeof a.url !== 'string' || !/^https?:\/\//i.test(a.url)) return 'http_request url must be a valid http(s) url';
+    const timeout = Number(a.timeout);
+    if (!Number.isFinite(timeout) || timeout < 1 || timeout > 60_000) return 'http_request timeout must be between 1 and 60000 ms';
+    if (a.headers !== undefined && !Array.isArray(a.headers)) return 'http_request headers must be an array';
+  }
   return null;
 }
 
@@ -197,6 +205,26 @@ export async function scheduleRoutes(app: ServerApp, prefix = '') {
       });
       await scheduleRepo().save(schedule);
 
+      const steps = (body.steps || []) as any[];
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        const actionErr = validateAction(step);
+        if (actionErr) {
+          await scheduleRepo().remove(schedule);
+          ctx.set.status = 400;
+          return { error: `Step ${i + 1}: ${actionErr}` };
+        }
+        const action = { ...step };
+        delete (action as any).uuid;
+        const st = stepRepo().create({
+          uuid: (step.uuid as string) || crypto.randomUUID(),
+          scheduleUuid: schedule.uuid,
+          order_: i,
+          action,
+        });
+        await stepRepo().save(st);
+      }
+
       debouncedSync(id);
       return { schedule: apiSchedule(schedule) };
     },
@@ -294,6 +322,31 @@ export async function scheduleRoutes(app: ServerApp, prefix = '') {
         const err = validateCondition(body.condition);
         if (err) { ctx.set.status = 400; return { error: err }; }
         s.condition = body.condition;
+      }
+
+      if (body.steps !== undefined) {
+        const steps = (body.steps || []) as any[];
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+          const actionErr = validateAction(step);
+          if (actionErr) {
+            ctx.set.status = 400;
+            return { error: `Step ${i + 1}: ${actionErr}` };
+          }
+        }
+        await stepRepo().delete({ scheduleUuid: sid });
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+          const action = { ...step };
+          delete (action as any).uuid;
+          const st = stepRepo().create({
+            uuid: (step.uuid as string) || crypto.randomUUID(),
+            scheduleUuid: sid,
+            order_: i,
+            action,
+          });
+          await stepRepo().save(st);
+        }
       }
 
       await scheduleRepo().save(s);

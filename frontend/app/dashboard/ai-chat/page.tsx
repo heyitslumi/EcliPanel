@@ -460,7 +460,7 @@ Keep responses concise and actionable. Use code blocks for commands, configs, an
                       </span>
 
                       {msg.role === "assistant" && (
-                        <div className="hidden sm:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => copyToClipboard(msg.content, msg.id)}
                             className="p-1 text-muted-foreground/60 hover:bg-secondary hover:text-foreground transition-colors"

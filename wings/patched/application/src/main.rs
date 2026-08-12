@@ -27,6 +27,7 @@ mod deserialize;
 mod dpi;
 mod io;
 mod models;
+mod net;
 mod payload;
 mod remote;
 mod response;
@@ -75,6 +76,28 @@ fn spawn_blocking_handled<
             }
             Err(err) => {
                 tracing::error!("spawned blocking task panicked: {:?}", err);
+            }
+        }
+    });
+}
+
+fn spawn_blocking_signalled<
+    F: FnOnce() -> Result<(), E> + Send + 'static,
+    E: Debug + Send + 'static,
+>(
+    signal: crate::io::fallible_reader::FallibleSignal,
+    f: F,
+) {
+    tokio::spawn(async move {
+        match tokio::task::spawn_blocking(f).await {
+            Ok(Ok(_)) => signal.succeed(),
+            Ok(Err(err)) => {
+                tracing::error!("spawned blocking task failed: {:?}", err);
+                signal.fail(format!("{err:?}"));
+            }
+            Err(err) => {
+                tracing::error!("spawned blocking task panicked: {:?}", err);
+                signal.fail(format!("task panicked: {err:?}"));
             }
         }
     });

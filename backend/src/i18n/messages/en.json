@@ -48,7 +48,9 @@
     "sentEmailNotFound": "Sent email not found",
     "featureOauthIsDisabled": "Feature 'oauth' is disabled",
     "resetLink": "Click the link below to reset your password. This link is valid for 1 hour.",
-    "alreadyVerified": "Already verified"
+    "alreadyVerified": "Already verified",
+    "passkeysDisabled": "Passkeys are disabled",
+    "passkeysNotDiscoverable": "Usernameless passkey login is not enabled. Enter your email instead."
   },
   "common": {
     "notFound": "Not found",

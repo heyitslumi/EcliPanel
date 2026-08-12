@@ -32,6 +32,8 @@ export function BackupsTab({ serverId }: { serverId: string }) {
   const [editingGroup, setEditingGroup] = useState<BackupGroup | null>(null);
   const [groupForm, setGroupForm] = useState({ name: '', description: '', compressionType: '' });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [groupPages, setGroupPages] = useState<Record<string, number>>({});
+  const GROUP_PAGE_SIZE = 10;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -324,9 +326,35 @@ export function BackupsTab({ serverId }: { serverId: string }) {
               <div className="border-t border-border p-3 space-y-2">
                 {groupBackups.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">{t('backups.noBackupsInGroup')}</p>
-                ) : (
-                  groupBackups.map(b => <BackupRow key={b.uuid || b.id} backup={b} groupUuid={group.uuid} />)
-                )}
+                ) : (() => {
+                  const page = groupPages[group.uuid] || 1;
+                  const totalPages = Math.max(1, Math.ceil(groupBackups.length / GROUP_PAGE_SIZE));
+                  const pageBackups = groupBackups.slice((page - 1) * GROUP_PAGE_SIZE, page * GROUP_PAGE_SIZE);
+                  return (
+                    <>
+                      {pageBackups.map(b => <BackupRow key={b.uuid || b.id} backup={b} groupUuid={group.uuid} />)}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+                          <button
+                            disabled={page <= 1}
+                            onClick={() => setGroupPages(p => ({ ...p, [group.uuid]: page - 1 }))}
+                            className="px-2 py-1 border border-border rounded disabled:opacity-40 hover:bg-secondary/50"
+                          >
+                            ← Prev
+                          </button>
+                          <span>{page} / {totalPages}</span>
+                          <button
+                            disabled={page >= totalPages}
+                            onClick={() => setGroupPages(p => ({ ...p, [group.uuid]: page + 1 }))}
+                            className="px-2 py-1 border border-border rounded disabled:opacity-40 hover:bg-secondary/50"
+                          >
+                            Next →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>

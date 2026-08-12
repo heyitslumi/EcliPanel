@@ -92,6 +92,9 @@ export class ServerConfig {
   @Column({ default: 500 })
   ioWeight: number;
 
+  @Column({ nullable: true, type: 'varchar', length: 255 })
+  threads?: string;
+
   @Column({ default: false })
   oomDisabled: boolean;
 

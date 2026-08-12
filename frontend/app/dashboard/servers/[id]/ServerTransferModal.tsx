@@ -107,6 +107,22 @@ export function ServerTransferModal({ serverId, server, open, onClose }: Props) 
     return () => clearInterval(poll)
   }, [transferring, serverId])
 
+  // Resume an already-running transfer when the modal opens
+  useEffect(() => {
+    if (!open || transferring) return
+    let cancelled = false
+    apiFetch(API_ENDPOINTS.serverTransfer.replace(":id", serverId))
+      .then((data: any) => {
+        if (cancelled) return
+        if (data && (data.archive_bytes_processed != null || data.bytes_total != null)) {
+          setProgress(data)
+          setTransferring(true)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [open, serverId, transferring])
+
   const handleTransfer = async () => {
     if (!targetNodeId) { setError("Please select a target node"); return }
     setSubmitting(true)

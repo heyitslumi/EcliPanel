@@ -871,7 +871,8 @@
     "loginFailed": "लॉगिन विफल",
     "missingTemporarySession": "अस्थायी सत्र गुम है",
     "failedToSendEmailCode": "ईमेल कोड भेजने में विफल",
-    "back": "वापस"
+    "back": "वापस",
+    "passkeyUsernamelessHint": "या अपना ईमेल दर्ज करके पुनः प्रयास करें।"
   },
   "register": {
     "steps": {

@@ -213,7 +213,7 @@ export default function RolesTab({ ctx }: { ctx: any }) {
                           setRoles((prev: any[]) => prev.filter((r: any) => r.id !== role.id))
                           if (selectedRole?.id === role.id) setSelectedRole(null)
                         }}
-                        className="p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all shrink-0"
+                        className="p-1.5 text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

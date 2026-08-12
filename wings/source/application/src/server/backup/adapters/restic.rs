@@ -1508,7 +1508,10 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
         let mut file_children: Vec<Child<'_>> = Vec::new();
 
         for (name, child_node) in node.dirs.iter() {
-            let child_path = match (is_ignored)(FileType::Dir, path.join(name.as_str())) {
+            let child_path = match is_ignored
+                .call_async(FileType::Dir, path.join(name.as_str()))
+                .await
+            {
                 Some(kept) => kept,
                 None => continue,
             };
@@ -1518,7 +1521,10 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
             });
         }
         for (name, meta) in node.files.iter() {
-            let child_path = match (is_ignored)(meta.file_type, path.join(name.as_str())) {
+            let child_path = match is_ignored
+                .call_async(meta.file_type, path.join(name.as_str()))
+                .await
+            {
                 Some(kept) => kept,
                 None => continue,
             };
@@ -1733,7 +1739,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
                         skip_notifier = false;
                     }
 
-                    if let Some(path) = (is_ignored)(file_type, entry_path.clone()) {
+                    if let Some(path) = is_ignored.call_async(file_type, entry_path.clone()).await {
                         let full_path = server_path.join(&entry_path);
 
                         if file_type.is_dir() {
@@ -1946,7 +1952,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
         compression_level: CompressionLevel,
         progress: crate::server::filesystem::archive::create::ArchiveProgress,
         is_ignored: IsIgnoredFn,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let entry = self.async_metadata(&path).await?;
 
         if !entry.file_type.is_dir() {
@@ -1960,6 +1966,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
         let path = path.as_ref().to_path_buf();
 
         let (reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (reader, signal) = crate::io::fallible_reader::FallibleReader::new(reader);
 
         let configuration = self.configuration.clone();
         let config = self.server.app_state.config.clone();
@@ -1992,7 +1999,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
 
         match archive_format {
             StreamableArchiveFormat::Zip => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut child = spawn_restic()?;
 
                     let writer = tokio_util::io::SyncIoBridge::new(writer);
@@ -2071,7 +2078,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
                 });
             }
             f if f.is_tar() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut child = spawn_restic()?;
 
                     let writer = CompressionWriter::new(
@@ -2123,7 +2130,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
                 });
             }
             f if f.is_itaf() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut child = spawn_restic()?;
 
                     let writer = CompressionWriter::new(
@@ -2275,7 +2282,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
         compression_level: CompressionLevel,
         progress: crate::server::filesystem::archive::create::ArchiveProgress,
         is_ignored: IsIgnoredFn,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let entry = self.async_metadata(&path).await?;
 
         if !entry.file_type.is_dir() {
@@ -2289,6 +2296,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
         let path = path.as_ref().to_path_buf();
 
         let (reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (reader, signal) = crate::io::fallible_reader::FallibleReader::new(reader);
 
         let configuration = self.configuration.clone();
         let config = self.server.app_state.config.clone();
@@ -2357,7 +2365,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
 
         match archive_format {
             StreamableArchiveFormat::Zip => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = tokio_util::io::SyncIoBridge::new(writer);
                     let mut zip = zip::ZipWriter::new_stream(writer);
 
@@ -2486,7 +2494,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
                 });
             }
             f if f.is_tar() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = CompressionWriter::new(
                         tokio_util::io::SyncIoBridge::new(writer),
                         f.compression_format(),
@@ -2564,7 +2572,7 @@ impl VirtualReadableFilesystem for VirtualResticBackup {
                 });
             }
             f if f.is_itaf() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = CompressionWriter::new(
                         tokio_util::io::SyncIoBridge::new(writer),
                         f.compression_format(),
