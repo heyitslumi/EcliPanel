@@ -658,6 +658,35 @@ export async function userRoutes(app: any, prefix = '') {
     }
   );
 
+  app.post(
+    prefix + '/users/me/consent',
+    async (ctx: any) => {
+      const requester = ctx.user as User;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: 'Not authenticated' };
+      }
+      const body = ctx.body as { consent?: string; version?: string };
+      const consent =
+        body?.consent === 'all' ? 'all' : body?.consent === 'essential' ? 'essential' : null;
+      if (!consent) {
+        ctx.set.status = 400;
+        return { error: 'consent must be "essential" or "all"' };
+      }
+      const userRepo = AppDataSource.getRepository(User);
+      await userRepo.update(requester.id, {
+        consent,
+        consentVersion: String(body?.version || '').slice(0, 32) || undefined,
+        consentAt: new Date(),
+      });
+      return { ok: true, consent };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Record cookie/analytics consent choice', tags: ['Users'] },
+    }
+  );
+
 
   const mailboxDomain = String(
     process.env.MAILBOX_DOMAIN || process.env.MAIL_DOMAIN || 'ecli.app'

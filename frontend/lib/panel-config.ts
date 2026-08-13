@@ -506,6 +506,7 @@ export const API_ENDPOINTS = {
   sunsetConfirm: "/api/users/me/sunset-confirm",
   reactivate: "/api/users/me/reactivate",
   termsConsent: "/api/users/me/terms-consent",
+  userConsent: "/api/users/me/consent",
   userUpdate: "/api/users/:id",
   userFavorites: "/api/users/me/favorites",
   mailboxFavorites: "/api/users/me/mailbox/favorites",

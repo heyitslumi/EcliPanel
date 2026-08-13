@@ -366,4 +366,13 @@ export class User {
 
   @Column({ nullable: true })
   termsConsentVersion?: string;
+
+  @Column({ nullable: true })
+  consent?: 'essential' | 'all';
+
+  @Column({ nullable: true })
+  consentVersion?: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  consentAt?: Date;
 }

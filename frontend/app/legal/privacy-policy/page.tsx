@@ -81,11 +81,11 @@ export default function PrivacyPolicyPage() {
               metadata.
             </li>
             <li>
-              Telemetry data: anonymized interaction events (page views, button
-              clicks, feature usage) collected through our first-party analytics
-              system to understand how users navigate and use the service, so we
-              can improve the user experience. No third-party analytics providers
-              are used for this purpose.
+              Telemetry data: page views, button clicks and feature usage events
+              collected through our first-party analytics system, only after you
+              choose "Accept all" in the cookie banner. Values you type into
+              forms are never collected. No third-party analytics providers are
+              used for this purpose.
             </li>
             <li>
               Cookies and tracking data for session management, security, and
@@ -197,7 +197,9 @@ export default function PrivacyPolicyPage() {
               Some data is retained longer for legal, security, and operational
               reasons: up to 1 year for support, audit, and security logs, and
               up to 10 years for billing and financial records as required by
-              law.
+              law. If you had billing history, an encrypted record of your name
+              and email address is kept for up to 10 years for billing and
+              financial purposes, otherwise for up to 1 year.
             </p>
             <p>
               We may decline deletion requests when the account owns active

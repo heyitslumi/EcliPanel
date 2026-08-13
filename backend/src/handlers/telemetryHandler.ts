@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/typeorm';
 import { TelemetryEvent } from '../models/telemetryEvent.entity';
+import { User } from '../models/user.entity';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
 import * as jwtLib from 'jsonwebtoken';
@@ -95,6 +96,16 @@ export async function telemetryIngestRoutes(app: any, prefix = '') {
         }
       }
       const sessionId = (ctx.query as any)?.sid ?? null;
+
+      if (userId) {
+        const consentUser = await AppDataSource.getRepository(User).findOne({
+          where: { id: userId },
+          select: { id: true, consent: true },
+        });
+        if (consentUser?.consent && consentUser.consent !== 'all') {
+          return { ok: true, count: 0 };
+        }
+      }
 
       const repo = AppDataSource.getRepository(TelemetryEvent);
       const entities = body.events.map((e) =>
