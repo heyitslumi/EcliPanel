@@ -1680,7 +1680,8 @@
       "generating": "生成中…",
       "createShareLink": "共有リンクを作成",
       "copyShareLink": "共有リンクをコピー",
-      "copy": "コピー"
+      "copy": "コピー",
+      "approve": "承認"
     }
   },
   "adminUsersTab": {
@@ -7218,5 +7219,23 @@
     "learnedServices": "services learned",
     "trustedIps": "trusted IPs",
     "bannedIps": "banned IPs"
+  },
+  "myData": {
+    "title": "データ管理",
+    "subtitle": "当社が保有する個人データのエクスポートをリクエストできます。リクエストはスタッフの確認後に処理されます。",
+    "requestButton": "データエクスポートをリクエスト",
+    "requesting": "リクエスト中...",
+    "loading": "読み込み中...",
+    "cooldownError": "エクスポートのリクエストは30日に1回のみです。",
+    "jobsEmpty": "エクスポートのリクエストはまだありません。",
+    "colCreated": "リクエスト日",
+    "colStatus": "ステータス",
+    "download": "ダウンロード",
+    "expiresAt": "有効期限",
+    "statusRequested": "スタッフの承認待ち",
+    "statusQueued": "待機中",
+    "statusRunning": "実行中",
+    "statusCompleted": "完了",
+    "statusFailed": "失敗"
   }
 }

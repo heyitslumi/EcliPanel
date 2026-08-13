@@ -1776,7 +1776,8 @@
       "generating": "Генерация…",
       "createShareLink": "Создать ссылку для общего доступа",
       "copyShareLink": "Скопировать ссылку для общего доступа",
-      "copy": "Копировать"
+      "copy": "Копировать",
+      "approve": "Одобрить"
     }
   },
   "adminUsersTab": {
@@ -7313,5 +7314,23 @@
     "learnedServices": "services learned",
     "trustedIps": "trusted IPs",
     "bannedIps": "banned IPs"
+  },
+  "myData": {
+    "title": "Управление данными",
+    "subtitle": "Запросите экспорт ваших персональных данных, которые мы храним. Сотрудники проверяют запрос до формирования экспорта.",
+    "requestButton": "Запросить экспорт данных",
+    "requesting": "Отправляем...",
+    "loading": "Загрузка...",
+    "cooldownError": "Запросить экспорт можно не чаще одного раза в 30 дней.",
+    "jobsEmpty": "Запросов на экспорт пока нет.",
+    "colCreated": "Запрошен",
+    "colStatus": "Статус",
+    "download": "Скачать",
+    "expiresAt": "Действует до",
+    "statusRequested": "Ожидает одобрения сотрудников",
+    "statusQueued": "В очереди",
+    "statusRunning": "Выполняется",
+    "statusCompleted": "Готов",
+    "statusFailed": "Ошибка"
   }
 }

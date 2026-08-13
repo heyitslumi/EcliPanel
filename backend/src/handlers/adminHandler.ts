@@ -2448,6 +2448,44 @@ export async function adminRoutes(app: any, prefix = '') {
     }
   );
 
+  app.post(
+    prefix + '/admin/export-jobs/:id/approve',
+    async ctx => {
+      const adminErr = requireAdminPermission(ctx, 'admin:export-jobs');
+      if (adminErr !== true) return adminErr;
+      const id = String(ctx.params.id || '');
+      const repo = AppDataSource.getRepository(ExportJob);
+      const job = await repo.findOne({ where: { id } });
+      if (!job) {
+        ctx.set.status = 404;
+        return { error: ctx.t('server.jobNotFound') };
+      }
+      if (job.status !== 'requested') {
+        ctx.set.status = 400;
+        return { error: 'only requested export jobs can be approved' };
+      }
+      job.status = 'queued';
+      job.adminId = ctx.user?.id;
+      job.message = 'Approved by staff';
+      await repo.save(job);
+      return { success: true, jobId: job.id };
+    },
+    {
+      beforeHandle: [authenticate, authorize('admin:access')],
+      schema: {
+        params: t.Object({ id: t.String() }),
+        response: {
+          200: t.Object({ success: t.Boolean(), jobId: t.String() }),
+          400: t.Object({ error: t.String() }),
+          401: t.Object({ error: t.String() }),
+          403: t.Object({ error: t.String() }),
+          404: t.Object({ error: t.String() }),
+        },
+      },
+      detail: { summary: 'Approve a user-requested export job', tags: ['Admin'] },
+    }
+  );
+
   app.get(
     prefix + '/admin/export-jobs/:id',
     async ctx => {

@@ -1948,7 +1948,8 @@
       "generating": "生成中…",
       "createShareLink": "创建分享链接",
       "copyShareLink": "复制分享链接",
-      "copy": "复制"
+      "copy": "复制",
+      "approve": "批准"
     }
   },
   "adminUsersTab": {
@@ -7176,5 +7177,23 @@
     "description": "来自受保护节点的实时 XDP/eBPF 指标",
     "noData": "还没有节点上报数据。请在节点的 ecliaegis.yaml 中添加 report 配置。",
     "loading": "加载中…"
+  },
+  "myData": {
+    "title": "数据管理",
+    "subtitle": "请求导出我们存储的您的个人数据。员工会在生成导出文件前审核请求。",
+    "requestButton": "请求导出数据",
+    "requesting": "请求中...",
+    "loading": "加载中...",
+    "cooldownError": "每 30 天只能请求一次导出。",
+    "jobsEmpty": "暂无导出请求。",
+    "colCreated": "请求时间",
+    "colStatus": "状态",
+    "download": "下载",
+    "expiresAt": "有效期至",
+    "statusRequested": "等待员工审核",
+    "statusQueued": "排队中",
+    "statusRunning": "进行中",
+    "statusCompleted": "已完成",
+    "statusFailed": "失败"
   }
 }

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { RefreshCw, Trash2 } from "lucide-react"
 import { API_ENDPOINTS } from "@/lib/panel-config"
+import { apiFetch } from "@/lib/api-client"
 import { useTranslations } from "next-intl"
 
 export default function ExportJobsTab({ ctx }: { ctx: any }) {
@@ -59,6 +60,20 @@ export default function ExportJobsTab({ ctx }: { ctx: any }) {
                 <td className="px-4 py-3 text-xs text-muted-foreground">{job.createdAt ? new Date(job.createdAt).toLocaleString() : t("common.na")}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{job.updatedAt ? new Date(job.updatedAt).toLocaleString() : t("common.na")}</td>
                 <td className="px-4 py-3">
+                  {job.status === "requested" ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await apiFetch(API_ENDPOINTS.adminExportJobApprove.replace(":id", job.id), { method: "POST" });
+                          fetchExportJobs(150, "");
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      {t("actions.approve")}
+                    </Button>
+                  ) : null}
                   {job.status === "completed" ? (
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-3">

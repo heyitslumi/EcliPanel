@@ -3,6 +3,7 @@
 import { PanelHeader } from "@/components/panel/header"
 import { PageLayout } from "@/components/panel/shared"
 import { FeedbackSettingsCard } from "@/components/panel/feedback-settings-card"
+import { YourDataSection } from "@/components/panel/your-data-section"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { API_ENDPOINTS } from "@/lib/panel-config"
@@ -125,6 +126,7 @@ function FormInput({
   hint,
   disabled,
   maxLength,
+  autoComplete,
 }: {
   label: string
   type?: string
@@ -137,6 +139,7 @@ function FormInput({
   hint?: string
   disabled?: boolean
   maxLength?: number
+  autoComplete?: string
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5 min-w-0", className)}>
@@ -152,6 +155,7 @@ function FormInput({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           maxLength={maxLength}
+          autoComplete={autoComplete}
           className={cn(
             "w-full border bg-secondary/30 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-primary/20 transition-all min-w-0 disabled:opacity-50 disabled:cursor-not-allowed",
             Icon ? "pl-10" : "px-3",
@@ -2154,6 +2158,7 @@ export default function SettingsPage() {
                       onChange={setCurrentPassword}
                       placeholder={t("security.currentPasswordPlaceholder")}
                       icon={Lock}
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
@@ -2177,6 +2182,7 @@ export default function SettingsPage() {
                         placeholder={t("security.newPasswordPlaceholder")}
                         hint={t("security.newPasswordHint")}
                         maxLength={PASSWORD_MAX}
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
@@ -2196,6 +2202,7 @@ export default function SettingsPage() {
                       value={confirmPassword}
                       onChange={setConfirmPassword}
                       placeholder={t("security.confirmPasswordPlaceholder")}
+                      autoComplete="new-password"
                     />
                   </div>
                 </form>
@@ -2270,20 +2277,6 @@ export default function SettingsPage() {
                    data-telemetry="settings:async">
                     {t("security.logoutElsewhere")}
                   </button>
-                  <button
-                    onClick={async () => {
-                      if (!confirm(t("security.confirmDeletion"))) return
-                      try {
-                        await apiFetch(API_ENDPOINTS.deletionRequests, { method: "POST" })
-                        alert(t("security.deletionSubmitted"))
-                      } catch (e: any) {
-                        alert(t("messages.failed") + ": " + e.message)
-                      }
-                    }}
-                    className="bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-all active:scale-[0.98]"
-                   data-telemetry="settings:async">
-                    {t("security.requestDeletion")}
-                  </button>
                 </div>
               </SettingsCard>
 
@@ -2296,6 +2289,8 @@ export default function SettingsPage() {
                 </p>
                 <ConnectedAppsList />
               </SettingsCard>
+
+              <YourDataSection />
             </div>
           )}
 
