@@ -57,6 +57,8 @@ export default function LoginPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [webauthnUsernameless, setWebauthnUsernameless] = useState(false);
+
   const [dismissedDomainWarning, setDismissedDomainWarning] = useState<boolean>(
     () => {
       try {
@@ -83,6 +85,18 @@ export default function LoginPage() {
     } catch {
       setDomainOk(null);
     }
+  }, []);
+
+  // Whether usernameless (discoverable credential) passkey login is available
+  useEffect(() => {
+    let cancelled = false;
+    fetch(API_ENDPOINTS.panelSettings, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setWebauthnUsernameless(data?.webauthn?.allowDiscoverable === true);
+      })
+      .catch(() => {});
+    return () => { cancelled = true };
   }, []);
 
   // Resend cooldown countdown timer
@@ -208,16 +222,19 @@ export default function LoginPage() {
   };
 
   const handlePasskey = async () => {
-    if (!email) {
+    setError(null);
+    // No email and usernameless not available: ask for email instead of
+    // attempting a ceremony the backend will reject
+    if (!email && !webauthnUsernameless) {
       setError(t("enterEmailBeforePasskey"));
       return;
     }
-    setError(null);
     setPasskeyLoading(true);
     try {
+      // No email → usernameless flow (discoverable credentials only)
       const opts = await apiFetch(API_ENDPOINTS.passkeyAuthChallenge, {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: email ? JSON.stringify({ email }) : "{}",
       });
       const publicKey: PublicKeyCredentialRequestOptions = {
         ...opts,
@@ -251,12 +268,20 @@ export default function LoginPage() {
       };
       const data = await apiFetch(API_ENDPOINTS.passkeyAuthenticate, {
         method: "POST",
-        body: JSON.stringify({ email, authenticationResponse }),
+        body: JSON.stringify({
+          ...(email ? { email } : {}),
+          authenticationResponse,
+        }),
       });
       await refreshUser();
       router.push(redirectTo);
     } catch (err: any) {
-      setError(err.message || t("passkeyFailed"));
+      // Usernameless failed and no email was given — point the user to it
+      if (!email && (err?.message?.includes("Usernameless") || err?.message?.includes("discoverable"))) {
+        setError(`${err.message} ${t("passkeyUsernamelessHint")}`);
+      } else {
+        setError(err.message || t("passkeyFailed"));
+      }
     } finally {
       setPasskeyLoading(false);
     }

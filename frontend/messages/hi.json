@@ -871,7 +871,8 @@
     "loginFailed": "लॉगिन विफल",
     "missingTemporarySession": "अस्थायी सत्र गुम है",
     "failedToSendEmailCode": "ईमेल कोड भेजने में विफल",
-    "back": "वापस"
+    "back": "वापस",
+    "passkeyUsernamelessHint": "या अपना ईमेल दर्ज करके पुनः प्रयास करें।"
   },
   "register": {
     "steps": {
@@ -1679,7 +1680,8 @@
       "generating": "उत्पन्न हो रहा है…",
       "createShareLink": "शेयर लिंक बनाएं",
       "copyShareLink": "शेयर लिंक कॉपी करें",
-      "copy": "कॉपी करें"
+      "copy": "कॉपी करें",
+      "approve": "स्वीकृत करें"
     }
   },
   "adminUsersTab": {
@@ -7217,5 +7219,23 @@
     "learnedServices": "services learned",
     "trustedIps": "trusted IPs",
     "bannedIps": "banned IPs"
+  },
+  "myData": {
+    "title": "डेटा प्रबंधन",
+    "subtitle": "हमारे पास संग्रहीत आपके व्यक्तिगत डेटा का निर्यात अनुरोध करें। निर्यात से पहले स्टाफ अनुरोध की समीक्षा करता है।",
+    "requestButton": "डेटा निर्यात का अनुरोध करें",
+    "requesting": "अनुरोध किया जा रहा है...",
+    "loading": "लोड हो रहा है...",
+    "cooldownError": "आप हर 30 दिन में केवल एक बार निर्यात का अनुरोध कर सकते हैं।",
+    "jobsEmpty": "अभी तक कोई निर्यात अनुरोध नहीं है।",
+    "colCreated": "अनुरोध किया गया",
+    "colStatus": "स्थिति",
+    "download": "डाउनलोड करें",
+    "expiresAt": "समाप्ति",
+    "statusRequested": "स्टाफ की मंजूरी की प्रतीक्षा में",
+    "statusQueued": "कतार में",
+    "statusRunning": "चल रहा है",
+    "statusCompleted": "पूर्ण",
+    "statusFailed": "विफल"
   }
 }

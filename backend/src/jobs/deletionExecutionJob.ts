@@ -4,6 +4,11 @@ import { DeletionRequest } from '../models/deletionRequest.entity';
 import { User } from '../models/user.entity';
 import { DeletedUserRetention } from '../models/deletedUserRetention.entity';
 import { Order } from '../models/order.entity';
+import { MailMessage } from '../models/mailMessage.entity';
+import { OutboundEmail } from '../models/outboundEmail.entity';
+import { IDVerification } from '../models/idVerification.entity';
+import { getSafeRelativeFilePath } from '../handlers/idVerificationHandler';
+import fs from 'fs';
 import { getMailboxAccountForUser, removeMailboxAccount } from '../services/mailcowService';
 import { sendMail } from '../services/mailService';
 import { resolveLocale } from '../i18n/resolve';
@@ -67,14 +72,47 @@ export async function executeDeletionRequest(req: DeletionRequest, now = new Dat
     );
   }
 
-  const panelUrl = process.env.PANEL_URL || 'https://ecli.app';
+  try {
+    await AppDataSource.getRepository(MailMessage).delete({ userId: user.id });
+    await AppDataSource.getRepository(OutboundEmail).delete({ userId: user.id });
+  } catch (err: any) {
+    console.warn(
+      '[deletionExecutionJob] failed to purge mirrored mailbox rows for user',
+      user.id,
+      err?.message || err
+    );
+  }
+
+  try {
+    const idRepo = AppDataSource.getRepository(IDVerification);
+    const records = await idRepo.find({ where: { userId: user.id } });
+    for (const rec of records) {
+      for (const url of [rec.idDocumentUrl, rec.selfieUrl]) {
+        if (typeof url === 'string' && url.trim()) {
+          const filepath = getSafeRelativeFilePath(process.cwd(), url);
+          if (!filepath) continue;
+          try {
+            await fs.promises.unlink(filepath);
+          } catch {}
+        }
+      }
+      await idRepo.remove(rec);
+    }
+  } catch (err: any) {
+    console.warn(
+      '[deletionExecutionJob] failed to purge ID verification records for user',
+      user.id,
+      err?.message || err
+    );
+  }
+
   sendMail({
     to: user.email,
     template: 'deletion-deleted',
     vars: {
       title: 'Account Deleted',
       message: 'Your EclipseSystems account has been permanently deleted as requested.',
-      details: `Your account and associated data have been removed from our systems.\n\nCertain information has been retained for legal and audit purposes as required by applicable law.\n\nIf you did not request this deletion, please contact our support team immediately at ${panelUrl}/contact.`,
+      details: `Your account and associated data have been removed from our systems.\n\nIf you had billing history, an encrypted record of your name and email address is retained for up to 10 years for billing and financial purposes, otherwise for up to 1 year.\n\nIf you did not request this deletion, please contact our support team immediately at legal@ecli.app.`,
     },
     locale: resolveLocale({ user }),
   }).catch((e: any) => console.error('[deletionExecutionJob] failed to send deletion email', e));

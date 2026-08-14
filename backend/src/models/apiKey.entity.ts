@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
 import type { User } from './user.entity';
 
 @Entity()
@@ -25,5 +25,6 @@ export class ApiKey {
   createdAt: Date;
 
   @Column('datetime', { nullable: true })
+  @Index('IDX_api_key_expiresAt')
   expiresAt?: Date;
 }

@@ -633,7 +633,7 @@ export default function EloDashboard() {
                         setEditScreenshots(updated.join("\n"))
                         setEditingProject({ ...editingProject, screenshots: updated })
                       }}
-                      className="absolute top-0 right-0 bg-destructive/80 text-destructive-foreground w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-0 right-0 bg-destructive/80 text-destructive-foreground w-5 h-5 flex items-center justify-center text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     >
                       ×
                     </button>
@@ -753,7 +753,7 @@ export default function EloDashboard() {
                     <button
                       type="button"
                       onClick={() => setDevlogImages(devlogImages.filter((_, j) => j !== i))}
-                      className="absolute top-0 right-0 bg-destructive/80 text-destructive-foreground w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-0 right-0 bg-destructive/80 text-destructive-foreground w-5 h-5 flex items-center justify-center text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     >
                       ×
                     </button>

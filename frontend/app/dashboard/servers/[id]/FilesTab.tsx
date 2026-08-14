@@ -22,7 +22,7 @@ import {
   Terminal, Wifi, WifiOff, Lock, Unlock,
   CheckCircle2, AlertCircle, Info, ChevronDown,
   Server, HardDrive, Globe, Play, Pause,
-  Link2, Clock, FileArchive
+  Link2, Clock, FileArchive, EllipsisVertical
 } from "lucide-react"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -57,6 +57,7 @@ interface ToastItem {
   id: string
   type: "success" | "error" | "info" | "warning"
   message: string
+  onUndo?: () => void
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -138,6 +139,15 @@ function ToastContainer({ toasts, onDismiss }: {
         >
           {icons[toast.type]}
           <p className="flex-1 text-sm leading-snug">{toast.message}</p>
+          {toast.onUndo && (
+            <button
+              onClick={() => { onDismiss(toast.id); toast.onUndo?.() }}
+              className="text-xs font-medium text-blue-300 hover:text-blue-100 transition-colors uppercase tracking-wide"
+              data-telemetry="servers:undo"
+            >
+              Undo
+            </button>
+          )}
           <button
             onClick={() => onDismiss(toast.id)}
             className="opacity-60 hover:opacity-100 transition-opacity"
@@ -153,9 +163,9 @@ function ToastContainer({ toasts, onDismiss }: {
 function useToast() {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
-  const toast = useCallback((type: ToastItem["type"], message: string, duration = 4000) => {
+  const toast = useCallback((type: ToastItem["type"], message: string, duration = 4000, onUndo?: () => void) => {
     const id = Math.random().toString(36).slice(2)
-    setToasts(prev => [...prev, { id, type, message }])
+    setToasts(prev => [...prev, { id, type, message, onUndo }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration)
   }, [])
 
@@ -682,10 +692,21 @@ function FileRow({
   const isImage = isImageFile(fname)
   const isVideo = isVideoFile(fname)
   const isText = isTextFile(fname)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const mobileActions: Array<{ label: string; icon: any; className?: string; show: boolean; onClick: () => void }> = [
+    { label: isImage ? "Preview" : "Edit", icon: isImage ? Eye : Pencil, className: "hover:text-primary", show: (isImage || isText) && !isDir, onClick: onEdit },
+    { label: "Rename", icon: Pencil, show: !isDir, onClick: onRename },
+    { label: "Download", icon: Download, show: !isDir, onClick: onDownload },
+    { label: "Extract", icon: FileArchive, className: "hover:text-amber-400", show: !isDir && isArchiveFile(fname) && !!onExtract, onClick: onExtract! },
+    { label: "Share", icon: Link2, className: "hover:text-violet-400", show: true, onClick: onShare },
+    { label: "Chmod", icon: Shield, show: true, onClick: onChmod },
+    { label: "Delete", icon: Trash2, className: "hover:text-red-400", show: true, onClick: onDelete },
+  ].filter(a => a.show)
 
   return (
     <div className={cn(
-      "group grid grid-cols-[28px_1fr_auto] sm:grid-cols-[28px_1fr_90px_140px_120px] items-center gap-2 px-4 py-2",
+      "group grid grid-cols-[28px_1fr_auto_auto] sm:grid-cols-[28px_1fr_90px_140px_120px] items-center gap-2 px-4 py-2",
       "border-t border-border/50 text-sm transition-colors",
       "hover:bg-secondary/30",
       isSelected && "bg-primary/5 hover:bg-primary/8"
@@ -724,6 +745,38 @@ function FileRow({
       <span className="sm:hidden text-xs text-muted-foreground flex-shrink-0">
         {isDir && dirSize !== null ? formatBytes(dirSize) : !isDir ? formatBytes(fsize) : ""}
       </span>
+
+      {/* Mobile: actions menu */}
+      <div className="sm:hidden relative flex-shrink-0">
+        <button
+          onClick={() => setMobileMenuOpen(v => !v)}
+          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          aria-label="File actions"
+          data-telemetry="servers:menu"
+        >
+          <EllipsisVertical className="h-4 w-4" />
+        </button>
+        {mobileMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setMobileMenuOpen(false)} />
+            <div className="absolute right-0 top-full z-30 mt-1 w-44 border border-border bg-popover shadow-xl py-1">
+              {mobileActions.map(a => (
+                <button
+                  key={a.label}
+                  onClick={() => { setMobileMenuOpen(false); a.onClick() }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60",
+                    a.className
+                  )}
+                  data-telemetry="servers:action"
+                >
+                  <a.icon className="h-3.5 w-3.5" /> {a.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Size */}
       <span className="hidden sm:block text-xs text-muted-foreground tabular-nums">
@@ -1141,6 +1194,39 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
     }
   }, [serverId, isSftpMode, sftpAuthorized, sftpHeaders])
 
+  // ── Undo stack (CTRL+Z) ───────────────────────────────────────────────────
+  const undoStackRef = useRef<Array<{ label: string; undo: () => Promise<void> | void }>>([])
+
+  const runUndo = useCallback(async () => {
+    const entry = undoStackRef.current.pop()
+    if (!entry) return
+    try {
+      await entry.undo()
+      await loadFiles(path)
+      toast("success", `Undid "${entry.label}"`)
+    } catch (e: any) {
+      toast("error", `Undo failed: ${e?.message || e}`)
+    }
+  }, [loadFiles, path, toast])
+
+  const pushUndoable = useCallback((label: string, undo: () => Promise<void> | void) => {
+    undoStackRef.current.push({ label, undo })
+    if (undoStackRef.current.length > 10) undoStackRef.current.shift()
+    toast("info", `"${label}" done. Press Ctrl+Z or Undo to revert.`, 6000, runUndo)
+  }, [toast, runUndo])
+
+  // Ctrl+Z undo for file ops — Monaco handles its own undo while editing
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return
+      if (editingFile || saving) return
+      e.preventDefault()
+      runUndo()
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [editingFile, saving, runUndo])
+
   // ── Auto SFTP auth ──────────────────────────────────────────────────────────
   const tryAutoSftpPassword = useCallback(async () => {
     if (!isSftpMode || sftpAuthorized || sftpAutoTried || !serverId) return
@@ -1510,6 +1596,7 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
   const renameFile = async (oldName: string) => {
     const newFileName = window.prompt(t("prompts.renameTo"), oldName)
     if (!newFileName || newFileName === oldName) return
+    const root = path
     try {
       const ep = isSftpMode
         ? API_ENDPOINTS.serverSftpFileRename.replace(":id", serverId)
@@ -1517,9 +1604,19 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
       await apiFetch(ep, {
         method: "PUT",
         headers: isSftpMode ? sftpHeaders : undefined,
-        body: JSON.stringify({ root: path, files: [{ from: oldName, to: newFileName }] }),
+        body: JSON.stringify({ root, files: [{ from: oldName, to: newFileName }] }),
       })
       toast("success", `Renamed to "${newFileName}"`)
+      pushUndoable(`Rename "${oldName}"`, async () => {
+        const epU = isSftpMode
+          ? API_ENDPOINTS.serverSftpFileRename.replace(":id", serverId)
+          : API_ENDPOINTS.serverFileRename.replace(":id", serverId)
+        await apiFetch(epU, {
+          method: "PUT",
+          headers: isSftpMode ? sftpHeaders : undefined,
+          body: JSON.stringify({ root, files: [{ from: newFileName, to: oldName }] }),
+        })
+      })
       await loadFiles(path)
     } catch (e: any) {
       toast("error", t("errors.renameFailed", { reason: e?.message }))
@@ -1619,6 +1716,9 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
     if (!selectedNames.length) return
     const dest = window.prompt(t("prompts.moveToFolder"), "")
     if (dest === null) return
+    const root = path
+    const moved = [...selectedNames]
+    const destination = dest.trim().replace(/^\/+|\/+$/g, "")
     setBulkBusy(true)
     try {
       const ep = isSftpMode
@@ -1627,9 +1727,19 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
       await apiFetch(ep, {
         method: "POST",
         headers: isSftpMode ? sftpHeaders : undefined,
-        body: JSON.stringify({ root: path, files: selectedNames, destination: dest.trim().replace(/^\/+|\/+$/g, "") }),
+        body: JSON.stringify({ root, files: moved, destination }),
       })
-      toast("success", `Moved ${selectedNames.length} item${selectedNames.length > 1 ? "s" : ""}`)
+      toast("success", `Moved ${moved.length} item${moved.length > 1 ? "s" : ""}`)
+      pushUndoable(`Move ${moved.length} item${moved.length > 1 ? "s" : ""}`, async () => {
+        const epU = isSftpMode
+          ? API_ENDPOINTS.serverSftpFileMove.replace(":id", serverId)
+          : API_ENDPOINTS.serverFileMove.replace(":id", serverId)
+        await apiFetch(epU, {
+          method: "POST",
+          headers: isSftpMode ? sftpHeaders : undefined,
+          body: JSON.stringify({ root: `${destination}/`, files: moved, destination: root.replace(/^\/+|\/+$/g, "") }),
+        })
+      })
       setSelectedNames([]); await loadFiles(path)
     } catch (e: any) {
       toast("error", t("errors.moveFailed", { reason: e.message }))
@@ -1734,7 +1844,12 @@ export function FilesTab({ serverId, sftpInfo, editorSettings, isKvm }: FilesTab
               value={revisionContent ?? fileContent}
               onChange={v => {
                 if (!revisionContent && !diffOriginal) setFileContent(v ?? "")
-                if (diffOriginal) { setDiffOriginal(undefined); setRevisionContent(null); setActiveRevisionId(null); }
+                if (diffOriginal) {
+                  setDiffOriginal(undefined); setRevisionContent(null); setActiveRevisionId(null);
+                  // Coming back from the diff viewer must not leave the
+                  // revision content in the editor — reload the live file
+                  if (editingFile) doOpenFile(editingFile)
+                }
               }}
               language={MONACO_LANGUAGE_MAP[ext] || "plaintext"}
               editorSettings={editorSettings}

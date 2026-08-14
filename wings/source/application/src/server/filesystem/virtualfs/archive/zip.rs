@@ -695,7 +695,11 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
 
                     let file_type = VirtualZipArchive::zip_entry_to_file_type(&entry);
 
-                    if let Some(name) = (self.is_ignored)(file_type, name.to_path_buf()) {
+                    if let Some(name) = self
+                        .is_ignored
+                        .call_async(file_type, name.to_path_buf())
+                        .await
+                    {
                         return Some(Ok((file_type, name)));
                     }
                 }
@@ -745,7 +749,7 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
 
                     let file_type = VirtualZipArchive::zip_entry_to_file_type(&entry);
 
-                    if let Some(name) = (self.is_ignored)(file_type, name) {
+                    if let Some(name) = self.is_ignored.call_async(file_type, name).await {
                         if entry.is_file() {
                             let (reader, mut writer) = tokio::io::simplex(crate::BUFFER_SIZE);
 
@@ -944,15 +948,17 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
         compression_level: CompressionLevel,
         progress: crate::server::filesystem::archive::create::ArchiveProgress,
         is_ignored: IsIgnoredFn,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let mut archive = self.archive.clone();
         let path = path.as_ref().to_path_buf();
 
         let (simplex_reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (simplex_reader, signal) =
+            crate::io::fallible_reader::FallibleReader::new(simplex_reader);
 
         match archive_format {
             StreamableArchiveFormat::Zip => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = tokio_util::io::SyncIoBridge::new(writer);
                     let mut zip = zip::ZipWriter::new_stream(writer);
 
@@ -1011,7 +1017,7 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
                         .file_compression_threads,
                 )?;
 
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut tar = tar::Builder::new(writer);
                     tar.mode(tar::HeaderMode::Complete);
 
@@ -1097,7 +1103,7 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
                         .file_compression_threads,
                 )?;
 
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut itaf_enc = ItafEncoder::new(
                         writer,
                         EncoderOptions {
@@ -1124,9 +1130,9 @@ impl VirtualReadableFilesystem for VirtualZipArchive {
                             continue;
                         }
                         let file_type = VirtualZipArchive::zip_entry_to_file_type(&entry);
-                        if (is_ignored)(file_type, relative.clone()).is_none() {
+                        let Some(relative) = (is_ignored)(file_type, relative) else {
                             continue;
-                        }
+                        };
                         entries.push((relative, i));
                     }
                     entries.sort_unstable_by(|a, b| a.0.cmp(&b.0));

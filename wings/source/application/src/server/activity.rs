@@ -13,6 +13,9 @@ pub enum ActivityEvent {
     #[serde(rename = "server:power.kill")]
     PowerKill,
 
+    #[serde(rename = "server:crash.detected")]
+    CrashDetected,
+
     #[serde(rename = "server:console.command")]
     ConsoleCommand,
 
@@ -47,6 +50,9 @@ pub enum ActivityEvent {
     FileDelete,
     #[serde(rename = "server:file.rename")]
     FileRename,
+
+    #[serde(rename = "server:schedule.http-request")]
+    ScheduleHttpRequest,
 }
 
 impl ActivityEvent {

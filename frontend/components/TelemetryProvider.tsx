@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const BATCH_SIZE = 20;
 const FLUSH_INTERVAL = 30_000;
@@ -129,18 +129,17 @@ function enqueue(payload: TelemetryPayload) {
 
 export default function TelemetryProvider() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastPageview = useRef("");
 
   const excluded = EXCLUDED_PATHS.some(p => pathname.startsWith(p));
 
   useEffect(() => {
     if (excluded) return;
-    const url = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
+    const url = pathname;
     if (url === lastPageview.current) return;
     lastPageview.current = url;
     enqueue({ event: "pageview", path: url, category: "navigation", timestamp: Date.now() });
-  }, [pathname, searchParams, excluded]);
+  }, [pathname, excluded]);
 
   useEffect(() => {
     if (excluded) return;
@@ -185,7 +184,6 @@ export default function TelemetryProvider() {
         enqueue({
           event: `change:${ename}`,
           category: getCategory(el),
-          label: ((el as HTMLInputElement).value || (el as HTMLSelectElement).value || "").slice(0, 64) || undefined,
           path: window.location.pathname,
           timestamp: Date.now(),
         });

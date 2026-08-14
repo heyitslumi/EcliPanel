@@ -39,7 +39,7 @@ mod get {
         Path(file_path): Path<compact_str::CompactString>,
         Query(params): Query<Params>,
     ) -> ApiResponseResult {
-        if file_path.contains("..") {
+        if !crate::utils::is_single_component_file_name(&file_path) {
             return ApiResponse::error("log file not found").ok();
         }
 

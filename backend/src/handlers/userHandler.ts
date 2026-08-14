@@ -4,6 +4,7 @@ import { MailboxAccount } from '../models/mailboxAccount.entity';
 import { Notification } from '../models/notification.entity';
 import { OutboundEmail } from '../models/outboundEmail.entity';
 import { User } from '../models/user.entity';
+import { ExportJob } from '../models/exportJob.entity';
 import { validateUserRegistration } from '../middleware/validation';
 import { hashPassword, comparePassword, isLegacyPasswordHash } from '../utils/password';
 import { validatePassword } from '../utils/passwordValidation';
@@ -655,6 +656,106 @@ export async function userRoutes(app: any, prefix = '') {
     {
       beforeHandle: authenticate,
       detail: { summary: 'Record terms/policy consent version', tags: ['Users'] },
+    }
+  );
+
+  app.post(
+    prefix + '/users/me/consent',
+    async (ctx: any) => {
+      const requester = ctx.user as User;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: 'Not authenticated' };
+      }
+      const body = ctx.body as { consent?: string; version?: string };
+      const consent =
+        body?.consent === 'all' ? 'all' : body?.consent === 'essential' ? 'essential' : null;
+      if (!consent) {
+        ctx.set.status = 400;
+        return { error: 'consent must be "essential" or "all"' };
+      }
+      const userRepo = AppDataSource.getRepository(User);
+      await userRepo.update(requester.id, {
+        consent,
+        consentVersion: String(body?.version || '').slice(0, 32) || undefined,
+        consentAt: new Date(),
+      });
+      return { ok: true, consent };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Record cookie/analytics consent choice', tags: ['Users'] },
+    }
+  );
+
+  app.post(
+    prefix + '/users/me/export-request',
+    async (ctx: any) => {
+      const requester = ctx.user as User;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: 'Not authenticated' };
+      }
+      const repo = AppDataSource.getRepository(ExportJob);
+      const cooldownFrom = new Date(Date.now() - 30 * 86_400_000);
+      const recent = await repo
+        .createQueryBuilder('j')
+        .where('j.userId = :id', { id: requester.id })
+        .andWhere('j.createdAt >= :cooldownFrom', { cooldownFrom })
+        .orderBy('j.createdAt', 'DESC')
+        .getOne();
+      if (recent) {
+        const retryAt = new Date(recent.createdAt.getTime() + 30 * 86_400_000);
+        ctx.set.status = 429;
+        return {
+          error: 'export_request_cooldown',
+          retryAfter: Math.max(1, Math.ceil((retryAt.getTime() - Date.now()) / 1000)),
+        };
+      }
+      const job = repo.create({
+        userId: requester.id,
+        status: 'requested',
+        progress: 0,
+        message: 'Awaiting staff approval',
+      });
+      await repo.save(job);
+      return { success: true, jobId: job.id };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'Request a data export', tags: ['Users'] },
+    }
+  );
+
+  app.get(
+    prefix + '/users/me/export-jobs',
+    async (ctx: any) => {
+      const requester = ctx.user as User;
+      if (!requester) {
+        ctx.set.status = 401;
+        return { error: 'Not authenticated' };
+      }
+      const repo = AppDataSource.getRepository(ExportJob);
+      const jobs = await repo.find({
+        where: { userId: requester.id },
+        order: { createdAt: 'DESC' },
+        take: 20,
+      });
+      return {
+        jobs: jobs.map(j => ({
+          id: j.id,
+          status: j.status,
+          progress: j.progress,
+          message: j.message,
+          shareToken: j.shareToken,
+          shareLinkExpiresAt: j.shareLinkExpiresAt,
+          createdAt: j.createdAt,
+        })),
+      };
+    },
+    {
+      beforeHandle: authenticate,
+      detail: { summary: 'List own export jobs', tags: ['Users'] },
     }
   );
 

@@ -34,8 +34,10 @@ export interface ScheduleVariable {
 }
 
 export type ScheduleDynamicParameter = string | ScheduleVariable;
+export type ScheduleHttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head';
 
 export type ScheduleActionPayload =
+  | { type: 'http_request'; ignore_failure?: boolean; method: ScheduleHttpMethod; url: string; headers?: { name: string; value: ScheduleDynamicParameter }[]; body?: ScheduleDynamicParameter | null; timeout: number; ignore_error_status?: boolean; output_status_into?: ScheduleVariable | null; output_body_into?: ScheduleVariable | null }
   | { type: 'sleep'; duration: number }
   | { type: 'ensure'; condition: ScheduleCondition }
   | { type: 'if'; condition: ScheduleCondition }
@@ -49,7 +51,7 @@ export type ScheduleActionPayload =
   | { type: 'wait_for_state'; ignore_failure?: boolean; state: string; timeout: number }
   | { type: 'send_power'; ignore_failure?: boolean; action: 'start' | 'stop' | 'restart' | 'kill' }
   | { type: 'send_command'; ignore_failure?: boolean; command: ScheduleDynamicParameter }
-  | { type: 'create_backup'; ignore_failure?: boolean; foreground?: boolean; name?: ScheduleDynamicParameter; ignored_files?: string[]; backup_group_uuid?: string; compression_type?: string }
+  | { type: 'create_backup'; ignore_failure?: boolean; foreground?: boolean; name?: ScheduleDynamicParameter; ignored_files?: string[]; backup_group_uuid?: string; compression_type?: string; output_into?: ScheduleVariable | null }
   | { type: 'restore_backup'; ignore_failure?: boolean; foreground?: boolean; backup_uuid?: string; backup_group_uuid?: string; selector?: 'latest' | 'oldest' | 'newest' }
   | { type: 'delete_backup'; ignore_failure?: boolean; backup_uuid?: string; backup_group_uuid?: string; selector?: 'latest' | 'oldest' | 'newest'; name_pattern?: string }
   | { type: 'move_backup'; ignore_failure?: boolean; backup_uuid?: string; backup_group_uuid?: string; destination_adapter?: string }

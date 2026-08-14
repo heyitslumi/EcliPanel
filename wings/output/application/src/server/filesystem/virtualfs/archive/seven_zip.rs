@@ -787,7 +787,11 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
 
                     let file_type = VirtualSevenZipArchive::seven_zip_entry_to_file_type(entry);
 
-                    if let Some(name) = (self.is_ignored)(file_type, name.to_path_buf()) {
+                    if let Some(name) = self
+                        .is_ignored
+                        .call_async(file_type, name.to_path_buf())
+                        .await
+                    {
                         return Some(Ok((file_type, name)));
                     }
                 }
@@ -1099,16 +1103,18 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
         compression_level: CompressionLevel,
         progress: crate::server::filesystem::archive::create::ArchiveProgress,
         is_ignored: IsIgnoredFn,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let archive = self.archive.clone();
         let mut reader = self.reader.clone();
         let path = path.as_ref().to_path_buf();
 
         let (simplex_reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (simplex_reader, signal) =
+            crate::io::fallible_reader::FallibleReader::new(simplex_reader);
 
         match archive_format {
             StreamableArchiveFormat::Zip => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = tokio_util::io::SyncIoBridge::new(writer);
                     let mut zip = zip::ZipWriter::new_stream(writer);
 
@@ -1215,7 +1221,7 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
                         .file_compression_threads,
                 )?;
 
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut tar = tar::Builder::new(writer);
                     tar.mode(tar::HeaderMode::Complete);
 
@@ -1310,7 +1316,7 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
                         .file_compression_threads,
                 )?;
 
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let mut itaf_enc = ItafEncoder::new(
                         writer,
                         EncoderOptions {
@@ -1331,14 +1337,12 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
                         if relative.components().count() == 0 {
                             continue;
                         }
-                        if (is_ignored)(
+                        let Some(relative) = (is_ignored)(
                             VirtualSevenZipArchive::seven_zip_entry_to_file_type(entry),
-                            relative.clone(),
-                        )
-                        .is_none()
-                        {
+                            relative,
+                        ) else {
                             continue;
-                        }
+                        };
                         entries.push((relative, i));
                     }
                     entries.sort_unstable_by(|a, b| a.0.cmp(&b.0));
@@ -1356,6 +1360,17 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
                         let Some(name) = components.last() else {
                             continue;
                         };
+
+                        if let Some(invalid) = components
+                            .iter()
+                            .find(|c| itaf::spec::validate_name(c).is_err())
+                        {
+                            tracing::debug!(
+                                path = %relative.display(),
+                                "skipping 7z entry while creating itaf archive, invalid name component: {invalid:?}"
+                            );
+                            continue;
+                        }
 
                         let parent = components.get_slice(..components.len() - 1)?;
 
@@ -1429,7 +1444,9 @@ impl VirtualReadableFilesystem for VirtualSevenZipArchive {
 
                                     Ok(false)
                                 })
-                                .unwrap_or_default();
+                                .map_err(|err| {
+                                    anyhow::anyhow!("failed to write 7z entry to itaf: {err}")
+                                })?;
                         } else {
                             itaf_enc.add_file(name, &meta, size, &mut std::io::empty())?;
                         }

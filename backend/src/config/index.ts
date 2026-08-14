@@ -11,6 +11,8 @@ import { startAllSftpProxies } from '../services/sftpProxyService';
 import fs from 'fs';
 import path from 'path';
 import { ServerConfig } from '../models/serverConfig.entity';
+import { ServerScheduleStep } from '../models/serverScheduleStep.entity';
+import { PanelSetting } from '../models/panelSetting.entity';
 import { User } from '../models/user.entity';
 import { OrganisationMember } from '../models/organisationMember.entity';
 import { createActivityLog } from '../handlers/logHandler';
@@ -202,6 +204,120 @@ export async function setupConfig(app: ConfigApp) {
     }
   } catch (err: unknown) {
     app.log?.warn({ err }, 'Failed to ensure soc_data(serverId,timestamp) index');
+  }
+
+  try {
+    const dbType = String(AppDataSource.options.type || '');
+    if (dbType === 'mysql' || dbType === 'mariadb') {
+      await AppDataSource.query(
+        `DELETE p1 FROM passkey p1 INNER JOIN passkey p2
+          ON p1.credentialID = p2.credentialID AND p1.id < p2.id`
+      );
+      const rows = await AppDataSource.query(
+        `SELECT COUNT(1) AS cnt
+           FROM information_schema.statistics
+          WHERE table_schema = DATABASE()
+            AND table_name = 'passkey'
+            AND index_name = 'IDX_passkey_credentialID_unique'`
+      );
+      if (Number((rows?.[0] as QueryRow | undefined)?.cnt ?? 0) === 0) {
+        await AppDataSource.query(
+          'CREATE UNIQUE INDEX IDX_passkey_credentialID_unique ON passkey (credentialID)'
+        );
+      }
+    } else if (dbType === 'postgres') {
+      await AppDataSource.query(
+        `DELETE FROM passkey WHERE id NOT IN (
+           SELECT MAX(id) FROM passkey GROUP BY "credentialID"
+         )`
+      );
+      await AppDataSource.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS "IDX_passkey_credentialID_unique" ON "passkey" ("credentialID")'
+      );
+    }
+  } catch (err: unknown) {
+    app.log?.warn({ err }, 'Failed to ensure unique passkey credentialID index');
+  }
+
+  try {
+    const dbType = String(AppDataSource.options.type || '');
+    if (dbType === 'mysql' || dbType === 'mariadb') {
+      const rows = await AppDataSource.query(
+        `SELECT COUNT(1) AS cnt
+           FROM information_schema.statistics
+          WHERE table_schema = DATABASE()
+            AND table_name = 'api_key'
+            AND index_name = 'IDX_api_key_expiresAt'`
+      );
+      if (Number((rows?.[0] as QueryRow | undefined)?.cnt ?? 0) === 0) {
+        await AppDataSource.query('CREATE INDEX IDX_api_key_expiresAt ON api_key (expiresAt)');
+      }
+    } else if (dbType === 'postgres') {
+      await AppDataSource.query('CREATE INDEX IF NOT EXISTS "IDX_api_key_expiresAt" ON "api_key" ("expiresAt")');
+    }
+  } catch (err: unknown) {
+    app.log?.warn({ err }, 'Failed to ensure api_key(expiresAt) index');
+  }
+
+  try {
+    const panelSettingRepo = AppDataSource.getRepository(PanelSetting);
+    const doneFlag = await panelSettingRepo.findOneBy({ key: 'migrationFormatDoubleBraceV1' });
+    if (!doneFlag) {
+      const stepRepo = AppDataSource.getRepository(ServerScheduleStep);
+      const steps = await stepRepo.find();
+      const rewrite = (format: string): string => {
+        let rewritten = '';
+        let idx = 0;
+        const total = format.length;
+        while (idx < total) {
+          const ch = format[idx];
+          const next = idx < total - 1 ? format[idx + 1] : undefined;
+          if (ch === '{' && next === '{') {
+            rewritten += '{';
+            idx += 2;
+          } else if (ch === '{') {
+            const closing = format.indexOf('}', idx + 1);
+            if (closing > -1) {
+              const variable = format.substring(idx + 1, closing);
+              if (/^[ \t\n\r]*[A-Za-z0-9_][A-Za-z0-9_. -]*[ \t\n\r]*$/.test(variable)) {
+                rewritten += '{{' + variable + '}}';
+              } else {
+                rewritten += '{' + variable + '}';
+              }
+              idx = closing + 1;
+            } else {
+              rewritten += format.substring(idx);
+              idx = total;
+            }
+          } else if (ch === '}' && next === '}') {
+            rewritten += '}';
+            idx += 2;
+          } else {
+            rewritten += ch;
+            idx += 1;
+          }
+        }
+        return rewritten;
+      };
+      let rewritten = 0;
+      for (const st of steps) {
+        const action = st.action as any;
+        if (action && action.type === 'format' && typeof action.format === 'string') {
+          const next = rewrite(action.format);
+          if (next !== action.format) {
+            st.action = { ...action, format: next };
+            await stepRepo.save(st);
+            rewritten++;
+          }
+        }
+      }
+      await panelSettingRepo.save({ key: 'migrationFormatDoubleBraceV1', value: 'done' });
+      if (rewritten > 0) {
+        app.log?.info?.({ rewritten }, 'Rewrote format schedule steps to double-brace syntax');
+      }
+    }
+  } catch (err: unknown) {
+    app.log?.warn({ err }, 'Failed to rewrite format schedule steps');
   }
 
   try {

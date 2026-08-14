@@ -48,6 +48,36 @@ fn api_remote_download_blocked_cidrs() -> Vec<cidr::IpCidr> {
         ])
     }
 }
+fn api_schedule_steps_http_request_enabled() -> bool {
+    true
+}
+fn api_schedule_steps_http_request_blocked_cidrs() -> Vec<cidr::IpCidr> {
+    unsafe {
+        Vec::from([
+            cidr::IpCidr::from_str("0.0.0.0/8").unwrap_unchecked(),
+            cidr::IpCidr::from_str("127.0.0.0/8").unwrap_unchecked(),
+            cidr::IpCidr::from_str("10.0.0.0/8").unwrap_unchecked(),
+            cidr::IpCidr::from_str("100.64.0.0/10").unwrap_unchecked(),
+            cidr::IpCidr::from_str("172.16.0.0/12").unwrap_unchecked(),
+            cidr::IpCidr::from_str("192.168.0.0/16").unwrap_unchecked(),
+            cidr::IpCidr::from_str("169.254.0.0/16").unwrap_unchecked(),
+            cidr::IpCidr::from_str("::1/128").unwrap_unchecked(),
+            cidr::IpCidr::from_str("fe80::/10").unwrap_unchecked(),
+            cidr::IpCidr::from_str("fc00::/7").unwrap_unchecked(),
+        ])
+    }
+}
+fn api_schedule_steps_http_request_requests() -> u32 {
+    5
+}
+fn api_schedule_steps_http_request_window_seconds() -> u64 {
+    60
+}
+/// Kept at or below [`crate::server::schedule::MAX_VARIABLE_SIZE`], since a
+/// captured body larger than a variable may hold would fail the step outright.
+fn api_schedule_steps_http_request_max_response_size() -> usize {
+    16 * 1024
+}
 fn api_directory_entry_limit() -> usize {
     10000
 }
@@ -297,6 +327,12 @@ fn system_file_collaboration_max_sessions_per_server() -> u64 {
 }
 fn system_file_collaboration_max_sessions_per_connection() -> u64 {
     8
+}
+fn system_file_collaboration_max_editors_per_session() -> u64 {
+    32
+}
+fn system_file_collaboration_max_cursors_per_connection() -> u64 {
+    64
 }
 fn system_file_collaboration_session_grace_period() -> u64 {
     30
@@ -634,6 +670,30 @@ nestify::nest! {
             #[serde(default)]
             #[schema(value_type = Vec<String>)]
             pub trusted_proxies: Vec<cidr::IpCidr>,
+
+            #[serde(default)]
+            #[schema(inline)]
+            pub schedule: #[derive(ToSchema, Deserialize, Serialize, DefaultFromSerde)] #[serde(default)] pub struct ApiSchedule {
+                #[serde(default)]
+                #[schema(inline)]
+                pub steps: #[derive(ToSchema, Deserialize, Serialize, DefaultFromSerde)] #[serde(default)] pub struct ApiScheduleSteps {
+                    #[serde(default)]
+                    #[schema(inline)]
+                    pub http_request: #[derive(ToSchema, Deserialize, Serialize, DefaultFromSerde)] #[serde(default)] pub struct ApiScheduleStepsHttpRequest {
+                        #[serde(default = "api_schedule_steps_http_request_enabled")]
+                        pub enabled: bool,
+                        #[serde(default = "api_schedule_steps_http_request_requests")]
+                        pub requests: u32,
+                        #[serde(default = "api_schedule_steps_http_request_window_seconds")]
+                        pub window_seconds: u64,
+                        #[serde(default = "api_schedule_steps_http_request_max_response_size")]
+                        pub max_response_size: usize,
+                        #[serde(default = "api_schedule_steps_http_request_blocked_cidrs")]
+                        #[schema(value_type = Vec<String>)]
+                        pub blocked_cidrs: Vec<cidr::IpCidr>,
+                    },
+                },
+            },
         },
         #[serde(default)]
         #[schema(inline)]
@@ -839,6 +899,10 @@ nestify::nest! {
                 pub max_sessions_per_server: u64,
                 #[serde(default = "system_file_collaboration_max_sessions_per_connection")]
                 pub max_sessions_per_connection: u64,
+                #[serde(default = "system_file_collaboration_max_editors_per_session")]
+                pub max_editors_per_session: u64,
+                #[serde(default = "system_file_collaboration_max_cursors_per_connection")]
+                pub max_cursors_per_connection: u64,
 
                 #[serde(default = "system_file_collaboration_session_grace_period")]
                 pub session_grace_period: u64,
@@ -972,7 +1036,7 @@ nestify::nest! {
                 pub ispn: bool,
                 #[serde(default = "docker_network_driver")]
                 pub driver: String,
-                #[serde(default = "docker_network_mode")]
+                #[serde(default = "docker_network_mode", alias = "network_mode")]
                 pub mode: String,
                 #[serde(default)]
                 pub is_internal: bool,
@@ -1486,6 +1550,24 @@ impl Config {
                 std::thread::sleep(std::time::Duration::from_secs(10));
             }
             tracing::warn!("you are treading on thin ice. proceed at your own risk.");
+        }
+
+        if cfg.docker.network.mode == docker_network_mode()
+            && cfg.docker.network.name != docker_network_name()
+        {
+            tracing::warn!(
+                "docker.network.mode is set to the default \"{}\" while docker.network.name is \"{}\", containers will be attached to a network that does not exist. if this is not intentional, set docker.network.mode to \"{}\".",
+                cfg.docker.network.mode,
+                cfg.docker.network.name,
+                cfg.docker.network.name
+            );
+        }
+
+        #[cfg(unix)]
+        if cfg.system.user.uid == 0 || cfg.system.user.gid == 0 {
+            return Err(anyhow::anyhow!(
+                "refusing to use user with UID or GID of 0 (root), please check your wings config and change system.username to a non-root user"
+            ));
         }
 
         if cfg.remote.is_empty() {

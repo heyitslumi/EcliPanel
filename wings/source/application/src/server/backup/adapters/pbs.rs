@@ -59,13 +59,15 @@ pub struct PbsBackup {
 }
 
 fn build_config(remote: PbsBackupConfiguration) -> PbsConfig {
+    let fingerprint = remote.fingerprint().map(Into::into);
+
     PbsConfig {
         url: remote.url.into(),
         datastore: remote.datastore.into(),
         namespace: remote.namespace.map(Into::into),
         token_id: remote.token_id.into(),
         token_secret: remote.token_secret.into(),
-        fingerprint: remote.fingerprint.into(),
+        fingerprint,
         backup_id_prefix: remote.backup_id_prefix.map(Into::into),
     }
 }
@@ -1039,9 +1041,9 @@ impl PbsVirtualFilesystem {
     ) {
         for (name, meta) in node.files.iter() {
             let archive_path = archive_dir.join(name.as_str());
-            if (is_ignored)(meta.file_type, archive_path.clone()).is_none() {
+            let Some(archive_path) = (is_ignored)(meta.file_type, archive_path) else {
                 continue;
-            }
+            };
             out.push(SubtreeEntry {
                 relative: relative_dir.join(name.as_str()),
                 archive_path,
@@ -1055,9 +1057,9 @@ impl PbsVirtualFilesystem {
 
         for (name, child) in node.dirs.iter() {
             let archive_path = archive_dir.join(name.as_str());
-            if (is_ignored)(FileType::Dir, archive_path.clone()).is_none() {
+            let Some(archive_path) = (is_ignored)(FileType::Dir, archive_path) else {
                 continue;
-            }
+            };
             let relative = relative_dir.join(name.as_str());
             let mode = if child.mode != 0 { child.mode } else { 0o755 };
             out.push(SubtreeEntry {
@@ -1216,7 +1218,10 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
             scratch.clear();
             scratch.push(&path);
             scratch.push(name.as_str());
-            match (is_ignored)(FileType::Dir, std::mem::take(&mut scratch)) {
+            match is_ignored
+                .call_async(FileType::Dir, std::mem::take(&mut scratch))
+                .await
+            {
                 Some(kept) => scratch = kept,
                 None => continue,
             }
@@ -1226,7 +1231,10 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
             scratch.clear();
             scratch.push(&path);
             scratch.push(name.as_str());
-            match (is_ignored)(meta.file_type, std::mem::take(&mut scratch)) {
+            match is_ignored
+                .call_async(meta.file_type, std::mem::take(&mut scratch))
+                .await
+            {
                 Some(kept) => scratch = kept,
                 None => continue,
             }
@@ -1568,7 +1576,7 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
         compression_level: CompressionLevel,
         progress: crate::server::filesystem::archive::create::ArchiveProgress,
         is_ignored: IsIgnoredFn,
-    ) -> Result<tokio::io::ReadHalf<tokio::io::SimplexStream>, anyhow::Error> {
+    ) -> Result<crate::io::fallible_reader::FallibleSimplexReader, anyhow::Error> {
         let base_path = path.as_ref().to_path_buf();
         let node = match self.tree.lookup_dir(&base_path) {
             Some(node) => node,
@@ -1592,10 +1600,11 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
             .api
             .file_compression_threads;
         let (reader, writer) = tokio::io::simplex(crate::BUFFER_SIZE);
+        let (reader, signal) = crate::io::fallible_reader::FallibleReader::new(reader);
 
         match archive_format {
             StreamableArchiveFormat::Zip => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = SyncIoBridge::new(writer);
                     let mut zip = zip::ZipWriter::new_stream(writer);
 
@@ -1654,7 +1663,7 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
                 });
             }
             f if f.is_tar() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = CompressionWriter::new(
                         SyncIoBridge::new(writer),
                         f.compression_format(),
@@ -1707,7 +1716,7 @@ impl VirtualReadableFilesystem for PbsVirtualFilesystem {
                 });
             }
             f if f.is_itaf() => {
-                crate::spawn_blocking_handled(move || -> Result<(), anyhow::Error> {
+                crate::spawn_blocking_signalled(signal, move || -> Result<(), anyhow::Error> {
                     let writer = CompressionWriter::new(
                         SyncIoBridge::new(writer),
                         f.compression_format(),

@@ -9,7 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { t } from 'elysia';
 
-function getSafeRelativeFilePath(base: string, relPath: string): string | null {
+export function getSafeRelativeFilePath(base: string, relPath: string): string | null {
   let decoded: string;
   try {
     decoded = decodeURIComponent(String(relPath || ''));

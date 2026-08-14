@@ -48,7 +48,9 @@
     "sentEmailNotFound": "未找到已发送的邮件",
     "featureOauthIsDisabled": "OAuth功能已禁用",
     "resetLink": "点击下方链接重置您的密码。此链接有效期为1小时。",
-    "alreadyVerified": "已验证"
+    "alreadyVerified": "已验证",
+    "passkeysDisabled": "Passkeys are disabled",
+    "passkeysNotDiscoverable": "Usernameless passkey login is not enabled"
   },
   "common": {
     "notFound": "未找到",

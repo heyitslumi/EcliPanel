@@ -13,6 +13,15 @@ pub enum FileType {
 
 impl FileType {
     #[inline]
+    pub fn from_is_dir(is_dir: bool) -> Self {
+        if is_dir {
+            FileType::Dir
+        } else {
+            FileType::File
+        }
+    }
+
+    #[inline]
     pub fn is_file(self) -> bool {
         matches!(self, FileType::File)
     }
@@ -175,6 +184,7 @@ pub struct AsyncWalkDir {
     cap_filesystem: super::CapFilesystem,
     stack: Vec<(PathBuf, AsyncReadDir)>,
     is_ignored: IsIgnoredFn,
+    reversed: bool,
 }
 
 impl AsyncWalkDir {
@@ -188,11 +198,18 @@ impl AsyncWalkDir {
             cap_filesystem,
             stack: vec![(path, read_dir)],
             is_ignored: IsIgnoredFn::default(),
+            reversed: false,
         })
     }
 
     pub fn with_is_ignored(mut self, is_ignored: IsIgnoredFn) -> Self {
         self.is_ignored = is_ignored;
+        self
+    }
+
+    #[allow(dead_code)]
+    pub fn reversed(mut self) -> Self {
+        self.reversed = true;
         self
     }
 
@@ -202,7 +219,8 @@ impl AsyncWalkDir {
                 Some(Ok((file_type, name))) => {
                     let full_path = parent_path.join(&name);
 
-                    let Some(full_path) = (self.is_ignored)(file_type, full_path) else {
+                    let Some(full_path) = self.is_ignored.call_async(file_type, full_path).await
+                    else {
                         continue 'stack;
                     };
 
@@ -211,13 +229,21 @@ impl AsyncWalkDir {
                             Ok(dir) => self.stack.push((full_path.clone(), dir)),
                             Err(err) => return Some(Err(err)),
                         };
+
+                        if self.reversed {
+                            continue 'stack;
+                        }
                     }
 
                     return Some(Ok((file_type, full_path)));
                 }
                 Some(Err(err)) => return Some(Err(err)),
                 None => {
-                    self.stack.pop();
+                    let (path, _) = self.stack.pop()?;
+
+                    if self.reversed && !self.stack.is_empty() {
+                        return Some(Ok((FileType::Dir, path)));
+                    }
                 }
             }
         }
@@ -279,6 +305,7 @@ pub struct WalkDir {
     cap_filesystem: super::CapFilesystem,
     stack: Vec<(PathBuf, ReadDir)>,
     is_ignored: IsIgnoredFn,
+    reversed: bool,
 }
 
 impl WalkDir {
@@ -292,11 +319,17 @@ impl WalkDir {
             cap_filesystem,
             stack: vec![(path, read_dir)],
             is_ignored: IsIgnoredFn::default(),
+            reversed: false,
         })
     }
 
     pub fn with_is_ignored(mut self, is_ignored: IsIgnoredFn) -> Self {
         self.is_ignored = is_ignored;
+        self
+    }
+
+    pub fn reversed(mut self) -> Self {
+        self.reversed = true;
         self
     }
 
@@ -315,6 +348,10 @@ impl WalkDir {
                             Ok(dir) => self.stack.push((full_path.clone(), dir)),
                             Err(err) => return Some(Err(err)),
                         };
+
+                        if self.reversed {
+                            continue 'stack;
+                        }
                     }
 
                     return Some(Ok((file_type, full_path)));
@@ -323,7 +360,11 @@ impl WalkDir {
                     return Some(Err(err));
                 }
                 None => {
-                    self.stack.pop();
+                    let (path, _) = self.stack.pop()?;
+
+                    if self.reversed && !self.stack.is_empty() {
+                        return Some(Ok((FileType::Dir, path)));
+                    }
                 }
             }
         }

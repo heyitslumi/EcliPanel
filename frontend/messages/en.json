@@ -871,7 +871,8 @@
     "loginFailed": "Login failed",
     "missingTemporarySession": "Missing temporary session",
     "failedToSendEmailCode": "Failed to send email code",
-    "back": "Back"
+    "back": "Back",
+    "passkeyUsernamelessHint": "Or enter your email and try again."
   },
   "register": {
     "steps": {
@@ -1976,7 +1977,8 @@
       "generating": "Generating…",
       "createShareLink": "Create share link",
       "copyShareLink": "Copy share link",
-      "copy": "Copy"
+      "copy": "Copy",
+      "approve": "Approve"
     }
   },
   "adminUsersTab": {
@@ -7212,5 +7214,23 @@
     "learnedServices": "services learned",
     "trustedIps": "trusted IPs",
     "bannedIps": "banned IPs"
+  },
+  "myData": {
+    "title": "Data management",
+    "subtitle": "Request an export of the personal data we store about you. Staff reviews requests before an export is generated.",
+    "requestButton": "Request data export",
+    "requesting": "Requesting...",
+    "loading": "Loading...",
+    "cooldownError": "You can request an export once every 30 days.",
+    "jobsEmpty": "No export requests yet.",
+    "colCreated": "Requested",
+    "colStatus": "Status",
+    "download": "Download",
+    "expiresAt": "Expires",
+    "statusRequested": "Awaiting staff approval",
+    "statusQueued": "Queued",
+    "statusRunning": "Running",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed"
   }
 }

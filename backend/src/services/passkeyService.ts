@@ -5,6 +5,7 @@ import {
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
 import { AppDataSource } from '../config/typeorm';
+import { PanelSetting } from '../models/panelSetting.entity';
 import { Passkey } from '../models/passkey.entity';
 import base64url from 'base64url';
 import { sha256Bytes } from '../utils/bunCrypto';
@@ -15,36 +16,65 @@ import {
 } from '@simplewebauthn/server/helpers';
 
 const rpName = 'Ecli Panel';
-const rpID: string | string[] = process.env.RP_ID
+const envRpId: string[] = process.env.RP_ID
   ? process.env.RP_ID.split(',').map(s => s.trim())
-  : 'ecli.app';
-const origin: string | string[] = process.env.ORIGIN
+  : ['ecli.app'];
+const envOrigin: string[] = process.env.ORIGIN
   ? process.env.ORIGIN.split(',').map(s => s.trim())
-  : 'https://ecli.app';
+  : ['https://ecli.app'];
 // FUN FACT: This was meant to be panel.ecli.app originally but yes, here we are
 
-function selectRpId(requestHost?: string) {
-  if (requestHost && Array.isArray(rpID)) {
+export interface WebauthnSettings {
+  enabled: boolean;
+  allowDiscoverable: boolean;
+  rpId: string;
+  rpOrigin: string;
+  authenticationTimeoutSeconds: number;
+  registrationTimeoutSeconds: number;
+}
+
+export async function loadWebauthnSettings(): Promise<WebauthnSettings> {
+  const defaults: WebauthnSettings = {
+    enabled: true,
+    allowDiscoverable: false,
+    rpId: envRpId[0],
+    rpOrigin: envOrigin[0],
+    authenticationTimeoutSeconds: 300,
+    registrationTimeoutSeconds: 300,
+  };
+  try {
+    const repo = AppDataSource.getRepository(PanelSetting);
+    const row = await repo.findOneBy({ key: 'webauthn' });
+    if (!row?.value) return defaults;
+    return { ...defaults, ...JSON.parse(row.value) };
+  } catch {
+    return defaults;
+  }
+}
+
+function selectRpId(requestHost?: string, settings?: WebauthnSettings) {
+  if (settings && settings.rpId) return settings.rpId;
+  const rpID = envRpId;
+  if (requestHost && rpID.length > 1) {
     return (
       rpID.find(id => requestHost === id) ||
       rpID.filter(id => requestHost.endsWith('.' + id)).sort((a, b) => b.length - a.length)[0] ||
       rpID[0]
     );
   }
-  return Array.isArray(rpID) ? rpID[0] : rpID;
+  return rpID[0];
 }
 
-function selectExpectedOrigin(requestOrigin?: string) {
+function selectExpectedOrigin(requestOrigin?: string, settings?: WebauthnSettings) {
+  const origin = settings && settings.rpOrigin ? [settings.rpOrigin] : envOrigin;
   if (!requestOrigin) return origin;
-  if (Array.isArray(origin)) {
-    return Array.from(new Set([...origin, requestOrigin]));
-  }
-  return [origin, requestOrigin];
+  return Array.from(new Set([...origin, requestOrigin]));
 }
 
 export class PasskeyService {
   static async generateRegistration(user: { id: number; email: string }, requestHost?: string) {
-    const selectedRPID = selectRpId(requestHost);
+    const settings = await loadWebauthnSettings();
+    const selectedRPID = selectRpId(requestHost, settings);
     const opts = generateRegistrationOptions({
       rpName,
       rpID: selectedRPID,
@@ -53,6 +83,9 @@ export class PasskeyService {
       attestationType: 'none',
       authenticatorSelection: {
         userVerification: 'preferred',
+        ...(settings.allowDiscoverable
+          ? { residentKey: 'required' as const, requireResidentKey: true }
+          : {}),
       },
     });
     return opts;
@@ -71,6 +104,7 @@ export class PasskeyService {
     requestHost?: string;
     requestOrigin?: string;
   }) {
+    const settings = await loadWebauthnSettings();
     if (attestationResponse.response?.clientDataJSON) {
       try {
         const decoded = JSON.parse(base64url.decode(attestationResponse.response.clientDataJSON));
@@ -89,31 +123,20 @@ export class PasskeyService {
       const authData = decodedCBOR.get('authData');
       const parsed = parseAuthenticatorData(authData);
       const buf = Buffer.from(parsed.rpIdHash);
-      if (Array.isArray(rpID)) {
-        rpID.forEach(id => {
-          const h = Buffer.from(sha256Bytes(id));
-          console.log(`  expected rpIdHash for ${id}:`, h.toString('hex'), 'match:', h.equals(buf));
-        });
-      } else {
-        const h = Buffer.from(sha256Bytes(rpID));
-        console.log(
-          '  expected rpIdHash for',
-          rpID,
-          ':',
-          h.toString('hex'),
-          'match:',
-          h.equals(buf)
-        );
-      }
+      const ids = settings.rpId ? [settings.rpId] : envRpId;
+      ids.forEach(id => {
+        const h = Buffer.from(sha256Bytes(id));
+        console.log(`  expected rpIdHash for ${id}:`, h.toString('hex'), 'match:', h.equals(buf));
+      });
     } catch (e) {
       console.log('  failed to decode attestationObject for rpIdHash:', e);
     }
 
-    const selectedRPID = selectRpId(requestHost);
+    const selectedRPID = selectRpId(requestHost, settings);
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
       expectedChallenge,
-      expectedOrigin: selectExpectedOrigin(requestOrigin),
+      expectedOrigin: selectExpectedOrigin(requestOrigin, settings),
       expectedRPID: selectedRPID,
     });
     if (verification.verified) {
@@ -131,6 +154,14 @@ export class PasskeyService {
       const transport = Array.isArray(transports) ? transports.join(',') : String(transports);
 
       const passkeyRepo = AppDataSource.getRepository(Passkey);
+      const existing = await passkeyRepo.findOne({ where: { credentialID: credID } });
+      if (existing) {
+        existing.publicKey = pk;
+        existing.counter = counter;
+        existing.transports = transport;
+        await passkeyRepo.save(existing);
+        return verification;
+      }
       const existingCount = await passkeyRepo.count({ where: { user: { id: userId } } });
       const passkey = passkeyRepo.create({
         user: { id: userId } as any,
@@ -145,17 +176,20 @@ export class PasskeyService {
     return verification;
   }
 
-  static async generateAuthentication(userId: number, requestHost?: string) {
+  static async generateAuthentication(userId: number | null, requestHost?: string) {
+    const settings = await loadWebauthnSettings();
     const passkeyRepo = AppDataSource.getRepository(Passkey);
-    const keys = await passkeyRepo.find({ where: { user: { id: userId } } });
-    const selectedRPID = selectRpId(requestHost);
+    const keys = userId
+      ? await passkeyRepo.find({ where: { user: { id: userId } } })
+      : [];
+    const selectedRPID = selectRpId(requestHost, settings);
     console.log(
       '[PasskeyService] generateAuthentication frontendHost:',
       requestHost,
-      'availableRPIDs:',
-      rpID,
       'selectedRPID:',
-      selectedRPID
+      selectedRPID,
+      'usernameless:',
+      userId === null
     );
     const opts: any = generateAuthenticationOptions({
       allowCredentials: keys.map(k => ({
@@ -163,7 +197,7 @@ export class PasskeyService {
         type: 'public-key',
         transports: k.transports.split(',').filter(Boolean) as any,
       })),
-      userVerification: 'preferred',
+      userVerification: userId === null ? 'required' : 'preferred',
       rpID: selectedRPID,
     });
     return opts;
@@ -182,6 +216,7 @@ export class PasskeyService {
     requestHost?: string;
     requestOrigin?: string;
   }) {
+    const settings = await loadWebauthnSettings();
     const passkeyRepo = AppDataSource.getRepository(Passkey);
     const credID = base64url.encode(authenticationResponse.rawId);
     let passkey = await passkeyRepo.findOne({ where: { credentialID: credID } });
@@ -189,11 +224,11 @@ export class PasskeyService {
       passkey = await passkeyRepo.findOne({ where: { credentialID: authenticationResponse.id } });
     }
     if (!passkey) throw new Error('Passkey not found');
-    const selectedRPID = selectRpId(requestHost);
+    const selectedRPID = selectRpId(requestHost, settings);
     const verification = await verifyAuthenticationResponse({
       response: authenticationResponse,
       expectedChallenge,
-      expectedOrigin: selectExpectedOrigin(requestOrigin),
+      expectedOrigin: selectExpectedOrigin(requestOrigin, settings),
       expectedRPID: selectedRPID,
       credential: {
         id: passkey.credentialID,

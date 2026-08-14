@@ -20,6 +20,8 @@ const MAX_TOTAL_FILE_BYTES = Number(process.env.EXPORT_JOB_MAX_TOTAL_BYTES || 50
 const EXPORT_RETENTION_DAYS = Number(process.env.EXPORT_JOB_RETENTION_DAYS || 14);
 
 function isDirectoryEntry(item: any): boolean {
+  if (typeof item?.directory === 'boolean') return item.directory;
+  if (typeof item?.file === 'boolean') return !item.file;
   const type = String(item?.type || '').toLowerCase();
   if (type === 'directory' || type === 'dir' || type === 'folder') return true;
   if (typeof item?.isDirectory === 'boolean') return item.isDirectory;
@@ -27,6 +29,25 @@ function isDirectoryEntry(item: any): boolean {
   const mode = String(item?.mode || '');
   if (mode.startsWith('d')) return true;
   return false;
+}
+
+async function listServerDir(svc: WingsApiService, serverId: string, dir: string): Promise<any[]> {
+  let res: any;
+  try {
+    res = await svc.listServerFiles(serverId, dir);
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      res = await svc.serverRequest(serverId, `/files/list?directory=${encodeURIComponent(dir)}`);
+    } else {
+      return [];
+    }
+  }
+  const data = res?.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.entries)) return data.entries;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.files)) return data.files;
+  return [];
 }
 
 async function collectFilesRecursive(
@@ -37,14 +58,7 @@ async function collectFilesRecursive(
   totals: { bytes: number }
 ): Promise<void> {
   if (entries.length >= MAX_FILES_PER_SERVER || totals.bytes >= MAX_TOTAL_FILE_BYTES) return;
-  let res: any;
-  try {
-    res = await svc.listServerFiles(serverId, dir);
-  } catch (e) {
-    return;
-  }
-  const data = res?.data;
-  const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  const list = await listServerDir(svc, serverId, dir);
   for (const item of list) {
     if (entries.length >= MAX_FILES_PER_SERVER || totals.bytes >= MAX_TOTAL_FILE_BYTES) break;
     const rawName = item?.name || item?.filename || item?.path || '';
@@ -221,7 +235,14 @@ export async function processExportJob(jobRow: ExportJob) {
       message: 'Archive created',
       resultPath: archivePath,
     });
-    job = await updateJob(job, { status: 'completed', progress: 100, message: 'Export complete' });
+    job = await updateJob(job, {
+      status: 'completed',
+      progress: 100,
+      message: 'Export complete',
+      shareToken: `${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`,
+      shareLinkExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      shareDownloadsRemaining: 3,
+    });
 
     try {
       await fsp.rm(outDir, { recursive: true, force: true });

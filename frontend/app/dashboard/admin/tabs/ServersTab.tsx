@@ -74,6 +74,8 @@ export default function ServersTab({ ctx }: { ctx: any }) {
     setEsDisk,
     esCpu,
     setEsCpu,
+    esThreads,
+    setEsThreads,
     esSwap,
     setEsSwap,
     esDockerImage,
@@ -505,6 +507,16 @@ export default function ServersTab({ ctx }: { ctx: any }) {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("editDialog.fields.cpuPercent")}</label>
               <input type="number" min="10" value={esCpu} onChange={(e) => setEsCpu(e.target.value)} className="border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pinned CPUs</label>
+              <input
+                type="text"
+                value={esThreads}
+                onChange={(e) => setEsThreads(e.target.value)}
+                placeholder="e.g. 0,1,3 or 0-2,4 (empty = all)"
+                className="border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50"
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("editDialog.fields.swapMb")}</label>

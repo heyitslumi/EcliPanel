@@ -7,6 +7,7 @@ mod get {
     use crate::{
         response::{ApiResponse, ApiResponseResult},
         routes::api::servers::_server_::GetServer,
+        server::filesystem::cap::FileType,
     };
     use axum::extract::Query;
     use serde::{Deserialize, Serialize};
@@ -39,7 +40,20 @@ mod get {
     pub async fn route(server: GetServer, Query(data): Query<Params>) -> ApiResponseResult {
         let path = server
             .filesystem
-            .relative_path(std::path::Path::new(&data.file));
+            .diff_key(std::path::Path::new(&data.file))
+            .await;
+
+        if server
+            .filesystem
+            .async_is_ignored(&path, FileType::File)
+            .await
+        {
+            return ApiResponse::new_serialized(Response {
+                revisions: Vec::new(),
+            })
+            .ok();
+        }
+
         let revisions = server.diff.list(&path.to_string_lossy()).await?;
 
         ApiResponse::new_serialized(Response { revisions }).ok()

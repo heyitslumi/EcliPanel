@@ -48,7 +48,9 @@
     "sentEmailNotFound": "Отправленное письмо не найдено",
     "featureOauthIsDisabled": "Функция OAuth отключена",
     "resetLink": "Нажмите на ссылку ниже, чтобы сбросить пароль. Ссылка действительна 1 час.",
-    "alreadyVerified": "Уже подтверждён"
+    "alreadyVerified": "Уже подтверждён",
+    "passkeysDisabled": "Passkeys are disabled",
+    "passkeysNotDiscoverable": "Usernameless passkey login is not enabled"
   },
   "common": {
     "notFound": "Не найдено",

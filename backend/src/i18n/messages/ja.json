@@ -48,7 +48,9 @@
     "sentEmailNotFound": "送信済みメールが見つかりません",
     "featureOauthIsDisabled": "OAuth機能は無効です",
     "resetLink": "以下のリンクをクリックしてパスワードをリセットしてください。このリンクの有効期限は1時間です。",
-    "alreadyVerified": "既に認証済みです"
+    "alreadyVerified": "既に認証済みです",
+    "passkeysDisabled": "Passkeys are disabled",
+    "passkeysNotDiscoverable": "Usernameless passkey login is not enabled"
   },
   "common": {
     "notFound": "見つかりません",
