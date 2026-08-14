@@ -33,7 +33,21 @@ type MysqlPartitionMeta = {
   partitionColumn: string;
   hasPkOnPartitionColumn: boolean;
   hasAnyForeignKeys: boolean;
+  pkColumns: string[];
 };
+
+type PartitionRangeBounds = {
+  start: Date;
+  end: Date;
+};
+
+function monthStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function quoteIdent(name: string): string {
+  return `\`${name.replace(/`/g, '``')}\``;
+}
 
 async function getMysqlPartitionMeta(table: string): Promise<MysqlPartitionMeta | null> {
   const columns: { column_name: string }[] = await AppDataSource.query(
@@ -60,7 +74,9 @@ async function getMysqlPartitionMeta(table: string): Promise<MysqlPartitionMeta 
     [table],
   );
 
-  const hasPkOnPartitionColumn = pkCols.some(c => c.column_name === partitionColumn);
+  const pkColumns = pkCols.map(c => c.column_name);
+
+  const hasPkOnPartitionColumn = pkColumns.includes(partitionColumn);
 
   const [fkOut] = await AppDataSource.query(
     `SELECT COUNT(*) AS cnt
@@ -85,7 +101,58 @@ async function getMysqlPartitionMeta(table: string): Promise<MysqlPartitionMeta 
     partitionColumn,
     hasPkOnPartitionColumn,
     hasAnyForeignKeys,
+    pkColumns,
   };
+}
+
+async function ensureMysqlPrimaryKeyIncludesPartitionColumn(
+  table: string,
+  meta: MysqlPartitionMeta,
+  log: any,
+): Promise<boolean> {
+  if (meta.hasPkOnPartitionColumn) return true;
+
+  const keyColumns = meta.pkColumns.length > 0 ? [...meta.pkColumns] : ['id'];
+  if (!keyColumns.includes(meta.partitionColumn)) {
+    keyColumns.push(meta.partitionColumn);
+  }
+
+  const keySql = keyColumns.map(c => quoteIdent(c)).join(', ');
+  const hasPrimaryKey = meta.pkColumns.length > 0;
+  const sql = hasPrimaryKey
+    ? `ALTER TABLE ${quoteIdent(table)} DROP PRIMARY KEY, ADD PRIMARY KEY (${keySql})`
+    : `ALTER TABLE ${quoteIdent(table)} ADD PRIMARY KEY (${keySql})`;
+
+  try {
+    await AppDataSource.query(sql);
+    log?.info({ table, keyColumns }, 'auto-partition: primary key updated to include partition column');
+    return true;
+  } catch (err: any) {
+    log?.warn({ table, keyColumns, err }, 'auto-partition: failed to update primary key');
+    return false;
+  }
+}
+
+async function getMysqlPartitionRangeBounds(table: string, partitionColumn: string): Promise<PartitionRangeBounds> {
+  const [row] = await AppDataSource.query(
+    `SELECT MIN(${quoteIdent(partitionColumn)}) AS min_value, MAX(${quoteIdent(partitionColumn)}) AS max_value
+       FROM ${quoteIdent(table)}`,
+  );
+
+  const now = new Date();
+  const defaultStart = monthStart(new Date(now.getFullYear(), now.getMonth() - 3, 1));
+  const defaultEnd = monthStart(new Date(now.getFullYear() + 1, 11, 1));
+
+  const minValue = row?.min_value ? new Date(row.min_value) : null;
+  const maxValue = row?.max_value ? new Date(row.max_value) : null;
+
+  const dataStart = minValue ? monthStart(new Date(minValue.getFullYear(), minValue.getMonth() - 1, 1)) : null;
+  const dataEnd = maxValue ? monthStart(new Date(maxValue.getFullYear(), maxValue.getMonth() + 2, 1)) : null;
+
+  const start = dataStart && dataStart < defaultStart ? dataStart : defaultStart;
+  const end = dataEnd && dataEnd > defaultEnd ? dataEnd : defaultEnd;
+
+  return { start, end };
 }
 
 async function getMysqlPartitionExpression(table: string): Promise<string | null> {
@@ -104,18 +171,22 @@ async function getMysqlPartitionExpression(table: string): Promise<string | null
 }
 
 async function ensureMysqlPartitions(table: string, log: any): Promise<void> {
-  const meta = await getMysqlPartitionMeta(table);
+  let meta = await getMysqlPartitionMeta(table);
   if (!meta) {
     log?.info({ table }, 'auto-partition: skipped (no compatible datetime column)');
     return;
   }
 
   if (!meta.hasPkOnPartitionColumn) {
-    log?.info(
-      { table, column: meta.partitionColumn },
-      'auto-partition: skipped (primary key must include partition column)',
-    );
-    return;
+    await ensureMysqlPrimaryKeyIncludesPartitionColumn(table, meta, log);
+    meta = await getMysqlPartitionMeta(table);
+    if (!meta?.hasPkOnPartitionColumn) {
+      log?.info(
+        { table, column: meta?.partitionColumn },
+        'auto-partition: skipped (primary key must include partition column)',
+      );
+      return;
+    }
   }
 
   if (meta.hasAnyForeignKeys) {
@@ -123,11 +194,9 @@ async function ensureMysqlPartitions(table: string, log: any): Promise<void> {
     return;
   }
 
-  const now = new Date();
-  const startMonth = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-  const endMonth = new Date(now.getFullYear() + 1, 11, 1);
+  const { start, end } = await getMysqlPartitionRangeBounds(table, meta.partitionColumn);
   const months: Date[] = [];
-  for (let cursor = new Date(startMonth); cursor <= endMonth; cursor = nextMonth(cursor)) {
+  for (let cursor = new Date(start); cursor <= end; cursor = nextMonth(cursor)) {
     months.push(new Date(cursor));
   }
 
@@ -188,12 +257,6 @@ async function createInitialMysqlPartitions(
       return `PARTITION \`${name}\` VALUES LESS THAN ('${bound}')`;
     })
     .join(',\n');
-
-  const [row] = await AppDataSource.query(`SELECT 1 AS ok FROM \`${table}\` LIMIT 1`);
-  if (row) {
-    log?.info({ table }, 'auto-partition: skipping non-empty table (partition manually during maintenance)');
-    return;
-  }
 
   const sql = `ALTER TABLE \`${table}\` PARTITION BY RANGE COLUMNS(\`${partitionColumn}\`)
 (${parts})`;
